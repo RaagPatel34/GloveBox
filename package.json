@@ -7,8 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "smoke": "node --env-file-if-exists=.env.local scripts/smoke-test.mts",
-    "typecheck": "next typegen && tsc --noEmit"
+    "smoke": "node --experimental-strip-types --env-file-if-exists=.env.local scripts/smoke-test.mts",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs"
   },
   "dependencies": {
     "next": "16.4.2",

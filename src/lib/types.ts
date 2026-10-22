@@ -28,7 +28,7 @@ export type ScheduleItemKind =
   | "engine_filter"
   | "brake_check";
 
-export type ItemStatus = "overdue" | "due_soon" | "ok";
+export type ItemStatus = "overdue" | "due_soon" | "ok" | "unknown";
 
 export type DueTarget = { dueAt?: string; dueOdometer?: number };
 
@@ -51,7 +51,7 @@ export type Proposal = {
   from: DueTarget;
   to: DueTarget;
   reason: string;
-  model: ModelTier;
+  model: ModelTier | "sample";
   state: "pending" | "applied" | "dismissed";
 };
 

@@ -20,15 +20,14 @@ export const DUE_SOON_MILES = 500;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-// Last reading plus the weekly baseline since then, plus miles from planned trips.
+// Estimated mileage is separate from the recorded odometer; planned trips are excluded.
 export function estimateOdometer(
   vehicle: Pick<Vehicle, "odometer" | "weeklyMiles">,
   readingAt: Date,
   now: Date,
-  plannedTripMiles = 0,
 ): number {
   const weeks = Math.max(0, (now.getTime() - readingAt.getTime()) / (7 * DAY_MS));
-  return Math.round(vehicle.odometer + vehicle.weeklyMiles * weeks + plannedTripMiles);
+  return Math.round(vehicle.odometer + vehicle.weeklyMiles * weeks);
 }
 
 export function itemStatus(
@@ -36,6 +35,7 @@ export function itemStatus(
   now: Date,
   currentOdometer: number,
 ): ItemStatus {
+  if (item.dueAt === undefined && item.dueOdometer === undefined) return "unknown";
   const daysLeft =
     item.dueAt === undefined ? Infinity : (new Date(item.dueAt).getTime() - now.getTime()) / DAY_MS;
   const milesLeft =

@@ -1,3 +1,4 @@
+import "server-only";
 import OpenAI from "openai";
 import type { ModelTier } from "./types";
 
@@ -9,6 +10,8 @@ export function nebius(): OpenAI {
   client ??= new OpenAI({
     baseURL: process.env.NEBIUS_BASE_URL ?? "https://api.tokenfactory.nebius.com/v1/",
     apiKey: process.env.NEBIUS_API_KEY,
+    timeout: 25000,
+    maxRetries: 0,
   });
   return client;
 }
