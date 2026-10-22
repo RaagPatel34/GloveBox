@@ -88,7 +88,7 @@ Demo URL and public video: pending. The repository is still private. A sample-on
 
 ## Not implemented
 
-Automatic station-price discovery, route optimization, weather nudges, Tavily, scheduled jobs, accounts, and server-side garage storage. Those are roadmap ideas, not claims about this build. The current scope is the own-car upkeep workflow and manually sourced detour comparison.
+Automatic station-price discovery, route optimization, weather nudges, Tavily, scheduled jobs, accounts, and server-side garage storage. These remain outstanding GitHub issue requirements, not claims about this build. See the [issue acceptance audit](docs/ISSUE-STATUS.md) for implemented work, gaps, and delivery order. The current preview covers own-car upkeep and manually sourced detour comparison.
 
 ## License
 

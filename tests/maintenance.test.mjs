@@ -42,3 +42,18 @@ test('bad saved data is rejected and unsupported sample commands generate no adv
   assert.equal(isGarage({ ...garage, items: [...garage.items, garage.items[0]] }), false);
   assert.equal(sampleCommand('plan a trip', garage, now).proposals.length, 0);
 });
+
+test('issues #5 and #7: demo has eight cards with exactly the promised attention states', () => {
+  const garage = demoGarage(now);
+  assert.equal(garage.items.length, 8);
+  assert.equal(new Set(garage.items.map(i => i.kind)).size, 8);
+  for (const item of garage.items) {
+    assert.equal(itemStatus(item, now, garage.vehicle.odometer), item.kind === 'wash' ? 'overdue' : item.kind === 'oil' ? 'due_soon' : 'ok');
+  }
+  assert.equal(garage.items.find(i => i.kind === 'wash').lastDoneAt, '2026-09-26T12:00:00.000Z');
+  assert.match(garage.vehicle.home.label, /Buena Park City Hall/);
+  garage.vehicle.odometer = 50000;
+  garage.proposals.push({ state: 'pending' });
+  assert.equal(demoGarage(now).vehicle.odometer, 48000);
+  assert.deepEqual(demoGarage(now).proposals, []);
+});

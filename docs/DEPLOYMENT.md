@@ -2,7 +2,7 @@
 
 ## Publish the credit-free preview
 
-1. Review and merge the GloveBox feature PR when ready. Alternatively, deploy its branch as a preview first.
+1. Keep the work on `codex/first-working-flow` and deploy that branch as a preview. The team has explicitly requested no push or merge to `main`.
 2. In Vercel, choose Add New → Project → Import Git Repository. Connect GitHub and grant access to **RaagPatel34/GloveBox** only. Import the repository.
 3. Framework: **Next.js**. Root directory: repository root. Node.js: **22.x**. Install: `npm ci`. Build: `npm run build`. Keep the default output directory.
 4. Add `ENABLE_LIVE_AI=false` to the environment variables. No keys are needed for the core preview. Do not copy the local API key or `.env.local` into the repo.

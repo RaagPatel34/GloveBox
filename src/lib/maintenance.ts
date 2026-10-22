@@ -11,9 +11,18 @@ export const LABELS: Record<ScheduleItem['kind'], string> = {
 };
 export function demoGarage(now = new Date()): Garage {
   const date = (days: number) => new Date(now.getTime() + days * DAY).toISOString();
-  const vehicle: Vehicle = { id: 'demo-civic', isDemo: true, mpgSource: { kind: 'sample' }, visitorId: 'local-demo', year: 2019, make: 'Honda', model: 'Civic', epaMpg: 32, odometer: 48000, weeklyMiles: 250, home: { label: 'Buena Park, CA', lat: 33.8675, lng: -117.9981 } };
+  const vehicle: Vehicle = { id: 'demo-civic', isDemo: true, mpgSource: { kind: 'sample' }, visitorId: 'local-demo', year: 2019, make: 'Honda', model: 'Civic', epaMpg: 32, odometer: 48000, weeklyMiles: 250, home: { label: 'Buena Park City Hall, 6650 Beach Blvd, Buena Park, CA', lat: 33.8675, lng: -117.9981 } };
   const item = (kind: ScheduleItem['kind'], dueAt?: string, dueOdometer?: number): ScheduleItem => ({ id: kind, vehicleId: vehicle.id, kind, dueAt, dueOdometer, status: 'unknown', intervalSource: { kind: 'baseline' } });
-  return { version: 1, vehicle, items: [item('wash', date(-12)), item('oil', date(120), 48400), item('tire_rotation', undefined, 51500), item('tire_pressure', date(18)), item('cabin_filter', date(100)), item('engine_filter')], proposals: [] };
+  return { version: 1, vehicle, items: [
+    { ...item('wash', date(-12)), lastDoneAt: date(-26), intervalDays: 14 },
+    item('oil', date(120), 48400),
+    item('tire_rotation', undefined, 51500),
+    item('tire_pressure', date(18)),
+    item('wipers', date(150)),
+    item('cabin_filter', date(100)),
+    item('engine_filter', undefined, 60000),
+    item('brake_check', date(180), 56000),
+  ], proposals: [] };
 }
 function record(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null && !Array.isArray(value); }
 function number(value: unknown): value is number { return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 2_000_000; }
