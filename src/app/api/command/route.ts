@@ -3,6 +3,7 @@ import { modelFor, nebius } from '@/lib/nebius';
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 
 export async function POST(request: Request) {
+  if (request.headers.get('origin') && request.headers.get('origin') !== new URL(request.url).origin) return Response.json({ error: 'Cross-origin requests are not accepted.' }, { status:403 });
   // Bound the body while reading; do not trust Content-Length.
   const reader = request.body?.getReader();
   if (!reader) return Response.json({ error: 'A request body is required.' }, { status: 400 });
@@ -20,6 +21,7 @@ export async function POST(request: Request) {
   catch { return Response.json({ error: 'Invalid JSON.' }, { status: 400 }); }
   if (!body || typeof body.command !== 'string' || !body.command.trim() || body.command.length > 1000 || !['sample', 'live'].includes(body.mode) || !isGarage(body.garage)) return Response.json({ error: 'Provide a command, mode, and valid garage.' }, { status: 400 });
   if (body.mode === 'sample') return Response.json(sampleCommand(body.command, body.garage));
+  if (process.env.ENABLE_LIVE_AI !== 'true') return Response.json({ error: 'Live AI is paused. Car setup, service logging, sample suggestions, and trip calculations work without credits.' }, { status:503 });
   if (!process.env.NEBIUS_API_KEY || !process.env.NEBIUS_MODEL_SUPER) return Response.json({ error: 'Live AI is not configured yet. Add NEBIUS_API_KEY and NEBIUS_MODEL_SUPER on the server, then restart. Sample mode is available now.' }, { status: 503 });
   try {
     const model = modelFor('super');

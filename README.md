@@ -1,21 +1,23 @@
 # GloveBox
 
-Your car’s co-pilot for upkeep and trip costs. Built for the Nebius x NVIDIA Global AI Hackathon, Best Apps & Agents track.
+Your car’s upkeep and trip costs, with the reasoning in plain sight.
 
-## Working today
+Built for the **Nebius x NVIDIA Global AI Hackathon — Best Apps and Agents**. Live inference is currently paused at the team’s request until credits are available. The core product needs no AI key.
 
-- Responsive garage dashboard with a one-click demo Civic and illustrative maintenance history.
-- Command → pending suggestion → Apply/Dismiss → updated dashboard.
-- Sample mode works without keys and is explicitly labeled as fixed sample logic, not AI.
-- Live mode calls one configured NVIDIA Nemotron model through Nebius Token Factory. It validates the model’s tool arguments before creating suggestions. **Live provider behavior still needs verification with a real API key.**
-- Browser-local persistence, stale-proposal protection, error states, and unknown-history status.
-- Suggestions can bring forward inspections or a wash; they cannot postpone existing deadlines, change the odometer, or mark service complete.
+## What works
 
-Trip planning, real vehicle lookup, manufacturer schedules, weather, Tavily, database persistence, and scheduled nudges are not implemented yet. See [the broader spec](docs/SPEC.md).
+- Add your own liquid-fuel car, mileage, city, and MPG. Optional EPA vehicle lookup has a manual fallback.
+- Record completed services, update the odometer, and set time/mileage intervals with source links and conditions.
+- See due, overdue, and unknown-history states. No history is treated as “unknown,” not “healthy.”
+- Review clearly labeled sample suggestions; Apply/Dismiss never marks a service complete.
+- Compare gas-detour savings, extra fuel use, and optional time cost using deterministic math.
+- Open manually entered stops in Google Maps. Distances and prices are entered by the user, not fetched or claimed to be live.
+- Save locally, export a JSON backup, and validate it before restoring. Reset/restore explicitly warns before replacement.
+- View NHTSA tire-care guidance and an applicable Honda sedan reference. User-entered sources are labeled as user records, not independently verified.
 
-## Run locally
+## Run
 
-Use Node 22.13+ (or a newer supported LTS) and npm.
+Use Node 22.13+ (Node 22 LTS is configured for CI).
 
 ```bash
 npm ci
@@ -23,53 +25,70 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open http://localhost:3000, click **Load demo car**, click the dirt-road example, and choose **Review my drive**. Apply one suggestion and dismiss the other. Refresh to verify your decisions were saved.
+Open http://localhost:3000. Choose **Add my car** or **Load demo car**. Core features work without credentials; optional EPA lookup requires network access. Sample suggestions run locally in the browser.
 
-Sample mode needs no credentials. Data stays in this browser; resetting the demo replaces its saved state. Live mode sends the command and demo schedule to Nebius. The app has no accounts or cross-device sync.
+For a fast walkthrough, load the demo, try the dirt-road command, apply a reminder, then use the gas-detour example. Example prices are illustrative. Try a $20/hour time value and see the detour verdict change.
 
-## Enable live Nemotron
+## Real maintenance records
 
-1. Create a Nebius Token Factory account and API key. Hackathon credit instructions: https://nebiusglobalaihackathon.devpost.com/resources.
-2. Put the key in `.env.local` as `NEBIUS_API_KEY`. Never share or commit this file.
-3. Run `npm run smoke` to list model IDs accessible to your account. This first run intentionally exits with instructions if no model is configured.
-4. Set `NEBIUS_MODEL_SUPER` to an available NVIDIA Nemotron ID. The name is the existing role variable, not a requirement to use a specific size; one working Nemotron model is enough for this milestone.
-5. Run `npm run smoke` again. It verifies tool arguments, executes fuel-cost math, sends the tool result back, and checks the final answer. Each configured model makes two inference requests.
-6. Restart the app and choose **Live · Nemotron** in the response menu.
+For a new vehicle, most items have no presumed interval. Enter guidance from your manual, then the date/mileage of the last completed service. If both time and distance thresholds are supplied, whichever comes first determines status. Tire-pressure checks use a 30-day reminder based on [NHTSA’s monthly-check guidance](https://www.nhtsa.gov/vehicle-safety/tires).
 
-Missing credentials return a clear setup message. Provider failures never silently fall back to sample responses.
+Recording an older service adds history without rolling a newer schedule backward. Service mileage cannot exceed the recorded odometer. Duplicate records and inconsistent date/mileage histories are rejected. Planned trips never change the odometer.
 
-## Architecture and team handoff
+One vehicle per browser. Data does not sync across devices or between localhost and the deployed domain. Export before replacing your garage. The app supports liquid-fuel cost estimates, not EV charging or plug-in hybrid energy modeling.
 
-`src/app/page.tsx` owns the dashboard and browser storage. `POST /api/command` accepts `{ command, mode: "sample" | "live", garage }` and returns `{ proposals, message, source, model? }`. `src/lib/maintenance.ts` owns validation and state transitions; `src/lib/types.ts` remains the shared contract.
+## NVIDIA / Nebius integration
 
-The live endpoint uses the `proposeMaintenance` tool with a bounded list of inspection suggestions. Plain code validates IDs, dates, reason lengths, and allowed actions; the model never writes state. This terminal tool returns structured proposals directly to the UI; it does not need a second model call to render the result.
+The existing `/api/command` route uses a configured NVIDIA Nemotron model through Nebius Token Factory. It validates bounded structured tool arguments and returns pending suggestions; the model cannot write the schedule directly. This integration previously passed a real local tool-round-trip and maintenance-proposal test.
 
-Frontend work can continue around the shared contract. Backend work can next add source-backed maintenance guidance, then trip calculations. Keys stay on the server. Before a public deployment, add shared rate limits and a spending budget for the paid inference endpoint; this milestone is intended for local testing.
+**Currently disabled:** `ENABLE_LIVE_AI=false`. This switch is enforced on the server, even if a key is saved. No Nebius calls are required by the tests or normal offline preview.
 
-## Checks
+When credits are available:
+
+1. Configure a fresh private `NEBIUS_API_KEY` and the base URL in `.env.local`.
+2. Run `npm run smoke` to list accessible model IDs. With no selected model, this intentionally exits after listing them.
+3. Set `NEBIUS_MODEL_SUPER` to the chosen NVIDIA Nemotron ID and rerun the smoke test. It incurs two inference calls per configured model.
+4. Set `ENABLE_LIVE_AI=true`, restart, and test **Live · Nemotron**.
+5. Add shared request metering and a spending budget before exposing paid inference publicly. See [deployment instructions](docs/DEPLOYMENT.md).
+
+The smoke script is an explicit integration test and makes calls when invoked with credentials regardless of the application’s enable switch. Do not run it while credit use is deferred.
+
+## Architecture
+
+- `src/app/page.tsx`: dashboard, browser persistence, proposal review.
+- `src/components/garage-tools.tsx`: vehicle setup, service records, intervals, backup/restore.
+- `src/components/trip-planner.tsx`: local trip-cost and detour comparison.
+- `src/lib/garage.ts`, `maintenance.ts`, `trip.ts`: validated state transitions and deterministic calculations.
+- `/api/vehicle`: bounded, fixed-host EPA lookup with timeout and manual fallback.
+- `/api/config`: public feature availability, never credentials.
+- `/api/command`: optional model call, disabled by default.
+
+## Verify
 
 ```bash
 npm test
 npm run lint
 npm run typecheck
 npm run build
-npm run smoke # requires real credentials
 ```
 
-Unit tests cover apply/dismiss, stale proposals, invalid model output, unknown history, mileage estimation, and storage validation. The smoke script exits nonzero on failure.
+GitHub Actions runs these checks without credentials. The tests cover reminders, service chronology, source validation, backup data, stale proposals, and detour edge cases. Browser checks cover vehicle entry, service records, persistence, disabled AI, and the calculator.
 
-## Submission checklist
+Browser verification covered the complete EPA flow: 2019 Honda → Civic 4Dr → engine/transmission selection → 33 combined MPG for the selected configuration. Manual MPG entry is also verified. Recheck external lookup from the deployed host.
 
-Target submission: Thursday, October 29 evening Pacific. Official deadline: Friday, October 30, 2026 at 10 a.m. Pacific.
+## Deploy and submit
 
-- [ ] Verify live Nemotron calls with your account and record the model ID.
-- [ ] Publish and test the working demo.
-- [ ] Make the repository public; keep the MIT license visible.
-- [ ] Record a public YouTube demo under three minutes.
-- [ ] Describe what works, how NVIDIA/Nebius are used, and known limitations.
-- [ ] Add feedback based on actual use of Nebius/NVIDIA tools.
+- [Vercel setup and release checklist](docs/DEPLOYMENT.md)
+- [Submission working copy](docs/SUBMISSION.md)
+- [2:45 demo recording script](docs/DEMO-SCRIPT.md)
+- [Real-user testing worksheet](docs/USER-TEST.md)
+- [Original product roadmap](docs/SPEC.md)
 
-Live demo and video: pending. Do not present sample mode as a real AI integration in the submission.
+Demo URL and public video: pending. The repository is still private. A sample-only preview is **not** a complete hackathon entry; restore and verify real NVIDIA/Nebius runtime usage before submission.
+
+## Not implemented
+
+Automatic station-price discovery, route optimization, weather nudges, Tavily, scheduled jobs, accounts, and server-side garage storage. Those are roadmap ideas, not claims about this build. The current scope is the own-car upkeep workflow and manually sourced detour comparison.
 
 ## License
 

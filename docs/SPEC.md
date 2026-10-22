@@ -1,5 +1,7 @@
 # GloveBox — Spec
 
+> Roadmap document: the current delivered scope is described in README.md. Live AI is paused pending credits. Weather, automatic gas-price lookup, route optimization, server storage, and scheduled jobs below are not implemented.
+
 > Your car's co-pilot for upkeep and trip costs. Tell it what happened; it tells you what's due, when to do it, and what the drive will cost.
 
 **Hackathon:** Nebius x NVIDIA Global AI Hackathon — **Best Apps & Agents** track

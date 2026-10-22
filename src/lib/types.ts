@@ -12,6 +12,8 @@ export type Vehicle = {
   make: string;
   model: string;
   epaMpg: number;
+  mpgSource?: { kind: "manual" | "epa" | "sample"; url?: string };
+  isDemo?: boolean;
   mpgOverride?: number;
   odometer: number;
   weeklyMiles: number;
@@ -41,7 +43,8 @@ export type ScheduleItem = DueTarget & {
   lastDoneAt?: string;
   lastDoneOdometer?: number;
   status: ItemStatus;
-  intervalSource: { kind: "baseline" | "manufacturer"; url?: string };
+  intervalSource: { kind: "baseline" | "manufacturer" | "user" | "nhtsa"; url?: string; note?: string };
+  reminderOrigin?: "sample" | "ai" | "service" | "user";
 };
 
 export type Proposal = {
@@ -52,6 +55,7 @@ export type Proposal = {
   to: DueTarget;
   reason: string;
   model: ModelTier | "sample";
+  sourceUrl?: string;
   state: "pending" | "applied" | "dismissed";
 };
 
@@ -91,3 +95,5 @@ export type Nudge = {
   reason: string;
   createdAt: string;
 };
+
+export type ServiceEntry = { id: string; itemId: string; date: string; odometer: number; notes: string; createdAt: string };
