@@ -45,13 +45,16 @@ export function parseForecast(body: unknown): WeatherForecast | null {
   const { time, precipitation_sum: sums, precipitation_probability_max: chances } = body.daily;
   if (!Array.isArray(time) || !Array.isArray(sums) || time.length === 0 || sums.length !== time.length) return null;
 
+  // Days are read in order and "day 0 is today", so a day with no usable rainfall cannot be
+  // skipped without shifting the rest: the forecast stops there instead. What came before is
+  // still a real forecast; with nothing before it there is no forecast.
   const days: ForecastDay[] = [];
   for (let i = 0; i < time.length; i++) {
-    if (typeof time[i] !== "string" || !isNumber(sums[i])) return null;
+    if (typeof time[i] !== "string" || !isNumber(sums[i])) break;
     const chance = Array.isArray(chances) ? chances[i] : null;
     days.push({ date: time[i], rainChance: isNumber(chance) ? chance : null, rainInches: sums[i] });
   }
-  return { days };
+  return days.length === 0 ? null : { days };
 }
 
 export function parseAirQuality(body: unknown): AirQuality | null {
@@ -59,13 +62,15 @@ export function parseAirQuality(body: unknown): AirQuality | null {
   const { time: asOf, pm2_5: pm25Now, us_aqi: usAqi } = body.current;
   if (typeof asOf !== "string" || !isNumber(pm25Now)) return null;
 
-  // Hourly times are local ISO strings, so they compare as text. Hours already past are skipped.
+  // Hourly times are local ISO strings, so they compare as text. Hours already past are skipped,
+  // but not the hour in progress: at 14:15 the 14:00 slot still counts (compare to "YYYY-MM-DDTHH").
   let peak = pm25Now;
   if (isRecord(body.hourly) && Array.isArray(body.hourly.time) && Array.isArray(body.hourly.pm2_5)) {
     const { time, pm2_5: values } = body.hourly;
+    const thisHour = asOf.slice(0, 13);
     let seen = 0;
     for (let i = 0; i < time.length && seen < HOURS_AHEAD; i++) {
-      if (typeof time[i] !== "string" || time[i] < asOf) continue;
+      if (typeof time[i] !== "string" || time[i].slice(0, 13) < thisHour) continue;
       seen++;
       if (isNumber(values[i])) peak = Math.max(peak, values[i]);
     }
@@ -73,7 +78,8 @@ export function parseAirQuality(body: unknown): AirQuality | null {
   return { asOf, pm25Now, pm25Peak24h: peak, usAqi: isNumber(usAqi) ? usAqi : null };
 }
 
-type FetchLike = (url: string) => Promise<Response>;
+// The shape of `fetch` the clients need; tests pass a fake. Shared with nudge-check, demo-nudge and epa.
+export type FetchLike =(url: string) => Promise<Response>;
 
 // A slow weather service must not hold up a page or the demo-car click.
 const TIMEOUT_MS = 6_000;

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { NOW } from "../test-support";
+import { inDays, NOW } from "../test-support";
 import { demoCar } from "./demo-car";
 import { demoNudge } from "./demo-nudge";
 
@@ -37,32 +37,40 @@ describe("demoNudge", () => {
       text: "Dry all week, a good time to wash.",
       createdAt: NOW.toISOString(),
     });
-    expect(nudge.reason).toContain("Open-Meteo");
+    expect(nudge?.reason).toContain("Open-Meteo");
   });
 
   it("gives every load a fresh id", async () => {
     const fetchImpl = fetchOf(dryForecast, clearAir);
     const [a, b] = [await demoNudge(car, NOW, randomUUID, fetchImpl), await demoNudge(car, NOW, randomUUID, fetchImpl)];
-    expect(a.id).not.toBe(b.id);
+    expect(a?.id).not.toBe(b?.id);
   });
 
   it("says plainly that it could not check, when Open-Meteo is unreachable, instead of inventing a forecast", async () => {
     const down = new Error("offline");
     const nudge = await demoNudge(car, NOW, randomUUID, fetchOf(down, down));
-    expect(nudge.vehicleId).toBe(car.vehicle.id);
-    expect(nudge.text).toBe("Check the forecast before you wash.");
-    expect(nudge.reason).toMatch(/could not be reached/);
-    expect(nudge.reason).toMatch(/not a real forecast/);
+    expect(nudge?.vehicleId).toBe(car.vehicle.id);
+    expect(nudge?.text).toBe("Check the forecast before you wash.");
+    expect(nudge?.reason).toMatch(/could not be reached/);
+    expect(nudge?.reason).toMatch(/not a real forecast/);
   });
 
   it("does the same when only one of the two services is down and the other had nothing to say", async () => {
     const nudge = await demoNudge(car, NOW, randomUUID, fetchOf(new Error("offline"), clearAir));
-    expect(nudge.reason).toMatch(/not a real forecast/);
+    expect(nudge?.reason).toMatch(/not a real forecast/);
+  });
+
+  it("seeds no nudge when the check worked and has nothing to say, rather than claiming Open-Meteo was down", async () => {
+    const washed = {
+      ...car,
+      items: car.items.map((i) => (i.kind === "wash" ? { ...i, lastDoneAt: NOW.toISOString(), dueAt: inDays(14) } : i)),
+    };
+    expect(await demoNudge(washed, NOW, randomUUID, fetchOf(dryForecast, clearAir))).toBeNull();
   });
 
   it("keeps a real nudge when one service is down but the other had something to say", async () => {
     const smoky = { ...clearAir, current: { ...clearAir.current, pm2_5: 90 } };
     const nudge = await demoNudge(car, NOW, randomUUID, fetchOf(new Error("offline"), smoky));
-    expect(nudge.text).toMatch(/^Smoky air/);
+    expect(nudge?.text).toMatch(/^Smoky air/);
   });
 });

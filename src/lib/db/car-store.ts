@@ -1,4 +1,5 @@
 import { fromRows, toRows, type ItemRow, type VehicleRow } from "../car-rows";
+import { washChanged } from "../nudge";
 import { nudgeToRow } from "../nudge-rows";
 import type { CarSnapshot, Nudge } from "../types";
 import { isVisitorId } from "../visitor";
@@ -18,12 +19,23 @@ export async function loadCar(visitorId: string): Promise<CarSnapshot | null> {
 // Writes back what the agents can change on an existing car: the odometer reading and each
 // item's service and due fields. Updated in place rather than replaced, so rows that hang off
 // the vehicle (proposals, nudges) are kept. Scoped to the visitor's own vehicle.
-export async function updateCar(visitorId: string, snapshot: CarSnapshot): Promise<void> {
+//
+// Pass the snapshot the change started from as `previous`: if the wash was logged or moved,
+// the car's stored nudges were worded for the old wash state, so they are dropped in the same
+// transaction (the next nudge check writes fresh ones).
+export async function updateCar(visitorId: string, snapshot: CarSnapshot, previous?: CarSnapshot): Promise<void> {
   if (!isVisitorId(visitorId)) throw new Error("Invalid visitor ID");
   const sql = getSql();
   const { vehicle, items } = toRows(visitorId, snapshot);
+  const dropNudges = previous !== undefined && washChanged(previous, snapshot);
 
   await sql.transaction([
+    ...(dropNudges
+      ? [
+          sql`DELETE FROM nudges
+              WHERE vehicle_id = (SELECT id FROM vehicles WHERE id = ${vehicle.id} AND visitor_id = ${visitorId})`,
+        ]
+      : []),
     sql`UPDATE vehicles SET odometer = ${vehicle.odometer}, reading_at = ${vehicle.reading_at}
         WHERE id = ${vehicle.id} AND visitor_id = ${visitorId}`,
     ...items.map(
