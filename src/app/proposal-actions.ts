@@ -4,7 +4,7 @@ import { refresh } from "next/cache";
 import { cookies } from "next/headers";
 import { getCarSnapshot } from "@/lib/car";
 import { loadProposal, saveDecision } from "@/lib/db/proposal-store";
-import { decideProposal } from "@/lib/proposals";
+import { CHANGED_SINCE, decideProposal } from "@/lib/proposals";
 import { VISITOR_COOKIE } from "@/lib/visitor";
 
 export type ProposalActionState = { message?: string };
@@ -32,7 +32,9 @@ export async function decideProposalAction(
 
     const result = decideProposal(car, proposal, decision, new Date());
     if (!result.ok) return { message: result.error };
-    await saveDecision(visitorId!, result);
+    const saved = await saveDecision(visitorId!, result);
+    // Nothing saved on Apply: the item moved after it was read above.
+    if (!saved && result.decision === "apply") return { message: CHANGED_SINCE };
   } catch (error) {
     console.error("decideProposalAction failed", error);
     return { message: "Could not save that. Please try again." };

@@ -42,35 +42,47 @@ export async function addProposals(visitorId: string, proposals: Proposal[]): Pr
   );
 }
 
-// Records the user's decision on a card (see decideProposal). Apply writes the moved item's
-// due fields in the same transaction, so the card and the schedule never disagree. Only a
-// still-pending card is applied or dismissed, and only an applied one hidden: a second
-// click, or one from another tab, is a no-op.
-export async function saveDecision(visitorId: string, decided: Decided): Promise<void> {
+// Records the user's decision on a card (see decideProposal). Only a still-pending card is
+// applied or dismissed, and only an applied one hidden. Returns false if nothing changed:
+// a second click, one from another tab, or, for Apply, an item that moved since.
+//
+// Apply moves the item and marks the card in one statement, so the card and the schedule
+// never disagree. The item moves only if its due point is still the card's `from`: the
+// check in decideProposal ran on rows read before this write, and a service logged or
+// another card applied in between must not be overwritten.
+export async function saveDecision(visitorId: string, decided: Decided): Promise<boolean> {
   if (!isVisitorId(visitorId)) throw new Error("Invalid visitor ID");
   const sql = getSql();
   const { proposal } = decided;
+  let rows: unknown[];
 
   if (decided.decision === "hide") {
-    await sql`UPDATE proposals SET hidden_at = ${proposal.hiddenAt ?? null}
+    rows = await sql`UPDATE proposals SET hidden_at = ${proposal.hiddenAt ?? null}
         WHERE id = ${proposal.id} AND state = 'applied' AND hidden_at IS NULL
-          AND vehicle_id = (SELECT id FROM vehicles WHERE id = ${proposal.vehicleId} AND visitor_id = ${visitorId})`;
-    return;
-  }
-
-  const item = decided.car?.items.find((i) => i.id === proposal.itemId);
-  await sql.transaction([
-    ...(item
-      ? [
-          sql`UPDATE schedule_items SET due_at = ${item.dueAt ?? null}, due_odometer = ${item.dueOdometer ?? null},
-                status = ${item.status}
-              WHERE id = ${item.id}
-                AND vehicle_id = (SELECT id FROM vehicles WHERE id = ${proposal.vehicleId} AND visitor_id = ${visitorId})
-                AND EXISTS (SELECT 1 FROM proposals WHERE id = ${proposal.id} AND state = 'pending')`,
-        ]
-      : []),
-    sql`UPDATE proposals SET state = ${proposal.state}
+          AND vehicle_id = (SELECT id FROM vehicles WHERE id = ${proposal.vehicleId} AND visitor_id = ${visitorId})
+        RETURNING id`;
+  } else if (decided.decision === "dismiss") {
+    rows = await sql`UPDATE proposals SET state = 'dismissed'
         WHERE id = ${proposal.id} AND state = 'pending'
-          AND vehicle_id = (SELECT id FROM vehicles WHERE id = ${proposal.vehicleId} AND visitor_id = ${visitorId})`,
-  ]);
+          AND vehicle_id = (SELECT id FROM vehicles WHERE id = ${proposal.vehicleId} AND visitor_id = ${visitorId})
+        RETURNING id`;
+  } else {
+    const item = decided.car?.items.find((i) => i.id === proposal.itemId);
+    if (!item) return false;
+    const from = proposalToRow(proposal);
+    rows = await sql`WITH moved AS (
+          UPDATE schedule_items SET due_at = ${item.dueAt ?? null}, due_odometer = ${item.dueOdometer ?? null},
+            status = ${item.status}
+          WHERE id = ${item.id}
+            AND vehicle_id = (SELECT id FROM vehicles WHERE id = ${proposal.vehicleId} AND visitor_id = ${visitorId})
+            AND due_at IS NOT DISTINCT FROM ${from.from_due_at}::timestamptz
+            AND due_odometer IS NOT DISTINCT FROM ${from.from_due_odometer}::integer
+            AND EXISTS (SELECT 1 FROM proposals WHERE id = ${proposal.id} AND item_id = ${item.id} AND state = 'pending')
+          RETURNING id
+        )
+        UPDATE proposals SET state = 'applied'
+        WHERE id = ${proposal.id} AND state = 'pending' AND EXISTS (SELECT 1 FROM moved)
+        RETURNING id`;
+  }
+  return rows.length > 0;
 }
