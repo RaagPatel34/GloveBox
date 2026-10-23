@@ -1,6 +1,6 @@
 import type { CarSnapshot, ItemStatus, ScheduleItem, ScheduleItemKind } from "./types";
 
-// Mapping between the app's CarSnapshot and the flat rows in Postgres (see src/lib/db/schema.sql).
+// Mapping between the app's CarSnapshot and the flat rows in Postgres (see src/lib/db/schema.ts).
 // Pure, so it is tested without a database. Reading is lenient about what the driver
 // returns (Date or ISO string for timestamps, number or string for numerics).
 
