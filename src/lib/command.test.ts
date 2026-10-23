@@ -127,6 +127,18 @@ describe("runCommand: service logs", () => {
     expect(reply.changes).toEqual([]);
     expect(reply.message).toMatch(/oil change|tire rotation/i);
   });
+
+  it.each([
+    ["an odometer reading", { intent: "odometer", odometer: 48_450 }, "odometer is 48,450", /odometer is 48,210/],
+    ["a named item", { intent: "service_log", item: "oil" }, "changed the oil", /date or mileage/i],
+  ])("says what to fix, not “which item”, when Super records nothing for %s", async (_label, routed, text, message) => {
+    const chat = scriptedChat({ nano: [route(routed)], super: [say("I could not do that.")] });
+    const { reply, saved } = await send(text, chat);
+    expect(saved).toEqual([]);
+    expect(reply.model).toBe("super");
+    expect(reply.message).not.toMatch(/which item/i);
+    expect(reply.message).toMatch(message);
+  });
 });
 
 describe("runCommand: Super can only record what the router read", () => {

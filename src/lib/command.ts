@@ -1,5 +1,5 @@
 import type { Chat } from "./agent/chat";
-import { runMaintenanceAgent, type MaintenanceEffect } from "./agent/maintenance";
+import { runMaintenanceAgent, type ActionRoute, type MaintenanceEffect } from "./agent/maintenance";
 import { routeCommand } from "./agent/router";
 import { buildDashboard } from "./dashboard";
 import { formatReadDate, numberFormat, STATUS_LABEL } from "./readout";
@@ -45,10 +45,11 @@ export async function runCommand(args: {
     return response;
   };
 
+  let route: ActionRoute;
   let state;
   try {
-    const route = await routeCommand(text, tracked, now);
-    switch (route.intent) {
+    const routed = await routeCommand(text, tracked, now);
+    switch (routed.intent) {
       case "unknown":
         return reply("nano", `I couldn't tell what to do with that. ${EXAMPLES}`);
       case "event":
@@ -56,15 +57,14 @@ export async function runCommand(args: {
       case "errand":
         return reply("nano", "That sounds like an errand. Trip planning is coming soon; for now I can log a service or an odometer reading.");
     }
+    route = routed;
     state = await runMaintenanceAgent({ chat: tracked, car, now, text, route });
   } catch (error) {
     console.error("runCommand: model call failed", error);
     return reply(answered, "Could not reach the AI just now. Please try again in a moment.");
   }
 
-  if (state.effects.length === 0) {
-    return reply("super", "I couldn't tell which item that was. Try naming it, like “oil change” or “tire rotation”.");
-  }
+  if (state.effects.length === 0) return reply("super", nothingRecorded(route));
 
   try {
     await args.save(state.car);
@@ -74,6 +74,17 @@ export async function runCommand(args: {
   }
 
   return reply("super", "Done.", describeEffects(state.effects, state.car, now));
+}
+
+// What to try when Super recorded nothing, by what the router read.
+function nothingRecorded(route: ActionRoute): string {
+  if (route.intent === "odometer") {
+    return "I couldn't record that reading. Type it as whole miles, like “odometer is 48,210”.";
+  }
+  if (route.item === undefined) {
+    return "I couldn't tell which item that was. Try naming it, like “oil change” or “tire rotation”.";
+  }
+  return "I couldn't log that. Check the date or mileage, like “changed the oil yesterday at 48,100”.";
 }
 
 // The lines the user sees. Every number comes from an effect or the updated car.
