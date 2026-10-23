@@ -1,5 +1,6 @@
 import { fromRows, toRows, type ItemRow, type VehicleRow } from "../car-rows";
-import type { CarSnapshot } from "../types";
+import { nudgeToRow } from "../nudge-rows";
+import type { CarSnapshot, Nudge } from "../types";
 import { isVisitorId } from "../visitor";
 import { getSql } from "./sql";
 
@@ -35,9 +36,9 @@ export async function updateCar(visitorId: string, snapshot: CarSnapshot): Promi
   ]);
 }
 
-// Replaces whatever car the visitor had with this one, atomically: the vehicle and all
-// of its schedule items land together or not at all.
-export async function saveCar(visitorId: string, snapshot: CarSnapshot): Promise<void> {
+// Replaces whatever car the visitor had with this one, atomically: the vehicle, all of its
+// schedule items and any nudges to start it with (the demo car's) land together or not at all.
+export async function saveCar(visitorId: string, snapshot: CarSnapshot, nudges: Nudge[] = []): Promise<void> {
   if (!isVisitorId(visitorId)) throw new Error("Invalid visitor ID");
   const sql = getSql();
   const { vehicle, items } = toRows(visitorId, snapshot);
@@ -56,6 +57,11 @@ export async function saveCar(visitorId: string, snapshot: CarSnapshot): Promise
             VALUES (${item.id}, ${item.vehicle_id}, ${item.kind}, ${item.interval_days}, ${item.interval_miles},
               ${item.last_done_at}, ${item.last_done_odometer}, ${item.due_at}, ${item.due_odometer},
               ${item.status}, ${item.interval_source_kind}, ${item.interval_source_url})`,
+    ),
+    ...nudges.map(nudgeToRow).map(
+      (nudge) =>
+        sql`INSERT INTO nudges (id, vehicle_id, text, reason, created_at)
+            VALUES (${nudge.id}, ${nudge.vehicle_id}, ${nudge.text}, ${nudge.reason}, ${nudge.created_at})`,
     ),
   ]);
 }
