@@ -162,6 +162,8 @@ export async function runMaintenanceAgent(args: {
       { role: "system", content: systemPrompt(pacificDate(args.now)) },
       { role: "user", content: `${args.text}\n\n(The router read this as ${JSON.stringify(args.route)}.)` },
     ],
+    // One change per message, and the reply is written from it: once it is recorded, stop.
+    stopWhen: () => state.effects.length > 0,
   });
   return state;
 }

@@ -70,6 +70,20 @@ describe("runCommand: service logs", () => {
     ]);
   });
 
+  it("saves the change as soon as it is recorded, without waiting on another model reply", async () => {
+    // No closing sentence in the script: asking Super again would fail and lose the wash.
+    const chat = scriptedChat({
+      nano: [route({ intent: "service_log", item: "wash" })],
+      super: [callTools(["logService", { item: "wash" }])],
+    });
+
+    const { reply, saved } = await send("just got a car wash", chat);
+
+    expect(saved).toHaveLength(1);
+    expect(chat.requests.filter((r) => r.tier === "super")).toHaveLength(1);
+    expect(reply.changes).toEqual(["Exterior wash logged Oct 22 at 48,000 mi. OK, next due Nov 5."]);
+  });
+
   it("shows only numbers the tools computed, never the model's own", async () => {
     const chat = scriptedChat({
       nano: [route({ intent: "service_log", item: "oil" })],
