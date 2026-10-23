@@ -227,6 +227,26 @@ describe("runCommand: Super can only record what the router read", () => {
     expect(saved[0].vehicle.odometer).toBe(47_750);
   });
 
+  it.each([
+    ["a shorthand mileage", "rotated the tires at 48k", { item: "tire_rotation", odometer: 48_000 }, 48],
+    ["a date", "changed the oil on 10/15", { item: "oil", date: "2026-10-15" }, 15],
+    ["a count of days", "changed the oil 3 days ago", { item: "oil", date: "2026-10-19" }, 3],
+    ["a year", "changed the oil in March 2026", { item: "oil", date: "2026-03-15" }, 2026],
+  ])("does not take a number from %s as a mileage", async (_label, text, fields, odometer) => {
+    const { saved } = await attempt({ intent: "service_log", ...fields }, text, [
+      "logService",
+      { item: fields.item, odometer },
+    ]);
+    expect(saved).toEqual([]);
+  });
+
+  it("counts “47.5k” as the user typing 47,500", async () => {
+    const routed = { intent: "service_log", item: "tire_rotation", odometer: 47_500 };
+    const { saved } = await attempt(routed, "rotated the tires at 47.5k", ["logService", { item: "tire_rotation" }]);
+    // Not the 48,000 estimate: the router's reading is used.
+    expect(saved[0].items.find((i) => i.kind === "tire_rotation")!.lastDoneOdometer).toBe(47_500);
+  });
+
   it("sets only the reading the user typed", async () => {
     const odometer = { intent: "odometer", odometer: 48_450 };
     expect((await attempt(odometer, "odometer is 48,450", ["updateOdometer", { miles: 49_000 }])).saved).toEqual([]);

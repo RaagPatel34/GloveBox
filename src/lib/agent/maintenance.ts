@@ -23,9 +23,23 @@ export type ActionRoute = Extract<Route, { intent: "service_log" | "odometer" }>
 
 const ONE_CHANGE = "A change is already recorded for this message. Stop and reply.";
 
-// Every whole number in the user's words: "48,100 miles" -> 48100.
-function typedNumbers(text: string): number[] {
-  return (text.match(/\d[\d,]*/g) ?? []).flatMap((n) => parseMiles(n) ?? []);
+// A word after a number that makes it a span of time, not a mileage: "3 days ago".
+const TIME_UNIT = /^(days?|weeks?|wks?|months?|mos?|years?|yrs?|hours?|hrs?)$/i;
+
+// The mileages in the user's words: "48,100 miles" -> 48100, "48k" -> 48000. A number
+// that is part of a date ("10/15"), a year ("March 2024"), a span of time ("3 days ago")
+// or too small to be this car's odometer is not one.
+function typedMileages(text: string, odometer: number): number[] {
+  const words = text.split(/\s+/).map((word) => word.replace(/^[("']+|[)"'.,;:!?]+$/g, ""));
+  // Under 1,000 miles counts only for a car that has barely been driven.
+  const smallest = Math.min(1_000, odometer / 2);
+  return words.flatMap((word, i) => {
+    const next = words[i + 1] ?? "";
+    const miles = parseMiles(word.replace(/(mi|miles)$/i, ""));
+    if (miles === undefined || miles < smallest || TIME_UNIT.test(next)) return [];
+    if (/^(19|20)\d\d$/.test(word) && !/^(mi|miles)$/i.test(next)) return [];
+    return [miles];
+  });
 }
 
 export function maintenanceTools(
@@ -33,7 +47,7 @@ export function maintenanceTools(
   now: Date,
   { route, text }: { route: ActionRoute; text: string },
 ): Tool[] {
-  const typed = typedNumbers(text);
+  const typed = typedMileages(text, estimateCarOdometer(state.car, now));
   const getSchedule: Tool = {
     name: "getSchedule",
     description:
