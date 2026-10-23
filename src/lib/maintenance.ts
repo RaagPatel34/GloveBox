@@ -1,7 +1,7 @@
 import type { Proposal, ScheduleItem, Vehicle, ServiceEntry } from './types';
 
 export const STORAGE_KEY = 'glovebox.v1';
-export type Garage = { version: 1; vehicle: Vehicle; items: ScheduleItem[]; proposals: Proposal[]; services?: ServiceEntry[] };
+export type Garage = { version: 1; vehicle: Vehicle; items: ScheduleItem[]; proposals: Proposal[]; services?: ServiceEntry[]; readingAt?: string; plannedTripMiles?: number };
 export type CommandResult = { proposals: Proposal[]; message: string; source: 'sample' | 'nebius'; model?: string };
 const DAY = 86_400_000;
 export const LABELS: Record<ScheduleItem['kind'], string> = {
@@ -13,7 +13,7 @@ export function demoGarage(now = new Date()): Garage {
   const date = (days: number) => new Date(now.getTime() + days * DAY).toISOString();
   const vehicle: Vehicle = { id: 'demo-civic', isDemo: true, mpgSource: { kind: 'sample' }, visitorId: 'local-demo', year: 2019, make: 'Honda', model: 'Civic', epaMpg: 32, odometer: 48000, weeklyMiles: 250, home: { label: 'Buena Park City Hall, 6650 Beach Blvd, Buena Park, CA', lat: 33.8675, lng: -117.9981 } };
   const item = (kind: ScheduleItem['kind'], dueAt?: string, dueOdometer?: number): ScheduleItem => ({ id: kind, vehicleId: vehicle.id, kind, dueAt, dueOdometer, status: 'unknown', intervalSource: { kind: 'baseline' } });
-  return { version: 1, vehicle, items: [
+  return { version: 1, vehicle, readingAt: now.toISOString(), plannedTripMiles: 0, items: [
     { ...item('wash', date(-12)), lastDoneAt: date(-26), intervalDays: 14 },
     item('oil', date(120), 48400),
     item('tire_rotation', undefined, 51500),
@@ -31,6 +31,7 @@ function target(value: unknown): boolean { return record(value) && date(value.du
 function text(value: unknown, max = 100): value is string { return typeof value === 'string' && value.trim().length > 0 && value.length <= max; }
 export function isGarage(value: unknown): value is Garage {
   if (!record(value) || value.version !== 1 || !record(value.vehicle) || !Array.isArray(value.items) || !Array.isArray(value.proposals)) return false;
+  if (!date(value.readingAt) || (value.plannedTripMiles !== undefined && (!number(value.plannedTripMiles) || value.plannedTripMiles > 10000))) return false;
   const v = value.vehicle;
   if (!text(v.id) || !text(v.make) || !text(v.model) || !number(v.year) || !number(v.odometer) || !number(v.epaMpg) || v.epaMpg === 0 || !number(v.weeklyMiles) || !record(v.home) || !text(v.home.label)) return false;
   if (value.items.length < 1 || value.items.length > 20 || value.proposals.length > 100) return false;

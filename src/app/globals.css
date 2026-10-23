@@ -1,117 +1,151 @@
+@import "tailwindcss";
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-panel: var(--panel);
+  --color-muted: var(--muted);
+  --color-overdue: var(--status-overdue);
+  --color-overdue-text: var(--status-overdue-text);
+  --color-due-soon: var(--status-due-soon);
+  --color-due-soon-text: var(--status-due-soon-text);
+  --color-ok: var(--status-ok);
+  --color-ok-text: var(--status-ok-text);
+  --font-sans: var(--font-body), system-ui, sans-serif;
+  --font-mono: var(--font-numeric), ui-monospace, monospace;
+}
+
+
 :root { --ink: #22392f; --muted: #69786e; --paper: #f5f6f1; --line: #dce1d7; --green: #254c39; --lime: #d3ed9b; }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--paper); color: var(--ink); font-family: Arial, Helvetica, sans-serif; font-size: 14px; }
-button, textarea, select { font: inherit; }
-button, a, select { -webkit-tap-highlight-color: transparent; }
-button { cursor: pointer; }
-button:disabled { opacity: .5; cursor: not-allowed; }
-button, select, textarea, a { outline-offset: 5px; }
-:focus-visible { outline: 2px solid #45723b; }
-a { color: inherit; text-decoration: none; }
+.app-shell button, .app-shell textarea, .app-shell select { font: inherit; }
+.app-shell button, .app-shell a, .app-shell select { -webkit-tap-highlight-color: transparent; }
+.app-shell button { cursor: pointer; }
+.app-shell button:disabled { opacity: .5; cursor: not-allowed; }
+.app-shell button, .app-shell select, .app-shell textarea, .app-shell a { outline-offset: 5px; }
+.app-shell :focus-visible { outline: 2px solid #45723b; }
+.app-shell a { color: inherit; text-decoration: none; }
 .app-shell { max-width: 1440px; margin: auto; padding: 0 64px; }
-.topbar { height: 100px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 20px; }
-.brand { display: flex; align-items: center; font-size: 26px; font-weight: 700; letter-spacing: -1.3px; gap: 10px; }
-.brand-mark { display: grid; place-items: center; width: 36px; height: 36px; background: var(--ink); color: var(--lime); border-radius: 10px; font-size: 28px; }
-.brand-dot { font-size: 10px; align-self: flex-start; padding-top: 4px; margin-left: -8px; }
-.top-note, .tiny { color: var(--muted); font-size: 11px; line-height: 1.6; }
-.preview-tag { font-size: 10px; letter-spacing: 1px; border: 1px solid var(--line); padding: 8px 11px; border-radius: 4px; }
-.intro { padding: 57px 0 45px; display: flex; justify-content: space-between; align-items: center; }
-.eyebrow, .small-label { font-size: 10px; letter-spacing: 1.5px; font-weight: 600; }
-.eyebrow { margin: 0 0 19px; color: #60775c; }
-h1 { font-size: clamp(42px, 5vw, 64px); line-height: 1.04; letter-spacing: -3px; font-weight: 500; margin: 0; }
-.intro-copy { color: var(--muted); line-height: 1.7; margin: 20px 0 0; }
-.intro-aside { border-left: 1px solid var(--line); padding-left: 30px; margin-right: 36px; }
-.intro-aside p { font-size: 23px; line-height: 1.35; margin: 17px 0; letter-spacing: -.5px; }
-.section-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 19px; gap: 12px; }
-h2 { font-weight: 500; font-size: 19px; letter-spacing: -.5px; margin: 0; }
-.count { font-family: monospace; font-size: 11px; color: var(--muted); margin-left: 8px; vertical-align: middle; }
-.text-button { border: 0; background: transparent; font-size: 12px; color: var(--green); padding: 8px 0 8px 8px; }
-.vehicle-card { display: grid; grid-template-columns: 1fr 1.4fr 1fr; align-items: center; background: #e5ecdf; border: 1px solid #d5decd; border-radius: 14px; padding: 30px 36px; min-height: 240px; overflow: hidden; }
-.pill { display: inline-block; font-size: 9px; letter-spacing: .8px; padding: 6px 9px; border-radius: 4px; background: #edf1e7; font-weight: 600; }
-.pill.light { background: #f6f8f0; }
-.vehicle-info h2 { font-size: 21px; line-height: 1.5; margin-top: 15px; }
-.vehicle-info h2 strong { font-size: 33px; font-weight: 500; }
-.vehicle-info p { font-size: 11px; color: var(--muted); margin: 12px 0 0; }
-.car-art { width: 100%; padding: 0 10px; }
-.car-art svg { width: 100%; }
-.vehicle-stats { border-left: 1px solid #cbd6c4; padding-left: 36px; margin-left: 28px; }
-.vehicle-stats .small-label { font-size: 8px; letter-spacing: 1px; color: #52654e; }
-.vehicle-stats p { margin: 8px 0 18px; font-size: 30px; letter-spacing: -1px; }
-.vehicle-stats small { font-size: 12px; letter-spacing: 0; color: #63735c; }
-.vehicle-stats .tiny { font-size: 9px; }
-.workspace { display: grid; grid-template-columns: 1.7fr 1fr; gap: 32px; margin-top: 36px; align-items: start; }
-.health-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 13px; }
-.health-card { background: #fffefa; padding: 21px; border-radius: 9px; border: 1px solid var(--line); }
-.card-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.item-symbol { font-size: 22px; color: #66795d; }
-.status { font-size: 9px; display: inline-flex; align-items: center; gap: 5px; color: #586e4f; }
-.status i { width: 5px; height: 5px; background: currentColor; border-radius: 50%; }
-.status.overdue { color: #a44d32; }.status.due_soon { color: #94702b; }.status.unknown { color: #6f756e; }
-h3 { font-size: 15px; font-weight: 500; margin: 18px 0 8px; }
-.health-card p { font-size: 12px; margin: 0 0 14px; color: #55634f; }
-.health-card .tiny { font-size: 9px; }
-.copilot { background: #eaeedc; border: 1px solid #dae2c8; border-radius: 12px; padding: 25px; }
-.copilot-heading { display: flex; align-items: start; gap: 12px; }
-.spark { font-size: 28px; color: #4c6b35; line-height: 1; }
-.copilot h2 { font-size: 20px; line-height: 1.3; max-width: 230px; }
-.copilot > p { font-size: 12px; line-height: 1.7; color: #61704f; margin: 16px 0 24px; }
-form label { display: block; font-size: 11px; font-weight: 600; margin-bottom: 9px; }
-textarea { width: 100%; resize: vertical; background: #fafbf5; border: 1px solid #cbd5bc; border-radius: 7px; padding: 14px; color: var(--ink); font-size: 13px; line-height: 1.6; min-height: 110px; }
-textarea::placeholder { color: #7e8872; }
-.example-button { font-size: 10px; text-align: left; background: none; border: 0; padding: 12px 0 16px; color: #526b3d; }
-.mode-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 0 0 14px; }
-.mode-row label { font-size: 10px; margin: 0; font-weight: 400; }
-select { background: #f6f8ed; color: var(--ink); border: 1px solid #cad4b8; border-radius: 4px; font-size: 10px; padding: 7px; max-width: 180px; }
-.primary { background: var(--green); color: #f4f7e9; border: 1px solid var(--green); padding: 13px 18px; border-radius: 6px; font-size: 12px; display: inline-flex; justify-content: space-between; align-items: center; gap: 25px; }
-.primary:hover:not(:disabled) { background: #193e2b; }
-.primary.full { width: 100%; }
-.copilot .mode-note { font-size: 10px; line-height: 1.6; margin: 15px 0 0; }
-.feedback:empty { display: none; }.feedback { margin-top: 24px; font-size: 13px; line-height: 1.6; }
-.notice { border-left: 3px solid #8ca86b; padding: 12px 16px; background: #eef1e5; }
-.suggestions { margin-top: 32px; }
-.quiet-state { border: 1px dashed #cfd8c6; padding: 25px; text-align: center; color: #76816f; border-radius: 8px; font-size: 12px; }
-.proposal-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
-.proposal { padding: 24px; background: #fffefa; border: 1px solid var(--line); border-radius: 10px; }
-.proposal h3 { font-size: 18px; }.proposal p { color: var(--muted); line-height: 1.7; font-size: 12px; }
-.date-change { display: flex; gap: 16px; font-size: 12px; margin: 18px 0; align-items: center; flex-wrap: wrap; }.date-change > span { color: var(--muted); text-decoration: line-through; }.date-change strong { font-weight: 500; }
-.actions { display: flex; gap: 10px; margin-top: 20px; }.secondary { background: none; border: 1px solid var(--line); border-radius: 6px; padding: 10px 16px; color: var(--muted); font-size: 12px; }
-.activity { margin-top: 28px; }.activity h2 { font-size: 15px; margin-bottom: 14px; }.activity > div { display: flex; justify-content: space-between; font-size: 12px; padding: 13px 0; border-top: 1px solid var(--line); color: var(--muted); }
-.error { background: #f8e9df; border: 1px solid #e8bba0; border-radius: 7px; padding: 16px; font-size: 13px; line-height: 1.6; margin-top: 20px; }
-.empty-state { background: #e8eddf; padding: 25px 30px 45px; border-radius: 12px; text-align: center; }.empty-state h2 { font-size: 28px; }.empty-state p { color: var(--muted); line-height: 1.7; margin: 15px 0 22px; }.empty-car { width: 280px; max-width: 100%; margin: auto; }
-footer { margin-top: 58px; padding: 28px 0 32px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 20px; color: var(--muted); font-size: 10px; }.footer-brand { font-size: 20px; color: var(--ink); }
-@media (min-width: 1450px) { .intro { padding-top: 70px; } }
-@media (max-width: 1000px) { .app-shell { padding: 0 30px; }.intro-aside { margin-right: 0; }.workspace { gap: 20px; grid-template-columns: 1.4fr 1fr; }.health-card { padding: 16px; }.vehicle-card { padding: 26px; }.vehicle-stats { padding-left: 22px; margin-left: 10px; }.vehicle-stats p { font-size: 25px; }.copilot { padding: 20px; } }
-@media (max-width: 760px) { .app-shell { padding: 0 20px; }.topbar { height: 76px; }.top-note, .intro-aside { display: none; }.brand { font-size: 23px; }.intro { padding: 36px 0; }h1 { letter-spacing: -2px; }.vehicle-card { grid-template-columns: 1fr 1fr; padding: 24px; }.vehicle-info h2 { font-size: 17px; }.vehicle-info h2 strong { font-size: 28px; }.vehicle-stats { grid-column: 1 / -1; margin: 22px 0 0; padding: 20px 0 0; border-left: 0; border-top: 1px solid #cbd6c4; display: flex; justify-content: space-between; gap: 20px; }.vehicle-stats .tiny { display: none; }.vehicle-stats p { margin-bottom: 0; }.car-art { padding: 0; }.workspace { grid-template-columns: 1fr; }.copilot { grid-row: 1; }.copilot h2 { max-width: none; }.proposal-grid { grid-template-columns: 1fr; }.section-heading > .tiny { font-size: 9px; }.health-grid { gap: 10px; }.health-card { padding: 15px; }.health-card h3 { font-size: 14px; }.status { font-size: 8px; }.card-top { gap: 4px; }footer { flex-wrap: wrap; margin-top: 35px; }footer > :last-child { width: 100%; }.actions { flex-wrap: wrap; } }
-@media (prefers-reduced-motion: no-preference) { button { transition: background .15s ease; } }
+.app-shell .topbar { height: 100px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.app-shell .brand { display: flex; align-items: center; font-size: 26px; font-weight: 700; letter-spacing: -1.3px; gap: 10px; }
+.app-shell .brand-mark { display: grid; place-items: center; width: 36px; height: 36px; background: var(--ink); color: var(--lime); border-radius: 10px; font-size: 28px; }
+.app-shell .brand-dot { font-size: 10px; align-self: flex-start; padding-top: 4px; margin-left: -8px; }
+.app-shell .top-note, .app-shell .tiny { color: var(--muted); font-size: 11px; line-height: 1.6; }
+.app-shell .preview-tag { font-size: 10px; letter-spacing: 1px; border: 1px solid var(--line); padding: 8px 11px; border-radius: 4px; }
+.app-shell .intro { padding: 57px 0 45px; display: flex; justify-content: space-between; align-items: center; }
+.app-shell .eyebrow, .app-shell .small-label { font-size: 10px; letter-spacing: 1.5px; font-weight: 600; }
+.app-shell .eyebrow { margin: 0 0 19px; color: #60775c; }
+.app-shell h1 { font-size: clamp(42px, 5vw, 64px); line-height: 1.04; letter-spacing: -3px; font-weight: 500; margin: 0; }
+.app-shell .intro-copy { color: var(--muted); line-height: 1.7; margin: 20px 0 0; }
+.app-shell .intro-aside { border-left: 1px solid var(--line); padding-left: 30px; margin-right: 36px; }
+.app-shell .intro-aside p { font-size: 23px; line-height: 1.35; margin: 17px 0; letter-spacing: -.5px; }
+.app-shell .section-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 19px; gap: 12px; }
+.app-shell h2 { font-weight: 500; font-size: 19px; letter-spacing: -.5px; margin: 0; }
+.app-shell .count { font-family: monospace; font-size: 11px; color: var(--muted); margin-left: 8px; vertical-align: middle; }
+.app-shell .text-button { border: 0; background: transparent; font-size: 12px; color: var(--green); padding: 8px 0 8px 8px; }
+.app-shell .vehicle-card { display: grid; grid-template-columns: 1fr 1.4fr 1fr; align-items: center; background: #e5ecdf; border: 1px solid #d5decd; border-radius: 14px; padding: 30px 36px; min-height: 240px; overflow: hidden; }
+.app-shell .pill { display: inline-block; font-size: 9px; letter-spacing: .8px; padding: 6px 9px; border-radius: 4px; background: #edf1e7; font-weight: 600; }
+.app-shell .pill.light { background: #f6f8f0; }
+.app-shell .vehicle-info h2 { font-size: 21px; line-height: 1.5; margin-top: 15px; }
+.app-shell .vehicle-info h2 strong { font-size: 33px; font-weight: 500; }
+.app-shell .vehicle-info p { font-size: 11px; color: var(--muted); margin: 12px 0 0; }
+.app-shell .car-art { width: 100%; padding: 0 10px; }
+.app-shell .car-art svg { width: 100%; }
+.app-shell .vehicle-stats { border-left: 1px solid #cbd6c4; padding-left: 36px; margin-left: 28px; }
+.app-shell .vehicle-stats .small-label { font-size: 8px; letter-spacing: 1px; color: #52654e; }
+.app-shell .vehicle-stats p { margin: 8px 0 18px; font-size: 30px; letter-spacing: -1px; }
+.app-shell .vehicle-stats small { font-size: 12px; letter-spacing: 0; color: #63735c; }
+.app-shell .vehicle-stats .tiny { font-size: 9px; }
+.app-shell .workspace { display: grid; grid-template-columns: 1.7fr 1fr; gap: 32px; margin-top: 36px; align-items: start; }
+.app-shell .health-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 13px; }
+.app-shell .health-card { background: #fffefa; padding: 21px; border-radius: 9px; border: 1px solid var(--line); }
+.app-shell .card-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.app-shell .item-symbol { font-size: 22px; color: #66795d; }
+.app-shell .status { font-size: 9px; display: inline-flex; align-items: center; gap: 5px; color: #586e4f; }
+.app-shell .status i { width: 5px; height: 5px; background: currentColor; border-radius: 50%; }
+.app-shell .status.overdue { color: #a44d32; }.app-shell .status.due_soon { color: #94702b; }.app-shell .status.unknown { color: #6f756e; }
+.app-shell h3 { font-size: 15px; font-weight: 500; margin: 18px 0 8px; }
+.app-shell .health-card p { font-size: 12px; margin: 0 0 14px; color: #55634f; }
+.app-shell .health-card .tiny { font-size: 9px; }
+.app-shell .copilot { background: #eaeedc; border: 1px solid #dae2c8; border-radius: 12px; padding: 25px; }
+.app-shell .copilot-heading { display: flex; align-items: start; gap: 12px; }
+.app-shell .spark { font-size: 28px; color: #4c6b35; line-height: 1; }
+.app-shell .copilot h2 { font-size: 20px; line-height: 1.3; max-width: 230px; }
+.app-shell .copilot > p { font-size: 12px; line-height: 1.7; color: #61704f; margin: 16px 0 24px; }
+.app-shell form label { display: block; font-size: 11px; font-weight: 600; margin-bottom: 9px; }
+.app-shell textarea { width: 100%; resize: vertical; background: #fafbf5; border: 1px solid #cbd5bc; border-radius: 7px; padding: 14px; color: var(--ink); font-size: 13px; line-height: 1.6; min-height: 110px; }
+.app-shell textarea::placeholder { color: #7e8872; }
+.app-shell .example-button { font-size: 10px; text-align: left; background: none; border: 0; padding: 12px 0 16px; color: #526b3d; }
+.app-shell .mode-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 0 0 14px; }
+.app-shell .mode-row label { font-size: 10px; margin: 0; font-weight: 400; }
+.app-shell select { background: #f6f8ed; color: var(--ink); border: 1px solid #cad4b8; border-radius: 4px; font-size: 10px; padding: 7px; max-width: 180px; }
+.app-shell .primary { background: var(--green); color: #f4f7e9; border: 1px solid var(--green); padding: 13px 18px; border-radius: 6px; font-size: 12px; display: inline-flex; justify-content: space-between; align-items: center; gap: 25px; }
+.app-shell .primary:hover:not(:disabled) { background: #193e2b; }
+.app-shell .primary.full { width: 100%; }
+.app-shell .copilot .mode-note { font-size: 10px; line-height: 1.6; margin: 15px 0 0; }
+.app-shell .feedback:empty { display: none; }.app-shell .feedback { margin-top: 24px; font-size: 13px; line-height: 1.6; }
+.app-shell .notice { border-left: 3px solid #8ca86b; padding: 12px 16px; background: #eef1e5; }
+.app-shell .suggestions { margin-top: 32px; }
+.app-shell .quiet-state { border: 1px dashed #cfd8c6; padding: 25px; text-align: center; color: #76816f; border-radius: 8px; font-size: 12px; }
+.app-shell .proposal-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.app-shell .proposal { padding: 24px; background: #fffefa; border: 1px solid var(--line); border-radius: 10px; }
+.app-shell .proposal h3 { font-size: 18px; }.app-shell .proposal p { color: var(--muted); line-height: 1.7; font-size: 12px; }
+.app-shell .date-change { display: flex; gap: 16px; font-size: 12px; margin: 18px 0; align-items: center; flex-wrap: wrap; }.app-shell .date-change > span { color: var(--muted); text-decoration: line-through; }.app-shell .date-change strong { font-weight: 500; }
+.app-shell .actions { display: flex; gap: 10px; margin-top: 20px; }.app-shell .secondary { background: none; border: 1px solid var(--line); border-radius: 6px; padding: 10px 16px; color: var(--muted); font-size: 12px; }
+.app-shell .activity { margin-top: 28px; }.app-shell .activity h2 { font-size: 15px; margin-bottom: 14px; }.app-shell .activity > div { display: flex; justify-content: space-between; font-size: 12px; padding: 13px 0; border-top: 1px solid var(--line); color: var(--muted); }
+.app-shell .error { background: #f8e9df; border: 1px solid #e8bba0; border-radius: 7px; padding: 16px; font-size: 13px; line-height: 1.6; margin-top: 20px; }
+.app-shell .empty-state { background: #e8eddf; padding: 25px 30px 45px; border-radius: 12px; text-align: center; }.app-shell .empty-state h2 { font-size: 28px; }.app-shell .empty-state p { color: var(--muted); line-height: 1.7; margin: 15px 0 22px; }.app-shell .empty-car { width: 280px; max-width: 100%; margin: auto; }
+.app-shell footer { margin-top: 58px; padding: 28px 0 32px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 20px; color: var(--muted); font-size: 10px; }.app-shell .footer-brand { font-size: 20px; color: var(--ink); }
+@media (min-width: 1450px) { .app-shell .intro { padding-top: 70px; } }
+@media (max-width: 1000px) { .app-shell { padding: 0 30px; }.app-shell .intro-aside { margin-right: 0; }.app-shell .workspace { gap: 20px; grid-template-columns: 1.4fr 1fr; }.app-shell .health-card { padding: 16px; }.app-shell .vehicle-card { padding: 26px; }.app-shell .vehicle-stats { padding-left: 22px; margin-left: 10px; }.app-shell .vehicle-stats p { font-size: 25px; }.app-shell .copilot { padding: 20px; } }
+@media (max-width: 760px) { .app-shell { padding: 0 20px; }.app-shell .topbar { height: 76px; }.app-shell .top-note, .app-shell .intro-aside { display: none; }.app-shell .brand { font-size: 23px; }.app-shell .intro { padding: 36px 0; }.app-shell h1 { letter-spacing: -2px; }.app-shell .vehicle-card { grid-template-columns: 1fr 1fr; padding: 24px; }.app-shell .vehicle-info h2 { font-size: 17px; }.app-shell .vehicle-info h2 strong { font-size: 28px; }.app-shell .vehicle-stats { grid-column: 1 / -1; margin: 22px 0 0; padding: 20px 0 0; border-left: 0; border-top: 1px solid #cbd6c4; display: flex; justify-content: space-between; gap: 20px; }.app-shell .vehicle-stats .tiny { display: none; }.app-shell .vehicle-stats p { margin-bottom: 0; }.app-shell .car-art { padding: 0; }.app-shell .workspace { grid-template-columns: 1fr; }.app-shell .copilot { grid-row: 1; }.app-shell .copilot h2 { max-width: none; }.app-shell .proposal-grid { grid-template-columns: 1fr; }.app-shell .section-heading > .tiny { font-size: 9px; }.app-shell .health-grid { gap: 10px; }.app-shell .health-card { padding: 15px; }.app-shell .health-card h3 { font-size: 14px; }.app-shell .status { font-size: 8px; }.app-shell .card-top { gap: 4px; }.app-shell footer { flex-wrap: wrap; margin-top: 35px; }.app-shell footer > :last-child { width: 100%; }.app-shell .actions { flex-wrap: wrap; } }
+@media (prefers-reduced-motion: no-preference) { .app-shell button { transition: background .15s ease; } }
 /* Car records and trip tools */
-.toolbar { display:flex; gap:18px; flex-wrap:wrap; }
-.unframed { margin:0; padding:0; border:0; min-width:0; }
-.tool-panel { margin:28px 0; padding:26px; border:1px solid var(--line); background:#fffefa; border-radius:12px; }
-.tool-panel .helper, .helper { font-size:12px; line-height:1.7; color:var(--muted); }
-.form-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
-.form-grid label { min-width:0; }
-input:not([type='checkbox']):not([type='file']) { display:block; width:100%; border:1px solid #cbd5bc; border-radius:6px; background:#fafbf5; color:var(--ink); padding:11px 12px; font:inherit; font-size:13px; margin-top:8px; }
-.tool-panel label, .route-builder label { display:block; margin:14px 0; font-size:12px; }
-.tool-panel select { display:block; width:100%; max-width:none; padding:10px; font-size:12px; margin-top:8px; }
-.tool-panel textarea { margin-top:8px; }
-.check-label { display:flex!important; align-items:start; gap:10px; font-size:12px; line-height:1.6; }
-.check-label input { margin-top:4px; }
-.field-note { display:block; font-size:10px; color:var(--muted); line-height:1.5; margin-top:7px; }
-.spaced { margin-top:18px; }
-.tools-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:start; }
-details summary { cursor:pointer; font-size:13px; line-height:1.5; }
-.tools-grid > details { padding:17px; border:1px solid var(--line); border-radius:8px; }
-details[open] > summary { margin-bottom:16px; }
-.tools-grid .form-grid { grid-template-columns:1fr 1fr; }
-.history { margin-top:18px; border-top:1px solid var(--line); padding-top:18px; }
-.history-list article { padding:14px 0; border-top:1px solid var(--line); display:flex; flex-wrap:wrap; justify-content:space-between; gap:10px; font-size:12px; }
-.history-list article strong { font-weight:500; }.history-list article span { color:var(--muted); }.history-list article p { width:100%; margin:0; line-height:1.6; overflow-wrap:anywhere; }
-.file-label { border:1px solid var(--line); border-radius:6px; padding:10px; margin:0!important; max-width:100%; }.file-label input { display:block; margin-top:8px; max-width:100%; font-size:10px; }
-.source-library { margin-top:24px; border:1px solid var(--line); border-radius:8px; padding:18px 22px; background:#edf1e7; }
-.source-library p { font-size:12px; line-height:1.7; color:var(--muted); }.source-library a,.source-link,.trip-result a { text-decoration:underline; text-underline-offset:3px; }
-.source-link { display:block; font-size:10px; margin-top:8px; }.source-note { margin-top:10px; }.source-note summary { font-size:10px; }.source-note p { line-height:1.6; overflow-wrap:anywhere; }
-.trip-panel { margin-top:36px; background:#edf1e7; }.trip-panel .eyebrow { margin-bottom:10px; }.trip-panel h2 { font-size:24px; }.trip-inputs { grid-template-columns:repeat(4,minmax(0,1fr)); }.trip-panel .form-grid:not(.trip-inputs) { grid-template-columns:1fr 1fr; }.trip-panel .route-builder { border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:14px 0; margin-top:20px; }
-.trip-result { margin-top:24px; background:#fffefa; padding:24px; border-radius:9px; }.trip-result h3 { font-size:26px; margin:16px 0; }.trip-result p { font-size:12px; line-height:1.7; }.calculation-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; margin:24px 0; }.calculation-grid span { display:block; color:var(--muted); font-size:11px; line-height:1.5; }.calculation-grid strong { display:block; font-size:23px; margin-top:9px; font-weight:500; }
-.link-button { display:inline-block; }
-@media (max-width:760px) { .tool-panel { padding:19px; }.form-grid, .trip-inputs { grid-template-columns:1fr 1fr; }.tools-grid { grid-template-columns:1fr; }.trip-panel h2 { font-size:20px; }.trip-panel .section-heading { align-items:start; }.trip-panel .text-button { white-space:nowrap; }.calculation-grid { grid-template-columns:1fr 1fr; }.trip-result { padding:18px; }.trip-result h3 { font-size:22px; } }
-@media (max-width:420px) { .form-grid,.trip-panel .form-grid:not(.trip-inputs) { grid-template-columns:1fr; }.trip-inputs { grid-template-columns:1fr 1fr; }.toolbar { gap:10px; }.section-heading h2 { font-size:17px; } }
+.app-shell .toolbar { display:flex; gap:18px; flex-wrap:wrap; }
+.app-shell .unframed { margin:0; padding:0; border:0; min-width:0; }
+.app-shell .tool-panel { margin:28px 0; padding:26px; border:1px solid var(--line); background:#fffefa; border-radius:12px; }
+.app-shell .tool-panel .helper, .app-shell .helper { font-size:12px; line-height:1.7; color:var(--muted); }
+.app-shell .form-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+.app-shell .form-grid label { min-width:0; }
+.app-shell input:not([type='checkbox']):not([type='file']) { display:block; width:100%; border:1px solid #cbd5bc; border-radius:6px; background:#fafbf5; color:var(--ink); padding:11px 12px; font:inherit; font-size:13px; margin-top:8px; }
+.app-shell .tool-panel label, .app-shell .route-builder label { display:block; margin:14px 0; font-size:12px; }
+.app-shell .tool-panel select { display:block; width:100%; max-width:none; padding:10px; font-size:12px; margin-top:8px; }
+.app-shell .tool-panel textarea { margin-top:8px; }
+.app-shell .check-label { display:flex!important; align-items:start; gap:10px; font-size:12px; line-height:1.6; }
+.app-shell .check-label input { margin-top:4px; }
+.app-shell .field-note { display:block; font-size:10px; color:var(--muted); line-height:1.5; margin-top:7px; }
+.app-shell .spaced { margin-top:18px; }
+.app-shell .tools-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:start; }
+.app-shell details summary { cursor:pointer; font-size:13px; line-height:1.5; }
+.app-shell .tools-grid > details { padding:17px; border:1px solid var(--line); border-radius:8px; }
+.app-shell details[open] > summary { margin-bottom:16px; }
+.app-shell .tools-grid .form-grid { grid-template-columns:1fr 1fr; }
+.app-shell .history { margin-top:18px; border-top:1px solid var(--line); padding-top:18px; }
+.app-shell .history-list article { padding:14px 0; border-top:1px solid var(--line); display:flex; flex-wrap:wrap; justify-content:space-between; gap:10px; font-size:12px; }
+.app-shell .history-list article strong { font-weight:500; }.app-shell .history-list article span { color:var(--muted); }.app-shell .history-list article p { width:100%; margin:0; line-height:1.6; overflow-wrap:anywhere; }
+.app-shell .file-label { border:1px solid var(--line); border-radius:6px; padding:10px; margin:0!important; max-width:100%; }.app-shell .file-label input { display:block; margin-top:8px; max-width:100%; font-size:10px; }
+.app-shell .source-library { margin-top:24px; border:1px solid var(--line); border-radius:8px; padding:18px 22px; background:#edf1e7; }
+.app-shell .source-library p { font-size:12px; line-height:1.7; color:var(--muted); }.app-shell .source-library a,.app-shell .source-link,.app-shell .trip-result a { text-decoration:underline; text-underline-offset:3px; }
+.app-shell .source-link { display:block; font-size:10px; margin-top:8px; }.app-shell .source-note { margin-top:10px; }.app-shell .source-note summary { font-size:10px; }.app-shell .source-note p { line-height:1.6; overflow-wrap:anywhere; }
+.app-shell .trip-panel { margin-top:36px; background:#edf1e7; }.app-shell .trip-panel .eyebrow { margin-bottom:10px; }.app-shell .trip-panel h2 { font-size:24px; }.app-shell .trip-inputs { grid-template-columns:repeat(4,minmax(0,1fr)); }.app-shell .trip-panel .form-grid:not(.trip-inputs) { grid-template-columns:1fr 1fr; }.app-shell .trip-panel .route-builder { border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:14px 0; margin-top:20px; }
+.app-shell .trip-result { margin-top:24px; background:#fffefa; padding:24px; border-radius:9px; }.app-shell .trip-result h3 { font-size:26px; margin:16px 0; }.app-shell .trip-result p { font-size:12px; line-height:1.7; }.app-shell .calculation-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; margin:24px 0; }.app-shell .calculation-grid span { display:block; color:var(--muted); font-size:11px; line-height:1.5; }.app-shell .calculation-grid strong { display:block; font-size:23px; margin-top:9px; font-weight:500; }
+.app-shell .link-button { display:inline-block; }
+@media (max-width:760px) { .app-shell .tool-panel { padding:19px; }.app-shell .form-grid, .app-shell .trip-inputs { grid-template-columns:1fr 1fr; }.app-shell .tools-grid { grid-template-columns:1fr; }.app-shell .trip-panel h2 { font-size:20px; }.app-shell .trip-panel .section-heading { align-items:start; }.app-shell .trip-panel .text-button { white-space:nowrap; }.app-shell .calculation-grid { grid-template-columns:1fr 1fr; }.app-shell .trip-result { padding:18px; }.app-shell .trip-result h3 { font-size:22px; } }
+@media (max-width:420px) { .app-shell .form-grid,.app-shell .trip-panel .form-grid:not(.trip-inputs) { grid-template-columns:1fr; }.app-shell .trip-inputs { grid-template-columns:1fr 1fr; }.app-shell .toolbar { gap:10px; }.app-shell .section-heading h2 { font-size:17px; } }
+
+.cloud-garage {
+  color-scheme: dark;
+  --background: #0d0e0f;
+  --foreground: #e9e7e2;
+  --panel: #151719;
+  --muted: #8b8a86;
+  --status-overdue: #ff6a3d;
+  --status-overdue-text: #ff8a63;
+  --status-due-soon: #f2a815;
+  --status-due-soon-text: #f5bd4a;
+  --status-ok: #5fd0a0;
+  --status-ok-text: #7fdcb3;
+}
+
+
+.cloud-garage { min-height:100vh; background:var(--background); color:var(--foreground); --font-body:Arial; --font-numeric:monospace; }

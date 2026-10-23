@@ -1,14 +1,14 @@
 # GitHub issue acceptance audit
 
-Reviewed against issues #4–#19 on October 22, 2026. These issues are the delivery backlog. This branch is a partial implementation, not a replacement for their acceptance criteria. No issue is automatically closed by this PR.
+Reviewed against issues #4–#19 on October 23, 2026. These issues are the delivery backlog. This branch is a partial implementation, not a replacement for their acceptance criteria. No issue is automatically closed by this PR.
 
 | Issue | Implemented on this branch | Still required |
 | --- | --- | --- |
-| [#4](https://github.com/RaagPatel34/GloveBox/issues/4) Hosting and keys | Vercel build configuration, server-enforced AI pause, prior Super tool-call verification | Vercel account connection and hosted verification; provider keys/caps; Nano/Ultra verification. Nebius usage is explicitly deferred by the team. |
-| [#5](https://github.com/RaagPatel34/GloveBox/issues/5) Dashboard | Eight fixture cards, status thresholds, phone layout, domain tests | Dashboard currently uses recorded mileage; wire reading date, weekly estimate and planned-trip projection as required. Never change the actual recorded odometer for a planned trip. |
-| [#6](https://github.com/RaagPatel34/GloveBox/issues/6) Car setup | EPA engine selection, manual MPG, eight cards, local persistence | Anonymous visitor identity, Postgres storage, weekly mileage input, baseline schedules and hosted acceptance checks. Local storage does not satisfy Postgres acceptance. |
-| [#7](https://github.com/RaagPatel34/GloveBox/issues/7) Demo car | Eight items; wash last done 26 days ago, oil 400 mi away, other six OK; reset clears proposals; public City Hall address | Verify reset on the hosted build. Existing city-center coordinates are approximate; geocode the landmark for routing before #12. |
-| [#8](https://github.com/RaagPatel34/GloveBox/issues/8) Command routing | Manual service and odometer forms; existing Super proposal loop | Nano classification, command-bar service/odometer tools, fixed routing examples, full model badges. Manual forms do not complete the ticket. |
+| [#4](https://github.com/RaagPatel34/GloveBox/issues/4) Hosting and keys | Feature-branch Vercel preview verified, server-enforced AI pause, prior Super tool-call verification | Provider keys/caps; Nano/Ultra verification. Nebius usage is explicitly deferred by the team. |
+| [#5](https://github.com/RaagPatel34/GloveBox/issues/5) Dashboard | Eight fixture cards, status thresholds, reading-date/weekly/planned mileage projection; separate recorded odometer; upstream cloud dashboard and tests | Hosted cloud dashboard acceptance with a configured database. |
+| [#6](https://github.com/RaagPatel34/GloveBox/issues/6) Car setup | EPA engine selection, manual MPG, weekly mileage, local persistence; upstream anonymous visitor identity, Postgres store/schema and baseline setup at /garage | Configure an existing database, run schema migration, verify hosted cloud setup and persistence. Local storage does not satisfy Postgres acceptance. |
+| [#7](https://github.com/RaagPatel34/GloveBox/issues/7) Demo car | Eight items; wash last done 26 days ago, oil 400 mi away, other six OK; reset clears proposals; public City Hall address | Reset verified on the hosted local preview; cloud reset still needs database acceptance. Existing city-center coordinates are approximate; geocode the landmark for routing before #12. |
+| [#8](https://github.com/RaagPatel34/GloveBox/issues/8) Command routing | Manual service and odometer forms; Super proposal loop; upstream Nano classification, command-bar tools, routing fixtures and model badges incorporated | Funded live router and database verification. Both command endpoints remain disabled; fixture tests do not replace live acceptance. |
 | [#9](https://github.com/RaagPatel34/GloveBox/issues/9) Proposals | From/to/reason/model cards, Apply/Dismiss, persistent state, sample dusty-trip path; Super previously verified | Reverify funded live model and hosted behavior. Sample output is labeled and is not live AI. |
 | [#10](https://github.com/RaagPatel34/GloveBox/issues/10) Weather/AQ | Shared nudge type only | Open-Meteo providers, conditional nudges, persisted nudges and real forecast demo seed. |
 | [#11](https://github.com/RaagPatel34/GloveBox/issues/11) Manufacturer lookup | Source-link UI and manual source entry | Tavily lookup and validated manufacturer/baseline fallback. Manual links do not complete this ticket. |
@@ -23,7 +23,7 @@ Reviewed against issues #4–#19 on October 22, 2026. These issues are the deliv
 
 ## Current work order
 
-1. #4: connect Vercel and verify a feature-branch preview with `ENABLE_LIVE_AI=false`. Do not merge or push to main.
+1. #4 preview is deployed with `ENABLE_LIVE_AI=false`. Preserve main and the draft PR.
 2. Finish #5–#7 acceptance, then #8–#10, then #12/#13/#15. Implement provider-independent work while credits are deferred; do not silently replace required integrations with manual-only flows.
 3. Complete #18/#19 using the actual finished product. Keep #11/#14/#16/#17 at their stated optional priorities.
 

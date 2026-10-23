@@ -37,6 +37,14 @@ Recording an older service adds history without rolling a newer schedule backwar
 
 One vehicle per browser. Data does not sync across devices or between localhost and the deployed domain. Export before replacing your garage. The app supports liquid-fuel cost estimates, not EV charging or plug-in hybrid energy modeling.
 
+## Reconciled cloud garage
+
+The feature branch incorporates main through `b5da2e0` (October 23, 2026). The original local garage remains at `/`; `/garage` contains the newer cloud dashboard, setup, visitor identity, and Postgres persistence. These garages are separate: local records are never uploaded or replaced automatically.
+
+Cloud storage is not configured in the preview. To use an existing development database, privately configure `DATABASE_URL` and run `npm run db:migrate` against that database before using `/garage`. No database was provisioned or migrated during reconciliation. End-to-end cloud persistence still requires verification.
+
+Weekly mileage and planned trips now project reminder urgency in the local garage. The recorded odometer and completed-service mileage remain actual readings; planned miles never count as completed driving. Legacy backups remain compatible.
+
 ## NVIDIA / Nebius integration
 
 The existing `/api/command` route uses a configured NVIDIA Nemotron model through Nebius Token Factory. It validates bounded structured tool arguments and returns pending suggestions; the model cannot write the schedule directly. This integration previously passed a real local tool-round-trip and maintenance-proposal test.
@@ -55,7 +63,9 @@ The smoke script is an explicit integration test and makes calls when invoked wi
 
 ## Architecture
 
-- `src/app/page.tsx`: dashboard, browser persistence, proposal review.
+- `src/components/local-garage.tsx`: local dashboard, browser persistence, proposal review.
+- `/garage`: upstream cloud dashboard and setup with anonymous visitor identity and Postgres storage.
+- `/api/cloud-command`: upstream Nano/Super command router, guarded by the same live-AI switch.
 - `src/components/garage-tools.tsx`: vehicle setup, service records, intervals, backup/restore.
 - `src/components/trip-planner.tsx`: local trip-cost and detour comparison.
 - `src/lib/garage.ts`, `maintenance.ts`, `trip.ts`: validated state transitions and deterministic calculations.
@@ -84,11 +94,11 @@ Browser verification covered the complete EPA flow: 2019 Honda → Civic 4Dr →
 - [Real-user testing worksheet](docs/USER-TEST.md)
 - [Original product roadmap](docs/SPEC.md)
 
-Demo URL and public video: pending. The repository is still private. A sample-only preview is **not** a complete hackathon entry; restore and verify real NVIDIA/Nebius runtime usage before submission.
+[Feature-branch preview](https://glove-box-git-codex-first-working-flow-glovebox2.vercel.app/) is deployed. Public video: pending. The repository is still private. A sample-only preview is **not** a complete hackathon entry; restore and verify real NVIDIA/Nebius runtime usage before submission.
 
 ## Not implemented
 
-Automatic station-price discovery, route optimization, weather nudges, Tavily, scheduled jobs, accounts, and server-side garage storage. These remain outstanding GitHub issue requirements, not claims about this build. See the [issue acceptance audit](docs/ISSUE-STATUS.md) for implemented work, gaps, and delivery order. The current preview covers own-car upkeep and manually sourced detour comparison.
+Automatic station-price discovery, route optimization, weather nudges, Tavily, scheduled jobs, accounts, and account authentication. These remain outstanding GitHub issue requirements, not claims about this build. See the [issue acceptance audit](docs/ISSUE-STATUS.md) for implemented work, gaps, and delivery order. The current preview covers own-car upkeep and manually sourced detour comparison.
 
 ## License
 

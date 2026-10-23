@@ -1,4 +1,4 @@
-import type { ItemStatus, ScheduleItem, ScheduleItemKind, Vehicle } from "./types";
+import type { CarSnapshot, ItemStatus, ScheduleItem, ScheduleItemKind, Vehicle } from "./types";
 
 // Starting defaults. Overridden per vehicle when Tavily finds a manufacturer schedule.
 export const BASELINE_INTERVALS: Record<
@@ -15,19 +15,51 @@ export const BASELINE_INTERVALS: Record<
   brake_check: { label: "Brake inspection", days: 365, miles: 12000 },
 };
 
+export function isItemKind(value: unknown): value is ScheduleItemKind {
+  return typeof value === "string" && Object.hasOwn(BASELINE_INTERVALS, value);
+}
+
+export const MAX_ODOMETER = 1_000_000;
+
+export function isOdometerReading(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= MAX_ODOMETER;
+}
+
+// A mileage as people write it: 48210, "48,210", "48 210", "48k", "48.2k" -> 48200.
+// Anything else is undefined. No range check: callers apply their own, such as isOdometerReading.
+export function parseMiles(value: unknown): number | undefined {
+  if (typeof value === "number") return Number.isFinite(value) && value >= 0 ? value : undefined;
+  if (typeof value !== "string") return undefined;
+  const match = /^(\d+(?:\.\d+)?)(k?)$/i.exec(value.replace(/[,\s]/g, ""));
+  if (!match) return undefined;
+  return match[2] === "" ? Number(match[1]) : Math.round(Number(match[1]) * 1000);
+}
+
+// A calendar date written YYYY-MM-DD, with no time.
+export function isPlainDate(value: unknown): value is string {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
 export const DUE_SOON_DAYS = 7;
 export const DUE_SOON_MILES = 500;
 
-const DAY_MS = 24 * 60 * 60 * 1000;
+export const DAY_MS = 24 * 60 * 60 * 1000;
 
-// Estimated mileage is separate from the recorded odometer; planned trips are excluded.
+// Last reading plus the weekly baseline since then, plus miles from planned trips.
 export function estimateOdometer(
   vehicle: Pick<Vehicle, "odometer" | "weeklyMiles">,
   readingAt: Date,
   now: Date,
+  plannedTripMiles = 0,
 ): number {
   const weeks = Math.max(0, (now.getTime() - readingAt.getTime()) / (7 * DAY_MS));
-  return Math.round(vehicle.odometer + vehicle.weeklyMiles * weeks);
+  return Math.round(vehicle.odometer + vehicle.weeklyMiles * weeks + plannedTripMiles);
+}
+
+// The car's estimated odometer at `at`, from its last reading and planned trips: the
+// number the dashboard shows.
+export function estimateCarOdometer(car: CarSnapshot, at: Date): number {
+  return estimateOdometer(car.vehicle, new Date(car.readingAt), at, car.plannedTripMiles ?? 0);
 }
 
 export function itemStatus(
@@ -45,3 +77,6 @@ export function itemStatus(
   if (daysLeft <= DUE_SOON_DAYS || milesLeft <= DUE_SOON_MILES) return "due_soon";
   return "ok";
 }
+
+// Most urgent first, for sorting and for picking the limit that explains a status.
+export const STATUS_RANK: Record<ItemStatus, number> = { overdue: 0, due_soon: 1, ok: 2, unknown: 3 };

@@ -7,11 +7,15 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "smoke": "node --experimental-strip-types --env-file-if-exists=.env.local scripts/smoke-test.mts",
+    "db:migrate": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env.local scripts/migrate.mts",
+    "smoke": "node --env-file-if-exists=.env.local scripts/smoke-test.mts",
+    "eval:router": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env.local scripts/eval-router.mts",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/*.test.mjs"
+    "test": "vitest run && node --experimental-strip-types --test tests/*.test.mjs",
+    "test:watch": "vitest"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.2.0",
     "next": "16.4.2",
     "openai": "^7.42.0",
     "react": "19.3.0",
@@ -25,6 +29,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.2",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.12"
   }
 }
