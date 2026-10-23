@@ -168,6 +168,16 @@ describe("buildDashboard: proposal cards", () => {
     ]);
   });
 
+  it("shows no date move when the due date stays on the same day", () => {
+    const sameDay = proposal({
+      from: { dueAt: "2026-12-26T18:34:00.000Z", dueOdometer: 48_400 },
+      to: { dueAt: "2026-12-26T12:00:00.000Z", dueOdometer: 48_000 },
+    });
+    expect(buildDashboard(snapshot([oil]), NOW, [sameDay]).proposals[0].moves).toEqual([
+      { from: "48,400 mi", to: "48,000 mi" },
+    ]);
+  });
+
   it("keeps applied cards, and leaves out dismissed ones and ones whose item is gone", () => {
     const dash = buildDashboard(snapshot([oil]), NOW, [
       proposal({ id: "applied", state: "applied" }),

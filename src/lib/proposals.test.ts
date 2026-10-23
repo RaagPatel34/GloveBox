@@ -52,6 +52,17 @@ describe("proposeAdjustment", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toMatch(error);
   });
+
+  it("refuses the day an item is already due, whatever time of day it was stored at", () => {
+    // Logged in the afternoon, the wash is due at 18:34 UTC on Nov 5, not at noon.
+    const afternoon = new Date("2026-10-22T18:34:00.000Z");
+    const logged = logService(car, { kind: "wash" }, afternoon);
+    if (!logged.ok) throw new Error(logged.error);
+    expect(logged.car.items.find((i) => i.kind === "wash")!.dueAt).toBe("2026-11-05T18:34:00.000Z");
+
+    const result = proposeAdjustment(logged.car, { kind: "wash", dueAt: "2026-11-05", reason: REASON }, afternoon, randomUUID);
+    expect(result).toEqual({ ok: false, error: expect.stringMatching(/already/) });
+  });
 });
 
 describe("decideProposal", () => {
@@ -103,6 +114,16 @@ describe("decideProposal", () => {
     expect(result).toEqual({ ok: false, error: expect.stringMatching(/changed since/) });
     // It can still be dismissed.
     expect(decideProposal(logged.car, proposal, "dismiss", NOW).ok).toBe(true);
+  });
+
+  it("applies a proposal whose due date was read on the same day the item is due", () => {
+    // The card was made from a due date of noon; the item is stored at 18:34 the same day.
+    const proposal = { ...filterProposal(), from: { dueAt: "2026-11-05T12:00:00.000Z" }, to: { dueAt: "2026-11-01T12:00:00.000Z" } };
+    const wash = car.items.find((i) => i.kind === "wash")!;
+    const later = { ...car, items: car.items.map((i) => (i === wash ? { ...i, dueAt: "2026-11-05T18:34:00.000Z" } : i)) };
+
+    const result = decideProposal(later, { ...proposal, itemId: wash.id }, "apply", NOW);
+    expect(result.ok).toBe(true);
   });
 
   it("refuses a proposal for another car's item", () => {

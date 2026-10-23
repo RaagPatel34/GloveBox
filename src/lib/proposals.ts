@@ -1,4 +1,4 @@
-import { pacificDate } from "./days";
+import { pacificDate, sameDueDay } from "./days";
 import { estimateCarOdometer, isOdometerReading, isPlainDate, itemStatus } from "./intervals";
 import { numberFormat } from "./readout";
 import type { CarSnapshot, DueTarget, Proposal, ScheduleItemKind } from "./types";
@@ -53,7 +53,8 @@ export function proposeAdjustment(
     const earliest = pacificDate(now, -1);
     const latest = pacificDate(now, -item.intervalDays);
     if (day < earliest || day > latest) return refuse(`The new due date must be from ${earliest} to ${latest}.`);
-    to.dueAt = `${day}T12:00:00.000Z`;
+    // The day it is already due keeps its stored time, so it is not shown as a move.
+    to.dueAt = sameDueDay(`${day}T12:00:00.000Z`, from.dueAt) ? from.dueAt : `${day}T12:00:00.000Z`;
   }
 
   if (input.dueOdometer !== undefined) {
@@ -69,7 +70,7 @@ export function proposeAdjustment(
     to.dueOdometer = input.dueOdometer;
   }
 
-  if (to.dueAt === from.dueAt && to.dueOdometer === from.dueOdometer) {
+  if (sameDueDay(to.dueAt, from.dueAt) && to.dueOdometer === from.dueOdometer) {
     return refuse(`${input.kind} is already due then. Propose a change, or skip it.`);
   }
 
@@ -94,9 +95,6 @@ export type DecisionResult =
   | { ok: true; proposal: Proposal; car: CarSnapshot | null }
   | { ok: false; error: string };
 
-const sameTime = (a: string | undefined, b: string | undefined) =>
-  a === b || (a !== undefined && b !== undefined && new Date(a).getTime() === new Date(b).getTime());
-
 // The user's Apply or Dismiss on a pending card. Apply returns the car with the item moved
 // to `to` and its status recomputed, so the dashboard shows the change at once; Dismiss
 // returns no car, as nothing on it changes.
@@ -109,7 +107,7 @@ export function decideProposal(car: CarSnapshot, proposal: Proposal, decision: D
 
   const item = car.items.find((i) => i.id === proposal.itemId);
   if (!item) return { ok: false, error: "That item is no longer on your car." };
-  if (!sameTime(item.dueAt, proposal.from.dueAt) || item.dueOdometer !== proposal.from.dueOdometer) {
+  if (!sameDueDay(item.dueAt, proposal.from.dueAt) || item.dueOdometer !== proposal.from.dueOdometer) {
     return { ok: false, error: "Your schedule for this item changed since this was suggested. Dismiss it instead." };
   }
 

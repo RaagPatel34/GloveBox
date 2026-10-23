@@ -1,5 +1,6 @@
 import { BASELINE_INTERVALS, estimateCarOdometer, itemStatus, STATUS_RANK } from "./intervals";
 import { tighterLimit, type Limit } from "./limits";
+import { sameDueDay } from "./days";
 import { formatReadDate, intervalUsed, numberFormat } from "./readout";
 import type { CarSnapshot, ItemStatus, ModelTier, Proposal, ScheduleItem, ScheduleItemKind, Vehicle } from "./types";
 
@@ -47,7 +48,7 @@ function proposalCards(car: CarSnapshot, proposals: Proposal[]): ProposalCard[] 
     if (!item || proposal.state === "dismissed") return [];
     const { from, to } = proposal;
     const moves = [
-      ...(from.dueAt !== to.dueAt ? [{ from: day(from.dueAt), to: day(to.dueAt) }] : []),
+      ...(!sameDueDay(from.dueAt, to.dueAt) ? [{ from: day(from.dueAt), to: day(to.dueAt) }] : []),
       ...(from.dueOdometer !== to.dueOdometer ? [{ from: miles(from.dueOdometer), to: miles(to.dueOdometer) }] : []),
     ];
     return [
