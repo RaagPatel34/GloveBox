@@ -73,6 +73,11 @@ export function logService(
   }
   const doneAt = parseServiceDate(input.date, now);
   if (typeof doneAt === "string") return { ok: false, error: doneAt };
+  // An older service would move the schedule backwards. A day's slack keeps a bare date
+  // (pinned to noon) for the same day as the last log from being refused.
+  if (item.lastDoneAt !== undefined && doneAt.getTime() < new Date(item.lastDoneAt).getTime() - DAY_MS) {
+    return { ok: false, error: "That service is older than the last one on record, so there is nothing to update." };
+  }
 
   // Planned trips count as driven, as on the dashboard, so a service logged today is at
   // the odometer the user sees there.

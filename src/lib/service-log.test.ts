@@ -48,6 +48,20 @@ describe("logService", () => {
     expect(oil.dueOdometer).toBe(55_250);
   });
 
+  it("refuses a service older than the one on record, so the schedule never moves backwards", () => {
+    // The demo car's last oil change was 300 days ago, on Dec 26, 2025.
+    const result = logService(car(), { kind: "oil", date: "2025-10-01" }, NOW);
+    expect(result).toEqual({ ok: false, error: expect.stringMatching(/older than the last one on record/) });
+  });
+
+  it("still takes a service on the same day as the one on record", () => {
+    // A bare date is pinned to noon UTC, hours before a wash logged "now" at 6 pm.
+    const later = new Date(NOW.getTime() + 6 * 60 * 60 * 1000);
+    const today = logService(car(), { kind: "wash" }, later);
+    if (!today.ok) throw new Error(today.error);
+    expect(logService(today.car, { kind: "wash", date: "2026-10-22" }, later).ok).toBe(true);
+  });
+
   it("logs a service done today at the odometer the dashboard shows, planned trips included", () => {
     const withTrip = { ...car(), plannedTripMiles: 300 };
     expect(buildDashboard(withTrip, NOW).odometerEstimate).toBe(48_300);
