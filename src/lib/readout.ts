@@ -1,6 +1,6 @@
 import { DAY_MS } from "./intervals";
 import type { Limit } from "./limits";
-import type { ScheduleItem } from "./types";
+import type { ItemStatus, ScheduleItem } from "./types";
 
 // Numbers and words for an upkeep tile. Pure, so the wording is tested once.
 
@@ -25,6 +25,13 @@ export function intervalUsed(item: IntervalFields, now: Date, currentOdometer: n
   if (shares.length === 0) return null;
   return Math.max(0, ...shares);
 }
+
+// Status is always written out, never left to colour alone.
+export const STATUS_LABEL: Record<ItemStatus, string> = {
+  overdue: "Overdue",
+  due_soon: "Due soon",
+  ok: "OK",
+};
 
 const numberFormat = new Intl.NumberFormat("en-US");
 
