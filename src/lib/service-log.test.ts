@@ -48,6 +48,18 @@ describe("logService", () => {
     expect(oil.dueOdometer).toBe(55_250);
   });
 
+  it("logs a service done today at the odometer the dashboard shows, planned trips included", () => {
+    const withTrip = { ...car(), plannedTripMiles: 300 };
+    expect(buildDashboard(withTrip, NOW).odometerEstimate).toBe(48_300);
+
+    const result = logService(withTrip, { kind: "oil" }, NOW);
+    if (!result.ok) throw new Error(result.error);
+    const oil = result.car.items.find((i) => i.kind === "oil")!;
+
+    expect(oil.lastDoneOdometer).toBe(48_300);
+    expect(oil.dueOdometer).toBe(55_800);
+  });
+
   it("leaves every other item and the vehicle alone", () => {
     const before = car();
     const result = logService(before, { kind: "wash" }, NOW);

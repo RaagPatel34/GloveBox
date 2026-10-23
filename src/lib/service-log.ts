@@ -1,7 +1,7 @@
 import {
   BASELINE_INTERVALS,
   DAY_MS,
-  estimateOdometer,
+  estimateCarOdometer,
   isItemKind,
   isOdometerReading,
   itemStatus,
@@ -68,12 +68,13 @@ export function logService(
   const doneAt = parseServiceDate(input.date, now);
   if (typeof doneAt === "string") return { ok: false, error: doneAt };
 
-  const readingAt = new Date(car.readingAt);
-  const doneOdometer = input.odometer ?? estimateOdometer(car.vehicle, readingAt, doneAt);
+  // Planned trips count as driven, as on the dashboard, so a service logged today is at
+  // the odometer the user sees there.
+  const doneOdometer = input.odometer ?? estimateCarOdometer(car, doneAt);
   const dueAt =
     item.intervalDays === undefined ? undefined : new Date(doneAt.getTime() + item.intervalDays * DAY_MS).toISOString();
   const dueOdometer = item.intervalMiles === undefined ? undefined : doneOdometer + item.intervalMiles;
-  const odometerNow = estimateOdometer(car.vehicle, readingAt, now, car.plannedTripMiles ?? 0);
+  const odometerNow = estimateCarOdometer(car, now);
 
   const updated: ScheduleItem = {
     ...item,
@@ -105,9 +106,9 @@ export function updateOdometer(car: CarSnapshot, miles: number, now: Date): Resu
     return { ok: false, error: `The odometer must be a whole number of miles up to ${MAX_ODOMETER}.` };
   }
 
-  const before = estimateOdometer(car.vehicle, new Date(car.readingAt), now, car.plannedTripMiles ?? 0);
-  const vehicle = { ...car.vehicle, odometer: miles };
-  const odometerNow = estimateOdometer(vehicle, now, now, car.plannedTripMiles ?? 0);
+  const before = estimateCarOdometer(car, now);
+  const read: CarSnapshot = { ...car, vehicle: { ...car.vehicle, odometer: miles }, readingAt: now.toISOString() };
+  const odometerNow = estimateCarOdometer(read, now);
 
   const statusChanges: OdometerUpdated["statusChanges"] = [];
   const items = car.items.map((item): ScheduleItem => {
@@ -122,7 +123,7 @@ export function updateOdometer(car: CarSnapshot, miles: number, now: Date): Resu
 
   return {
     ok: true,
-    car: { ...car, vehicle, readingAt: now.toISOString(), items },
+    car: { ...read, items },
     effect: { type: "odometer_updated", from: before, to: miles, statusChanges },
   };
 }
