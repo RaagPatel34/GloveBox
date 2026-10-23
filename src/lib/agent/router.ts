@@ -1,5 +1,5 @@
 // The .ts extension lets `npm run eval:router` load this file under plain Node.
-import { BASELINE_INTERVALS, DAY_MS, isItemKind, isOdometerReading } from "../intervals.ts";
+import { BASELINE_INTERVALS, DAY_MS, isItemKind, isOdometerReading, isPlainDate } from "../intervals.ts";
 import type { ScheduleItemKind } from "../types";
 import type { Chat } from "./chat";
 
@@ -85,7 +85,7 @@ export function parseRoute(raw: string | null): Route {
     case "service_log": {
       const route: Route = { intent: "service_log" };
       if (isItemKind(fields.item)) route.item = fields.item;
-      if (typeof fields.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(fields.date)) route.date = fields.date;
+      if (isPlainDate(fields.date)) route.date = fields.date;
       const odometer = toOdometer(fields.odometer);
       if (odometer !== undefined) route.odometer = odometer;
       return route;

@@ -25,6 +25,11 @@ export function isOdometerReading(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= MAX_ODOMETER;
 }
 
+// A calendar date written YYYY-MM-DD, with no time.
+export function isPlainDate(value: unknown): value is string {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
 export const DUE_SOON_DAYS = 7;
 export const DUE_SOON_MILES = 500;
 

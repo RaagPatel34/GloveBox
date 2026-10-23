@@ -4,6 +4,7 @@ import {
   estimateCarOdometer,
   isItemKind,
   isOdometerReading,
+  isPlainDate,
   itemStatus,
   MAX_ODOMETER,
 } from "./intervals";
@@ -36,11 +37,13 @@ export type Result<E> = { ok: true; car: CarSnapshot; effect: E } | { ok: false;
 // Services logged further back than this are almost certainly a misread date.
 const MAX_DAYS_BACK = 3 * 365;
 
+const ODOMETER_ERROR = `The odometer must be a whole number of miles up to ${MAX_ODOMETER}.`;
+
 // "2026-10-15" or a full ISO timestamp. A bare date is pinned to noon UTC, which is the
 // same calendar day in California. Returns an error string for anything else.
 function parseServiceDate(raw: string | undefined, now: Date): Date | string {
   if (raw === undefined) return now;
-  const date = /^\d{4}-\d{2}-\d{2}$/.test(raw) ? new Date(`${raw}T12:00:00.000Z`) : new Date(raw);
+  const date = isPlainDate(raw) ? new Date(`${raw}T12:00:00.000Z`) : new Date(raw);
   if (!/^\d{4}-\d{2}-\d{2}/.test(raw) || Number.isNaN(date.getTime())) {
     return `"${raw}" is not a date. Use YYYY-MM-DD.`;
   }
@@ -63,7 +66,7 @@ export function logService(
   const item = car.items.find((i) => i.kind === input.kind);
   if (!item) return { ok: false, error: `This car has no ${input.kind} item.` };
   if (input.odometer !== undefined && !isOdometerReading(input.odometer)) {
-    return { ok: false, error: `The odometer must be a whole number of miles up to ${MAX_ODOMETER}.` };
+    return { ok: false, error: ODOMETER_ERROR };
   }
   const doneAt = parseServiceDate(input.date, now);
   if (typeof doneAt === "string") return { ok: false, error: doneAt };
@@ -111,9 +114,7 @@ export function logService(
 // A fresh reading taken now. It replaces the estimate, so every mileage-based status is
 // recomputed and stored. Lower readings are allowed: this is how a wrong one gets fixed.
 export function updateOdometer(car: CarSnapshot, miles: number, now: Date): Result<OdometerUpdated> {
-  if (!isOdometerReading(miles)) {
-    return { ok: false, error: `The odometer must be a whole number of miles up to ${MAX_ODOMETER}.` };
-  }
+  if (!isOdometerReading(miles)) return { ok: false, error: ODOMETER_ERROR };
 
   const before = estimateCarOdometer(car, now);
   const read: CarSnapshot = { ...car, vehicle: { ...car.vehicle, odometer: miles }, readingAt: now.toISOString() };
