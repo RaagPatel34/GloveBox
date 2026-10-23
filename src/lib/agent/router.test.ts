@@ -76,6 +76,21 @@ describe("parseRoute", () => {
     expect(parseRoute(raw)).toEqual({ intent: "unknown" });
   });
 
+  it("reads a reply cut off mid-thought as unknown, even if the thinking holds JSON", () => {
+    expect(parseRoute('<think>Maybe {"intent":"event"}? Or')).toEqual({ intent: "unknown" });
+  });
+
+  it.each([
+    ["braces in untagged reasoning before it", 'The user means {wash}. {"intent":"service_log","item":"wash"}'],
+    ["braces in a closed think block before it", '<think>{maybe} {"intent":"event"}</think>{"intent":"service_log","item":"wash"}'],
+    ["thinking with only a closing tag before it", 'it is {wash}</think>\n{"intent":"service_log","item":"wash"}'],
+    ["an earlier draft object", '{"intent":"event"}\nNo, better:\n{"intent":"service_log","item":"wash"}'],
+    ["a note in braces after it", '{"intent":"service_log","item":"wash"} {note: wash only}'],
+    ["a code fence and a brace inside a string", '```json\n{"intent":"service_log","item":"wash","why":"}"}\n```'],
+  ])("finds the route among %s", (_label, raw) => {
+    expect(parseRoute(raw)).toEqual({ intent: "service_log", item: "wash" });
+  });
+
   it("keeps a service log but drops fields it cannot trust", () => {
     expect(parseRoute('{"intent":"service_log","item":"spark_plugs","date":"yesterday","odometer":"lots"}')).toEqual({
       intent: "service_log",
