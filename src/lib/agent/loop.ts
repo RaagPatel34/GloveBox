@@ -63,7 +63,8 @@ export async function runToolLoop(args: {
     for (const call of reply.toolCalls) {
       const { args: parsed, result } = await runOne(byName.get(call.name), call.name, call.arguments);
       calls.push({ name: call.name, args: parsed, result });
-      messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
+      // A tool that returns nothing still needs JSON content: undefined would not serialize.
+      messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result ?? null) });
     }
   }
 

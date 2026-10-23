@@ -67,6 +67,15 @@ describe("runToolLoop", () => {
     expect(JSON.parse(toolMessage.content as string).error).toMatch(message);
   });
 
+  it("sends a tool that returns nothing back as null, so the tool message is still valid", async () => {
+    const silent: Tool = { ...add, run: () => undefined };
+    const chat = scriptedChat({ super: [callTools(["add", { a: 1, b: 1 }]), say("Done.")] });
+
+    await runToolLoop({ chat, tier: "super", messages: user, tools: [silent] });
+
+    expect(chat.requests[1].messages.at(-1)).toMatchObject({ role: "tool", content: "null" });
+  });
+
   it("is bounded: a model that never stops calling tools is cut off after maxSteps turns", async () => {
     const forever = Array.from({ length: 10 }, () => callTools(["add", { a: 1, b: 1 }]));
     const chat = scriptedChat({ super: forever });
