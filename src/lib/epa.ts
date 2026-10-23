@@ -9,6 +9,9 @@
 
 const BASE = "https://www.fueleconomy.gov/ws/rest/vehicle";
 
+// Shared by the proxy route and the setup form so both say the same thing when the service is down.
+export const EPA_UNREACHABLE = "Could not reach fueleconomy.gov.";
+
 export type MenuItem = { text: string; value: string };
 
 export type EpaVehicle = {

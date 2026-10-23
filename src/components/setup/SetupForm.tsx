@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { saveCarAction, type SetupState } from "@/app/setup-actions";
 import { useVisitorId } from "@/components/visitor/useVisitorId";
-import type { EpaVehicle, MenuItem } from "@/lib/epa";
+import { EPA_UNREACHABLE, type EpaVehicle, type MenuItem } from "@/lib/epa";
 
 type Selection = { year: string; make: string; model: string; optionId: string };
 const EMPTY: Selection = { year: "", make: "", model: "", optionId: "" };
@@ -47,7 +47,7 @@ export function SetupForm() {
       const data = await getJson<T>(query);
       if (mine === ticket.current) apply(data);
     } catch {
-      if (mine === ticket.current) setLookupError("Could not reach fueleconomy.gov. Try again in a moment.");
+      if (mine === ticket.current) setLookupError(`${EPA_UNREACHABLE} Try again in a moment.`);
     }
   }
 
@@ -55,7 +55,7 @@ export function SetupForm() {
     let live = true;
     getJson<{ items: MenuItem[] }>("")
       .then((data) => live && setYears(data.items))
-      .catch(() => live && setLookupError("Could not reach fueleconomy.gov. Reload to try again."));
+      .catch(() => live && setLookupError(`${EPA_UNREACHABLE} Reload to try again.`));
     return () => {
       live = false;
     };

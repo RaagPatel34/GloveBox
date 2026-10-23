@@ -1,4 +1,4 @@
-import { createEpaClient } from "@/lib/epa";
+import { createEpaClient, EPA_UNREACHABLE } from "@/lib/epa";
 
 // Proxy for the fueleconomy.gov picker (the browser cannot call it directly).
 // One endpoint, steps picked by which params are present:
@@ -37,6 +37,6 @@ export async function GET(request: Request) {
     if (model === null) return json({ items: await epa.models(Number(year), make) });
     return json({ items: await epa.options(Number(year), make, model) });
   } catch {
-    return json({ error: "fueleconomy.gov is not responding. Try again in a moment." }, 502);
+    return json({ error: `${EPA_UNREACHABLE} Try again in a moment.` }, 502);
   }
 }
