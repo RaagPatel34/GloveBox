@@ -74,7 +74,13 @@ export function logService(
   const dueAt =
     item.intervalDays === undefined ? undefined : new Date(doneAt.getTime() + item.intervalDays * DAY_MS).toISOString();
   const dueOdometer = item.intervalMiles === undefined ? undefined : doneOdometer + item.intervalMiles;
-  const odometerNow = estimateCarOdometer(car, now);
+  // A mileage past today's estimate is a newer reading: the car has at least that many
+  // miles now. It becomes the reading, and every status is recomputed, as updateOdometer does.
+  const moved = input.odometer !== undefined && input.odometer > estimateCarOdometer(car, now);
+  const read: CarSnapshot = moved
+    ? { ...car, vehicle: { ...car.vehicle, odometer: doneOdometer }, readingAt: doneAt.toISOString() }
+    : car;
+  const odometerNow = estimateCarOdometer(read, now);
 
   const updated: ScheduleItem = {
     ...item,
@@ -84,10 +90,13 @@ export function logService(
     dueOdometer,
     status: itemStatus({ dueAt, dueOdometer }, now, odometerNow),
   };
+  const items = car.items.map((i) =>
+    i.id === item.id ? updated : moved ? { ...i, status: itemStatus(i, now, odometerNow) } : i,
+  );
 
   return {
     ok: true,
-    car: { ...car, items: car.items.map((i) => (i.id === item.id ? updated : i)) },
+    car: { ...read, items },
     effect: {
       type: "service_logged",
       kind: item.kind,
