@@ -1,42 +1,22 @@
-// PROTOTYPE (issue #5): three health-dashboard variants on "/", switchable via ?variant=A|B|C.
-// Lives on the prototype/health-dashboard branch only; the winner gets rebuilt under /tdd.
-
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { buildDashboard } from "./_prototype/fixture";
-import { PrototypeSwitcher } from "./_prototype/switcher";
-import * as A from "./_prototype/variant-a";
-import * as B from "./_prototype/variant-b";
-import * as C from "./_prototype/variant-c";
+import { HealthDashboard, HealthDashboardSkeleton } from "@/components/health/HealthDashboard";
+import { getCarSnapshot } from "@/lib/car";
+import { buildDashboard } from "@/lib/dashboard";
 
-const VARIANTS = {
-  A: { name: A.name, View: A.VariantA },
-  B: { name: B.name, View: B.VariantB },
-  C: { name: C.name, View: C.VariantC },
-};
-type Key = keyof typeof VARIANTS;
-
-export default function Home({ searchParams }: PageProps<"/">) {
+export default function Home() {
   return (
-    <Suspense>
-      <Dashboard searchParams={searchParams} />
+    <Suspense fallback={<HealthDashboardSkeleton />}>
+      <LiveDashboard />
     </Suspense>
   );
 }
 
-async function Dashboard({ searchParams }: Pick<PageProps<"/">, "searchParams">) {
-  const param = (await searchParams).variant;
+// Statuses depend on the current time, so this renders per request rather than
+// being baked into the static shell.
+async function LiveDashboard() {
   await connection();
-  const key: Key = typeof param === "string" && param in VARIANTS ? (param as Key) : "A";
-  const { View } = VARIANTS[key];
-
-  return (
-    <>
-      <View data={buildDashboard(new Date())} />
-      <PrototypeSwitcher
-        variants={Object.entries(VARIANTS).map(([k, v]) => ({ key: k, name: v.name }))}
-        current={key}
-      />
-    </>
-  );
+  const now = new Date();
+  const car = await getCarSnapshot(now);
+  return <HealthDashboard dashboard={buildDashboard(car, now)} />;
 }

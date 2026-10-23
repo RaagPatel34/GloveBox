@@ -18,7 +18,7 @@ export const BASELINE_INTERVALS: Record<
 export const DUE_SOON_DAYS = 7;
 export const DUE_SOON_MILES = 500;
 
-const DAY_MS = 24 * 60 * 60 * 1000;
+export const DAY_MS = 24 * 60 * 60 * 1000;
 
 // Last reading plus the weekly baseline since then, plus miles from planned trips.
 export function estimateOdometer(
@@ -45,3 +45,6 @@ export function itemStatus(
   if (daysLeft <= DUE_SOON_DAYS || milesLeft <= DUE_SOON_MILES) return "due_soon";
   return "ok";
 }
+
+// Most urgent first, for sorting and for picking the limit that explains a status.
+export const STATUS_RANK: Record<ItemStatus, number> = { overdue: 0, due_soon: 1, ok: 2 };

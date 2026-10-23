@@ -91,3 +91,14 @@ export type Nudge = {
   reason: string;
   createdAt: string;
 };
+
+// Everything the dashboard needs to know about one car. This is the seam for loading:
+// the fixture builds one today, and the saved-car flow builds one from storage later.
+export type CarSnapshot = {
+  vehicle: Vehicle;
+  // ISO timestamp of when `vehicle.odometer` was read.
+  readingAt: string;
+  // Miles from trips the user has planned but not yet driven.
+  plannedTripMiles?: number;
+  items: ScheduleItem[];
+};
