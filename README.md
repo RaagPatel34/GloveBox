@@ -54,6 +54,18 @@ npm run dev                  # http://localhost:3000
 | `DATABASE_URL` | Postgres (Neon or Supabase) |
 | `EIA_API_KEY` | Weekly CA / LA gas price fallback |
 
+## Database
+
+Postgres on [Neon](https://neon.tech), reached over HTTPS with `@neondatabase/serverless` (works on Vercel without a connection pool). Set `DATABASE_URL` (the pooled connection string from the Neon dashboard), then:
+
+```bash
+npm run db:migrate
+```
+
+This applies the schema in [src/lib/db/schema.ts](src/lib/db/schema.ts) (`vehicles` and `schedule_items`) using `CREATE ... IF NOT EXISTS`, so it is idempotent. Run it once per database, including the production one, before the first deploy: `DATABASE_URL=<prod url> node --env-file-if-exists=.env.local scripts/migrate.mts`, or put the production URL in `.env.local` temporarily.
+
+There are no accounts. Each browser gets a random visitor ID (kept in `localStorage`, mirrored to a `gb_visitor` cookie so the server can read it) and its car is stored under that ID. A different browser, or cleared site data, starts fresh.
+
 ## Limitations
 
 - Gas prices are best-effort and always shown with source and timestamp
