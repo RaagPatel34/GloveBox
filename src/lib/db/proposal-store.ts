@@ -6,10 +6,12 @@ import { getSql } from "./sql";
 
 // Postgres access for the visitor's proposal cards. Kept thin, like car-store.ts: the rules
 // are in proposals.ts. Every query is scoped to the visitor's own vehicle.
+//
+// For the reads, as in car-store.ts, the caller validates the visitor ID (getCarSnapshot
+// does); a malformed one just finds no row. The writes check it themselves.
 
 // The cards to show: pending and applied, in the order they were made. Dismissed and hidden ones are gone.
 export async function loadProposals(visitorId: string): Promise<Proposal[]> {
-  if (!isVisitorId(visitorId)) return [];
   const sql = getSql();
   const rows = (await sql`SELECT p.* FROM proposals p JOIN vehicles v ON v.id = p.vehicle_id
     WHERE v.visitor_id = ${visitorId} AND p.state <> 'dismissed' AND p.hidden_at IS NULL
@@ -18,7 +20,6 @@ export async function loadProposals(visitorId: string): Promise<Proposal[]> {
 }
 
 export async function loadProposal(visitorId: string, proposalId: string): Promise<Proposal | null> {
-  if (!isVisitorId(visitorId)) return null;
   const sql = getSql();
   const rows = (await sql`SELECT p.* FROM proposals p JOIN vehicles v ON v.id = p.vehicle_id
     WHERE v.visitor_id = ${visitorId} AND p.id = ${proposalId}`) as ProposalRow[];
