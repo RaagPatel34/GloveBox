@@ -146,6 +146,21 @@ describe("runCommand: input it cannot act on", () => {
     expect(reply.message).toMatch(/try again/i);
   });
 
+  it("badges the model that last answered when a later call fails", async () => {
+    const nanoOnly = scriptedChat({ nano: [route({ intent: "service_log", item: "wash" })] });
+    const afterNano = await send("just got a car wash", nanoOnly);
+    expect(afterNano.reply).toMatchObject({ model: "nano", changes: [] });
+    expect(afterNano.reply.message).toMatch(/try again/i);
+
+    const superCutOff = scriptedChat({
+      nano: [route({ intent: "service_log", item: "wash" })],
+      super: [callTools(["getSchedule", {}])],
+    });
+    const afterSuper = await send("just got a car wash", superCutOff);
+    expect(afterSuper.saved).toEqual([]);
+    expect(afterSuper.reply.model).toBe("super");
+  });
+
   it.each([["", ""], ["blank", "   "], ["not text", 42], ["too long", "x".repeat(501)]])(
     "asks for something to do when the input is %s, without calling a model",
     async (_label, text) => {

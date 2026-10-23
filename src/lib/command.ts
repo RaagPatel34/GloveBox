@@ -37,9 +37,17 @@ export async function runCommand(args: {
     return reply(null, "The AI is not connected yet, so the command bar cannot read messages. The dashboard still works.");
   }
 
+  // The last model that answered, so even an error reply carries the right badge.
+  let answered: CommandReply["model"] = null;
+  const tracked: Chat = async (request) => {
+    const response = await chat(request);
+    answered = request.tier;
+    return response;
+  };
+
   let state;
   try {
-    const route = await routeCommand(text, chat, now);
+    const route = await routeCommand(text, tracked, now);
     switch (route.intent) {
       case "unknown":
         return reply("nano", `I couldn't tell what to do with that. ${EXAMPLES}`);
@@ -48,10 +56,10 @@ export async function runCommand(args: {
       case "errand":
         return reply("nano", "That sounds like an errand. Trip planning is coming soon; for now I can log a service or an odometer reading.");
     }
-    state = await runMaintenanceAgent({ chat, car, now, text, route });
+    state = await runMaintenanceAgent({ chat: tracked, car, now, text, route });
   } catch (error) {
     console.error("runCommand: model call failed", error);
-    return reply(null, "Could not reach the AI just now. Please try again in a moment.");
+    return reply(answered, "Could not reach the AI just now. Please try again in a moment.");
   }
 
   if (state.effects.length === 0) {
