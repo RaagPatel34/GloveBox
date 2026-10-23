@@ -1,4 +1,4 @@
-import type { CarSnapshot } from "./dashboard";
+import type { CarSnapshot } from "./types";
 import { demoCar } from "./fixtures/demo-car";
 
 // The one place the dashboard gets its car from.

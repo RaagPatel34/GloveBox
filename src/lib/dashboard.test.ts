@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { buildDashboard, odometerDigits, type CarSnapshot } from "./dashboard";
+import { buildDashboard, odometerDigits } from "./dashboard";
 import { inDays, NOW } from "./test-support";
-import type { ScheduleItem, Vehicle } from "./types";
+import type { CarSnapshot, ScheduleItem, Vehicle } from "./types";
 
 const vehicle: Vehicle = {
   id: "v1",

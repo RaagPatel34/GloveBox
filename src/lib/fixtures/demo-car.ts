@@ -1,6 +1,5 @@
-import type { CarSnapshot } from "../dashboard";
 import { BASELINE_INTERVALS, DAY_MS } from "../intervals";
-import type { ScheduleItem, ScheduleItemKind, Vehicle } from "../types";
+import type { CarSnapshot, ScheduleItem, ScheduleItemKind, Vehicle } from "../types";
 
 // The spec's demo car: a 2019 Honda Civic at about 48,000 mi, ~250 mi/week.
 // Last wash 26 days ago -> overdue. Oil change ~400 mi away -> due soon. The rest are OK.
