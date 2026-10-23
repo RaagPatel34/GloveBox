@@ -376,6 +376,46 @@ describe("runCommand: life events", () => {
     expect(JSON.parse(second.messages.at(-1)!.content as string).error).toMatch(/sooner, never later/);
   });
 
+  it("shows Super the suggestions still waiting on the user, so it knows a new one replaces them", async () => {
+    const car = demoCar(NOW, VISITOR, randomUUID);
+    const oil = car.items.find((i) => i.kind === "oil")!;
+    const waiting: Proposal = {
+      id: "earlier",
+      vehicleId: car.vehicle.id,
+      itemId: oil.id,
+      from: { dueAt: oil.dueAt, dueOdometer: 48_400 },
+      to: { dueAt: oil.dueAt, dueOdometer: 48_100 },
+      reason: OIL_REASON,
+      model: "super",
+      state: "pending",
+    };
+    const chat = scriptedChat({
+      nano: [route({ intent: "event" })],
+      super: [callTools(["getSchedule", {}]), say("Nothing new.")],
+    });
+
+    await runCommand({
+      text: DEMO_EVENT,
+      car,
+      pending: [waiting],
+      chat,
+      now: NOW,
+      save: async () => {},
+      saveProposals: async () => {},
+    });
+
+    const schedule = JSON.parse(chat.requests.filter((r) => r.tier === "super")[1].messages.at(-1)!.content as string);
+    const items = schedule.items as { item: string; pendingSuggestion: unknown }[];
+    expect(items.find((i) => i.item === "oil")!.pendingSuggestion).toEqual({
+      dueAt: oil.dueAt,
+      dueOdometer: 48_100,
+      reason: OIL_REASON,
+    });
+    expect(items.find((i) => i.item === "wash")!.pendingSuggestion).toBeNull();
+    const tool = chat.requests[1].tools!.find((t) => t.type === "function" && t.function.name === "proposeAdjustment")!;
+    expect(tool.type === "function" && tool.function.description).toMatch(/replaces/);
+  });
+
   it("keeps the proposals already made when Super's closing reply fails", async () => {
     const chat = scriptedChat({
       nano: [route({ intent: "event" })],

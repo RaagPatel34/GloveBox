@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { getCarSnapshot } from "@/lib/car";
 import { runCommand } from "@/lib/command";
 import { updateCar } from "@/lib/db/car-store";
-import { addProposals } from "@/lib/db/proposal-store";
+import { addProposals, loadProposals } from "@/lib/db/proposal-store";
 import { missingNebiusConfig, nebiusChat } from "@/lib/nebius";
 import type { CommandReply } from "@/lib/types";
 import { VISITOR_COOKIE } from "@/lib/visitor";
@@ -25,12 +25,14 @@ export async function POST(request: Request) {
 
   try {
     const car = await getCarSnapshot(visitorId);
+    // getCarSnapshot only returns a car for a valid visitor ID.
+    const pending = car ? (await loadProposals(visitorId!)).filter((p) => p.state === "pending") : [];
     const reply = await runCommand({
       text,
       car,
+      pending,
       chat: missing.length > 0 ? null : nebiusChat(),
       now: new Date(),
-      // getCarSnapshot only returns a car for a valid visitor ID.
       save: (next) => updateCar(visitorId!, next),
       saveProposals: (proposals) => addProposals(visitorId!, proposals),
     });

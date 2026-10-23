@@ -23,6 +23,8 @@ const reply = (
 export async function runCommand(args: {
   text: unknown;
   car: CarSnapshot | null;
+  // The visitor's cards still waiting on Apply or Dismiss. A new suggestion for one of their items replaces it.
+  pending?: Proposal[];
   // Null when the AI is not configured (see missingNebiusConfig).
   chat: Chat | null;
   now: Date;
@@ -30,7 +32,7 @@ export async function runCommand(args: {
   saveProposals: (proposals: Proposal[]) => Promise<void>;
   newId?: () => string;
 }): Promise<CommandReply> {
-  const { car, chat, now, newId = randomUUID } = args;
+  const { car, chat, now, pending = [], newId = randomUUID } = args;
   const text = typeof args.text === "string" ? args.text.trim() : "";
   if (text === "" || text.length > MAX_COMMAND_LENGTH) {
     return reply(null, `Type what happened, in ${MAX_COMMAND_LENGTH} characters or fewer. ${EXAMPLES}`);
@@ -59,7 +61,7 @@ export async function runCommand(args: {
         return reply("nano", "That sounds like an errand. Trip planning is coming soon; for now I can log a service or an odometer reading.");
     }
     route = routed;
-    state = await runMaintenanceAgent({ chat: tracked, car, now, text, route, newId });
+    state = await runMaintenanceAgent({ chat: tracked, car, now, text, route, newId, pending });
   } catch (error) {
     console.error("runCommand: model call failed", error);
     return reply(answered, "Could not reach the AI just now. Please try again in a moment.");
