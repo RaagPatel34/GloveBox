@@ -92,6 +92,17 @@ export type Nudge = {
   createdAt: string;
 };
 
+// What POST /api/command answers with.
+export type CommandReply = {
+  // Which model produced this reply, for its badge. Null when no model answered
+  // (empty input, the AI not set up or not reachable).
+  model: ModelTier | null;
+  message: string;
+  // One line per change made, written by code from tool results, never by the model.
+  // Non-empty means the car changed and the dashboard should reload.
+  changes: string[];
+};
+
 // Everything the dashboard needs to know about one car. This is the seam for loading:
 // the fixture builds one today, and the saved-car flow builds one from storage later.
 export type CarSnapshot = {

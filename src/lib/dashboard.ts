@@ -1,4 +1,4 @@
-import { BASELINE_INTERVALS, estimateOdometer, itemStatus, STATUS_RANK } from "./intervals";
+import { BASELINE_INTERVALS, estimateCarOdometer, itemStatus, STATUS_RANK } from "./intervals";
 import { tighterLimit, type Limit } from "./limits";
 import { intervalUsed } from "./readout";
 import type { CarSnapshot, ItemStatus, ScheduleItem, ScheduleItemKind, Vehicle } from "./types";
@@ -30,7 +30,7 @@ function compareAscending(a: number, b: number): number {
 export function buildDashboard(car: CarSnapshot, now: Date): Dashboard {
   const { vehicle } = car;
   const readingAt = new Date(car.readingAt);
-  const odometerEstimate = estimateOdometer(vehicle, readingAt, now, car.plannedTripMiles ?? 0);
+  const odometerEstimate = estimateCarOdometer(car, now);
 
   const items = car.items.map((item): DashboardItem => {
     const used = intervalUsed(item, now, odometerEstimate);
