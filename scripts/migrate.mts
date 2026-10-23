@@ -17,6 +17,6 @@ for (const statement of SCHEMA_STATEMENTS) {
 
 const tables = await sql`
   SELECT table_name FROM information_schema.tables
-  WHERE table_schema = 'public' AND table_name IN ('vehicles', 'schedule_items')
+  WHERE table_schema = 'public' AND table_name IN ('vehicles', 'schedule_items', 'nudges')
   ORDER BY table_name`;
 console.log(`Schema applied. Tables present: ${tables.map((t) => t.table_name).join(", ")}`);
