@@ -1,5 +1,5 @@
-import { pacificDate, sameDueDay } from "./days";
-import { estimateCarOdometer, isOdometerReading, isPlainDate, itemStatus } from "./intervals";
+import { pacificDate, parsePlainDate, sameDueDay } from "./days";
+import { estimateCarOdometer, isOdometerReading, itemStatus } from "./intervals";
 import { numberFormat } from "./readout";
 import type { CarSnapshot, DueTarget, Proposal, ScheduleItemKind } from "./types";
 
@@ -45,16 +45,13 @@ export function proposeAdjustment(
   if (input.dueAt !== undefined) {
     if (item.intervalDays === undefined) return refuse(`${input.kind} is tracked by mileage only.`);
     const day = input.dueAt;
-    // A day past the month's end rolls over, or does not parse at all: neither is the day given.
-    const pinned = isPlainDate(day) ? new Date(`${day}T12:00:00.000Z`) : null;
-    if (!pinned || Number.isNaN(pinned.getTime()) || pinned.toISOString().slice(0, 10) !== day) {
-      return refuse(`"${String(day)}" is not a date. Use YYYY-MM-DD.`);
-    }
+    const pinned = parsePlainDate(day);
+    if (!pinned) return refuse(`"${String(day)}" is not a date. Use YYYY-MM-DD.`);
     const earliest = pacificDate(now, -1);
     const latest = pacificDate(now, -item.intervalDays);
     if (day < earliest || day > latest) return refuse(`The new due date must be from ${earliest} to ${latest}.`);
     // The day it is already due keeps its stored time, so it is not shown as a move.
-    to.dueAt = sameDueDay(`${day}T12:00:00.000Z`, from.dueAt) ? from.dueAt : `${day}T12:00:00.000Z`;
+    to.dueAt = sameDueDay(pinned.toISOString(), from.dueAt) ? from.dueAt : pinned.toISOString();
   }
 
   if (input.dueOdometer !== undefined) {

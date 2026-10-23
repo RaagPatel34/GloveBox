@@ -120,6 +120,8 @@ describe("logService", () => {
   it.each([
     [{ kind: "wash", date: "2026-11-30" }, /future/],
     [{ kind: "wash", date: "last week" }, /date/],
+    // A day past the month's end would roll over to Oct 1 rather than be refused.
+    [{ kind: "wash", date: "2026-09-31" }, /YYYY-MM-DD/],
     [{ kind: "oil", odometer: -5 }, /odometer/],
     [{ kind: "oil", odometer: 48_000.5 }, /odometer/],
     [{ kind: "oil", odometer: 5_000_000 }, /odometer/],
