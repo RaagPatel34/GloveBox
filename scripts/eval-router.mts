@@ -1,8 +1,7 @@
 // Runs the router's fixed example set (src/lib/agent/router-examples.ts) against the real Nano
 // and reports each miss. Run with `npm run eval:router` (reads .env.local) after any prompt change.
 // Exits non-zero if any example is misrouted, so it can gate a deploy.
-import { checkRoute, routeCommand } from "../src/lib/agent/router.ts";
-import { ROUTER_EXAMPLES } from "../src/lib/agent/router-examples.ts";
+import { checkRouterExample, ROUTER_EXAMPLES } from "../src/lib/agent/router-examples.ts";
 import { missingNebiusConfig, nebiusChat } from "../src/lib/nebius.ts";
 
 const missing = missingNebiusConfig(["nano"]);
@@ -15,11 +14,12 @@ const chat = nebiusChat();
 const now = new Date();
 let misses = 0;
 
-for (const { input, expected } of ROUTER_EXAMPLES) {
+for (const example of ROUTER_EXAMPLES) {
+  const { input } = example;
   const started = Date.now();
   try {
-    const route = await routeCommand(input, chat, now);
-    const problems = checkRoute(route, expected);
+    // The same check router.test.ts runs on every `npm test`.
+    const { route, problems } = await checkRouterExample(example, chat, now);
     const ms = Date.now() - started;
     if (problems.length === 0) {
       console.log(`  ✅ ${input} (${ms}ms) → ${JSON.stringify(route)}`);

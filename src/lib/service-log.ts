@@ -1,12 +1,14 @@
 import {
   BASELINE_INTERVALS,
   DAY_MS,
-  estimateOdometer,
+  estimateCarOdometer,
   isItemKind,
   isOdometerReading,
+  isPlainDate,
   itemStatus,
   MAX_ODOMETER,
 } from "./intervals";
+import { tighterLimit } from "./limits";
 import type { CarSnapshot, ItemStatus, ScheduleItem, ScheduleItemKind } from "./types";
 
 // What the maintenance agent's write tools do to a car: log a service, correct the odometer.
@@ -21,6 +23,8 @@ export type ServiceLogged = {
   doneAt: string;
   doneOdometer: number;
   status: ItemStatus;
+  // The due point that limits it, as on the dashboard tile, as of when it was logged.
+  next: { kind: "days"; dueAt: string } | { kind: "miles"; dueOdometer: number } | null;
 };
 
 export type OdometerUpdated = {
@@ -36,11 +40,13 @@ export type Result<E> = { ok: true; car: CarSnapshot; effect: E } | { ok: false;
 // Services logged further back than this are almost certainly a misread date.
 const MAX_DAYS_BACK = 3 * 365;
 
+const ODOMETER_ERROR = `The odometer must be a whole number of miles up to ${MAX_ODOMETER}.`;
+
 // "2026-10-15" or a full ISO timestamp. A bare date is pinned to noon UTC, which is the
 // same calendar day in California. Returns an error string for anything else.
 function parseServiceDate(raw: string | undefined, now: Date): Date | string {
   if (raw === undefined) return now;
-  const date = /^\d{4}-\d{2}-\d{2}$/.test(raw) ? new Date(`${raw}T12:00:00.000Z`) : new Date(raw);
+  const date = isPlainDate(raw) ? new Date(`${raw}T12:00:00.000Z`) : new Date(raw);
   if (!/^\d{4}-\d{2}-\d{2}/.test(raw) || Number.isNaN(date.getTime())) {
     return `"${raw}" is not a date. Use YYYY-MM-DD.`;
   }
@@ -63,17 +69,24 @@ export function logService(
   const item = car.items.find((i) => i.kind === input.kind);
   if (!item) return { ok: false, error: `This car has no ${input.kind} item.` };
   if (input.odometer !== undefined && !isOdometerReading(input.odometer)) {
-    return { ok: false, error: `The odometer must be a whole number of miles up to ${MAX_ODOMETER}.` };
+    return { ok: false, error: ODOMETER_ERROR };
   }
   const doneAt = parseServiceDate(input.date, now);
   if (typeof doneAt === "string") return { ok: false, error: doneAt };
 
-  const readingAt = new Date(car.readingAt);
-  const doneOdometer = input.odometer ?? estimateOdometer(car.vehicle, readingAt, doneAt);
+  // Planned trips count as driven, as on the dashboard, so a service logged today is at
+  // the odometer the user sees there.
+  const doneOdometer = input.odometer ?? estimateCarOdometer(car, doneAt);
   const dueAt =
     item.intervalDays === undefined ? undefined : new Date(doneAt.getTime() + item.intervalDays * DAY_MS).toISOString();
   const dueOdometer = item.intervalMiles === undefined ? undefined : doneOdometer + item.intervalMiles;
-  const odometerNow = estimateOdometer(car.vehicle, readingAt, now, car.plannedTripMiles ?? 0);
+  // A mileage past today's estimate is a newer reading: the car has at least that many
+  // miles now. It becomes the reading, and every status is recomputed, as updateOdometer does.
+  const moved = input.odometer !== undefined && input.odometer > estimateCarOdometer(car, now);
+  const read: CarSnapshot = moved
+    ? { ...car, vehicle: { ...car.vehicle, odometer: doneOdometer }, readingAt: doneAt.toISOString() }
+    : car;
+  const odometerNow = estimateCarOdometer(read, now);
 
   const updated: ScheduleItem = {
     ...item,
@@ -83,10 +96,14 @@ export function logService(
     dueOdometer,
     status: itemStatus({ dueAt, dueOdometer }, now, odometerNow),
   };
+  const items = car.items.map((i) =>
+    i.id === item.id ? updated : moved ? { ...i, status: itemStatus(i, now, odometerNow) } : i,
+  );
+  const limit = tighterLimit(updated, now, odometerNow, read.vehicle.weeklyMiles);
 
   return {
     ok: true,
-    car: { ...car, items: car.items.map((i) => (i.id === item.id ? updated : i)) },
+    car: { ...read, items },
     effect: {
       type: "service_logged",
       kind: item.kind,
@@ -94,6 +111,12 @@ export function logService(
       doneAt: updated.lastDoneAt!,
       doneOdometer,
       status: updated.status,
+      next:
+        limit?.kind === "days" && dueAt !== undefined
+          ? { kind: "days", dueAt }
+          : limit?.kind === "miles" && dueOdometer !== undefined
+            ? { kind: "miles", dueOdometer }
+            : null,
     },
   };
 }
@@ -101,13 +124,11 @@ export function logService(
 // A fresh reading taken now. It replaces the estimate, so every mileage-based status is
 // recomputed and stored. Lower readings are allowed: this is how a wrong one gets fixed.
 export function updateOdometer(car: CarSnapshot, miles: number, now: Date): Result<OdometerUpdated> {
-  if (!isOdometerReading(miles)) {
-    return { ok: false, error: `The odometer must be a whole number of miles up to ${MAX_ODOMETER}.` };
-  }
+  if (!isOdometerReading(miles)) return { ok: false, error: ODOMETER_ERROR };
 
-  const before = estimateOdometer(car.vehicle, new Date(car.readingAt), now, car.plannedTripMiles ?? 0);
-  const vehicle = { ...car.vehicle, odometer: miles };
-  const odometerNow = estimateOdometer(vehicle, now, now, car.plannedTripMiles ?? 0);
+  const before = estimateCarOdometer(car, now);
+  const read: CarSnapshot = { ...car, vehicle: { ...car.vehicle, odometer: miles }, readingAt: now.toISOString() };
+  const odometerNow = estimateCarOdometer(read, now);
 
   const statusChanges: OdometerUpdated["statusChanges"] = [];
   const items = car.items.map((item): ScheduleItem => {
@@ -122,7 +143,7 @@ export function updateOdometer(car: CarSnapshot, miles: number, now: Date): Resu
 
   return {
     ok: true,
-    car: { ...car, vehicle, readingAt: now.toISOString(), items },
+    car: { ...read, items },
     effect: { type: "odometer_updated", from: before, to: miles, statusChanges },
   };
 }

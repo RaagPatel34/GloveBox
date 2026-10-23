@@ -1,4 +1,4 @@
-import type { ItemStatus, ScheduleItem, ScheduleItemKind, Vehicle } from "./types";
+import type { CarSnapshot, ItemStatus, ScheduleItem, ScheduleItemKind, Vehicle } from "./types";
 
 // Starting defaults. Overridden per vehicle when Tavily finds a manufacturer schedule.
 export const BASELINE_INTERVALS: Record<
@@ -25,6 +25,11 @@ export function isOdometerReading(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= MAX_ODOMETER;
 }
 
+// A calendar date written YYYY-MM-DD, with no time.
+export function isPlainDate(value: unknown): value is string {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
 export const DUE_SOON_DAYS = 7;
 export const DUE_SOON_MILES = 500;
 
@@ -39,6 +44,12 @@ export function estimateOdometer(
 ): number {
   const weeks = Math.max(0, (now.getTime() - readingAt.getTime()) / (7 * DAY_MS));
   return Math.round(vehicle.odometer + vehicle.weeklyMiles * weeks + plannedTripMiles);
+}
+
+// The car's estimated odometer at `at`, from its last reading and planned trips: the
+// number the dashboard shows.
+export function estimateCarOdometer(car: CarSnapshot, at: Date): number {
+  return estimateOdometer(car.vehicle, new Date(car.readingAt), at, car.plannedTripMiles ?? 0);
 }
 
 export function itemStatus(

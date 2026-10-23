@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { MAX_COMMAND_LENGTH } from "@/lib/command-limits";
 import type { CommandReply } from "@/lib/types";
 import { ModelBadge } from "./ModelBadge";
 
@@ -52,7 +53,7 @@ export function CommandBar() {
           id="command"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          maxLength={500}
+          maxLength={MAX_COMMAND_LENGTH}
           autoComplete="off"
           placeholder="“Just got a car wash” or “odometer is 48,210”"
           className="min-w-0 flex-1 rounded-xl bg-panel px-4 py-3 text-base text-foreground ring-1 ring-white/10 placeholder:text-muted/70 focus:outline-none focus:ring-2 focus:ring-ok"

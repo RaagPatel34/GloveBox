@@ -1,21 +1,27 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { callTools, say, scriptedChat, type ScriptedChat } from "./agent/scripted-chat";
-import { runCommand } from "./command";
+import { describeEffects, runCommand } from "./command";
 import { buildDashboard } from "./dashboard";
 import { demoCar } from "./fixtures/demo-car";
+import { logService, updateOdometer } from "./service-log";
 import { inDays, NOW } from "./test-support";
 import type { CarSnapshot } from "./types";
 
 const VISITOR = "11111111-2222-4333-8444-555555555555";
 
-async function send(text: unknown, chat: ScriptedChat | null, car: CarSnapshot | null = demoCar(NOW, VISITOR, randomUUID)) {
+async function send(
+  text: unknown,
+  chat: ScriptedChat | null,
+  car: CarSnapshot | null = demoCar(NOW, VISITOR, randomUUID),
+  now = NOW,
+) {
   const saved: CarSnapshot[] = [];
   const reply = await runCommand({
     text,
     car,
     chat,
-    now: NOW,
+    now,
     save: async (next) => {
       saved.push(next);
     },
@@ -96,6 +102,19 @@ describe("runCommand: service logs", () => {
     expect(schedule.items.find((i: { item: string }) => i.item === "wash").status).toBe("overdue");
   });
 
+  it("tells Super today's date in California, as it tells Nano", async () => {
+    const chat = scriptedChat({
+      nano: [route({ intent: "service_log", item: "wash" })],
+      super: [callTools(["getSchedule", {}]), say("Done.")],
+    });
+    // 2026-10-23 04:00 UTC is still Oct 22 in Buena Park.
+    await send("got a car wash yesterday", chat, undefined, new Date("2026-10-23T04:00:00.000Z"));
+
+    const [first, second] = chat.requests.filter((r) => r.tier === "super");
+    expect(first.messages[0].content).toContain("Today is 2026-10-22.");
+    expect(JSON.parse(second.messages.at(-1)!.content as string).today).toBe("2026-10-22");
+  });
+
   it("saves nothing, with a helpful reply, when Super does not log anything", async () => {
     const chat = scriptedChat({
       nano: [route({ intent: "service_log" })],
@@ -108,6 +127,110 @@ describe("runCommand: service logs", () => {
     expect(reply.model).toBe("super");
     expect(reply.changes).toEqual([]);
     expect(reply.message).toMatch(/oil change|tire rotation/i);
+  });
+
+  it.each([
+    ["an odometer reading", { intent: "odometer", odometer: 48_450 }, "odometer is 48,450", /odometer is 48,210/],
+    ["a named item", { intent: "service_log", item: "oil" }, "changed the oil", /date or mileage/i],
+  ])("says what to fix, not “which item”, when Super records nothing for %s", async (_label, routed, text, message) => {
+    const chat = scriptedChat({ nano: [route(routed)], super: [say("I could not do that.")] });
+    const { reply, saved } = await send(text, chat);
+    expect(saved).toEqual([]);
+    expect(reply.model).toBe("super");
+    expect(reply.message).not.toMatch(/which item/i);
+    expect(reply.message).toMatch(message);
+  });
+});
+
+describe("runCommand: Super can only record what the router read", () => {
+  // Nano routes `text` as `routed`; Super makes `calls` in one turn, then stops.
+  const attempt = (routed: object, text: string, ...calls: [string, unknown][]) =>
+    send(text, scriptedChat({ nano: [route(routed)], super: [callTools(...calls), say("Done.")] }));
+
+  it("logs only the item the router named", async () => {
+    const { saved } = await attempt({ intent: "service_log", item: "wash" }, "just got a car wash", ["logService", { item: "oil" }]);
+    expect(saved).toEqual([]);
+  });
+
+  it("cannot change the odometer on a service log", async () => {
+    const { saved } = await attempt({ intent: "service_log", item: "wash" }, "just got a car wash", [
+      "updateOdometer",
+      { miles: 60_000 },
+    ]);
+    expect(saved).toEqual([]);
+  });
+
+  it("cannot log a service on an odometer reading", async () => {
+    const { saved } = await attempt({ intent: "odometer", odometer: 48_450 }, "odometer is 48,450", [
+      "logService",
+      { item: "wash" },
+    ]);
+    expect(saved).toEqual([]);
+  });
+
+  it("records one change per message", async () => {
+    const { saved, reply } = await attempt(
+      { intent: "service_log" },
+      "did the oil and the wash",
+      ["logService", { item: "oil" }],
+      ["logService", { item: "wash" }],
+    );
+    expect(reply.changes).toHaveLength(1);
+    expect(saved[0].items.find((i) => i.kind === "wash")!.lastDoneAt).not.toBe(NOW.toISOString());
+  });
+
+  it("uses the router's date and mileage when Super leaves them out", async () => {
+    const { saved, reply } = await attempt(
+      { intent: "service_log", item: "oil", date: "2026-10-21", odometer: 47_900 },
+      "changed the oil yesterday at 47,900",
+      ["logService", { item: "oil" }],
+    );
+    const oil = saved[0].items.find((i) => i.kind === "oil")!;
+    expect(oil.lastDoneAt?.slice(0, 10)).toBe("2026-10-21");
+    expect(oil.lastDoneOdometer).toBe(47_900);
+    expect(reply.changes[0]).toMatch(/^Oil change \(synthetic\) logged Oct 21 at 47,900 mi\./);
+  });
+
+  it("refuses a date or mileage that contradicts the router's", async () => {
+    const routed = { intent: "service_log", item: "oil", date: "2026-10-21", odometer: 47_900 };
+    const text = "changed the oil yesterday at 47,900";
+    expect((await attempt(routed, text, ["logService", { item: "oil", odometer: 49_999 }])).saved).toEqual([]);
+    expect((await attempt(routed, text, ["logService", { item: "oil", date: "2026-10-01" }])).saved).toEqual([]);
+  });
+
+  it("refuses a date or mileage the user never gave", async () => {
+    const routed = { intent: "service_log", item: "oil" };
+    expect((await attempt(routed, "changed the oil", ["logService", { item: "oil", odometer: 47_000 }])).saved).toEqual([]);
+    expect((await attempt(routed, "changed the oil", ["logService", { item: "oil", date: "2026-10-01" }])).saved).toEqual([]);
+  });
+
+  it("ignores a router mileage that is not in the user's words", async () => {
+    const { saved } = await attempt({ intent: "service_log", item: "wash", odometer: 52_000 }, "just got a car wash", [
+      "logService",
+      { item: "wash" },
+    ]);
+    expect(saved[0].items.find((i) => i.kind === "wash")!.lastDoneOdometer).toBe(48_000);
+    expect(saved[0].vehicle.odometer).toBe(47_750);
+  });
+
+  it("sets only the reading the user typed", async () => {
+    const odometer = { intent: "odometer", odometer: 48_450 };
+    expect((await attempt(odometer, "odometer is 48,450", ["updateOdometer", { miles: 49_000 }])).saved).toEqual([]);
+    expect((await attempt(odometer, "update my odometer", ["updateOdometer", { miles: 48_450 }])).saved).toEqual([]);
+  });
+});
+
+describe("describeEffects", () => {
+  it("describes each change as it was made, not as the car ended up", () => {
+    const logged = logService(demoCar(NOW, VISITOR, randomUUID), { kind: "oil", odometer: 47_900 }, NOW);
+    if (!logged.ok) throw new Error(logged.error);
+    // 55,000 is within 500 mi of the new oil due point, so oil ends up due soon.
+    const read = updateOdometer(logged.car, 55_000, NOW);
+    if (!read.ok) throw new Error(read.error);
+
+    const lines = describeEffects([logged.effect, read.effect]);
+    expect(lines[0]).toBe("Oil change (synthetic) logged Oct 22 at 47,900 mi. OK, next due at 55,400 mi.");
+    expect(lines).toContain("Oil change (synthetic): OK → Due soon.");
   });
 });
 
@@ -146,6 +269,21 @@ describe("runCommand: input it cannot act on", () => {
     expect(reply.message).toMatch(/try again/i);
   });
 
+  it("badges the model that last answered when a later call fails", async () => {
+    const nanoOnly = scriptedChat({ nano: [route({ intent: "service_log", item: "wash" })] });
+    const afterNano = await send("just got a car wash", nanoOnly);
+    expect(afterNano.reply).toMatchObject({ model: "nano", changes: [] });
+    expect(afterNano.reply.message).toMatch(/try again/i);
+
+    const superCutOff = scriptedChat({
+      nano: [route({ intent: "service_log", item: "wash" })],
+      super: [callTools(["getSchedule", {}])],
+    });
+    const afterSuper = await send("just got a car wash", superCutOff);
+    expect(afterSuper.saved).toEqual([]);
+    expect(afterSuper.reply.model).toBe("super");
+  });
+
   it.each([["", ""], ["blank", "   "], ["not text", 42], ["too long", "x".repeat(501)]])(
     "asks for something to do when the input is %s, without calling a model",
     async (_label, text) => {
@@ -155,6 +293,15 @@ describe("runCommand: input it cannot act on", () => {
       expect(reply.model).toBeNull();
     },
   );
+
+  it("takes up to 500 characters, and says so when there are more", async () => {
+    const tooLong = await send("x".repeat(501), scriptedChat({}));
+    expect(tooLong.reply.message).toMatch(/500 characters or fewer/);
+
+    const chat = scriptedChat({ nano: [route({ intent: "unknown" })] });
+    await send("x".repeat(500), chat);
+    expect(chat.requests).toHaveLength(1);
+  });
 
   it("asks for a car first when there is none", async () => {
     const chat = scriptedChat({});

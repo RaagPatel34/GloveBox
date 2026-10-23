@@ -48,6 +48,39 @@ describe("logService", () => {
     expect(oil.dueOdometer).toBe(55_250);
   });
 
+  it("logs a service done today at the odometer the dashboard shows, planned trips included", () => {
+    const withTrip = { ...car(), plannedTripMiles: 300 };
+    expect(buildDashboard(withTrip, NOW).odometerEstimate).toBe(48_300);
+
+    const result = logService(withTrip, { kind: "oil" }, NOW);
+    if (!result.ok) throw new Error(result.error);
+    const oil = result.car.items.find((i) => i.kind === "oil")!;
+
+    expect(oil.lastDoneOdometer).toBe(48_300);
+    expect(oil.dueOdometer).toBe(55_800);
+  });
+
+  it("moves the odometer forward when the service mileage is past the current reading", () => {
+    // Oil is due at 48,400, so 48,450 makes it overdue; the wash then resets at 48,450.
+    const result = logService(car(), { kind: "wash", odometer: 48_450 }, NOW);
+    if (!result.ok) throw new Error(result.error);
+    const stored = Object.fromEntries(result.car.items.map((i) => [i.kind, i.status]));
+
+    expect(result.car.vehicle.odometer).toBe(48_450);
+    expect(result.car.readingAt).toBe(NOW.toISOString());
+    expect(buildDashboard(result.car, NOW).odometerEstimate).toBe(48_450);
+    expect(stored.oil).toBe("overdue");
+    expect(stored).toEqual(Object.fromEntries(buildDashboard(result.car, NOW).items.map((i) => [i.kind, i.status])));
+  });
+
+  it("keeps the reading when the service mileage is behind it", () => {
+    const before = car();
+    const result = logService(before, { kind: "oil", odometer: 47_900 }, NOW);
+    if (!result.ok) throw new Error(result.error);
+    expect(result.car.vehicle).toEqual(before.vehicle);
+    expect(result.car.readingAt).toBe(before.readingAt);
+  });
+
   it("leaves every other item and the vehicle alone", () => {
     const before = car();
     const result = logService(before, { kind: "wash" }, NOW);
@@ -66,6 +99,7 @@ describe("logService", () => {
       doneAt: NOW.toISOString(),
       doneOdometer: 48_000,
       status: "ok",
+      next: { kind: "days", dueAt: inDays(14) },
     });
   });
 
