@@ -46,9 +46,16 @@ describe("parseForecast", () => {
     expect(parseForecast({ daily: { time: ["2026-10-23"], precipitation_sum: [] } })).toBeNull();
   });
 
-  it("rejects a day whose rainfall is missing", () => {
+  it("rejects a forecast whose first day's rainfall is missing: nothing usable is left", () => {
     const body = { daily: { ...FORECAST.daily, precipitation_sum: [null, 0, 0, 0, 0, 0, 0] } };
     expect(parseForecast(body)).toBeNull();
+  });
+
+  it("keeps the days before one whose rainfall is missing, so a real rain-hold is not lost", () => {
+    const body = { daily: { ...FORECAST.daily, precipitation_sum: [0, 0.4, null, 0, 0, 0, 0] } };
+    const forecast = parseForecast(body);
+    expect(forecast?.days.map((d) => d.date)).toEqual(["2026-10-23", "2026-10-24"]);
+    expect(forecast?.days[1].rainInches).toBe(0.4);
   });
 });
 
@@ -62,6 +69,14 @@ describe("parseAirQuality", () => {
     expect(parseAirQuality(AIR)?.pm25Peak24h).toBe(8.8);
     const rising = { ...AIR, hourly: { ...AIR.hourly, pm2_5: [11.9, 10.4, 8.8, 40.5, 7.3] } };
     expect(parseAirQuality(rising)?.pm25Peak24h).toBe(40.5);
+  });
+
+  it("counts the hour in progress: a 14:15 reading still has the 14:00 slot ahead of it", () => {
+    const body = {
+      current: { time: "2026-10-23T14:15", pm2_5: 8, us_aqi: 30 },
+      hourly: { time: ["2026-10-23T13:00", "2026-10-23T14:00", "2026-10-23T15:00"], pm2_5: [99, 50, 9] },
+    };
+    expect(parseAirQuality(body)?.pm25Peak24h).toBe(50);
   });
 
   it("looks only 24 hours ahead", () => {

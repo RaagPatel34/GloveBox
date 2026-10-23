@@ -1,7 +1,7 @@
 import { estimateCarOdometer, itemStatus } from "./intervals";
 import { evaluateNudge, type NudgeDraft } from "./nudge";
 import type { CarSnapshot } from "./types";
-import { getAirQuality, getWeather } from "./weather";
+import { type FetchLike, getAirQuality, getWeather } from "./weather";
 
 // Checks the real weather and air at the car's home against the nudge rules.
 // Used by "Load demo car" now and by the daily job (#16) later.
@@ -12,8 +12,6 @@ export type ConditionsCheck = {
   // not tell", not "nothing to say": the caller decides whether that matters.
   complete: boolean;
 };
-
-type FetchLike = (url: string) => Promise<Response>;
 
 // Never throws: a service that is down just leaves its half out.
 export async function checkConditions(car: CarSnapshot, now: Date, fetchImpl?: FetchLike): Promise<ConditionsCheck> {
