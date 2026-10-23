@@ -21,7 +21,8 @@ export async function loadDemoCarAction(_previous: DemoCarState, formData: FormD
     const now = new Date();
     const car = demoCar(now, visitorId, randomUUID);
     // The car's nudge comes from the real forecast; demoNudge never throws if Open-Meteo is down.
-    await saveCar(visitorId, car, [await demoNudge(car, now, randomUUID)]);
+    const nudge = await demoNudge(car, now, randomUUID);
+    await saveCar(visitorId, car, nudge ? [nudge] : []);
   } catch (error) {
     console.error("loadDemoCarAction failed", error);
     return { message: "Could not load the demo car. Please try again." };
