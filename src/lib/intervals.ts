@@ -18,7 +18,7 @@ export const BASELINE_INTERVALS: Record<
 export const DUE_SOON_DAYS = 7;
 export const DUE_SOON_MILES = 500;
 
-const DAY_MS = 24 * 60 * 60 * 1000;
+export const DAY_MS = 24 * 60 * 60 * 1000;
 
 // Last reading plus the weekly baseline since then, plus miles from planned trips.
 export function estimateOdometer(
