@@ -6,6 +6,7 @@ import { SetupForm } from "@/components/setup/SetupForm";
 import { VisitorSync } from "@/components/visitor/VisitorSync";
 import { getCarSnapshot } from "@/lib/car";
 import { buildDashboard } from "@/lib/dashboard";
+import { listNudges } from "@/lib/db/nudge-store";
 import { VISITOR_COOKIE } from "@/lib/visitor";
 
 export default function Home() {
@@ -23,11 +24,13 @@ async function LiveDashboard() {
   const visitorId = (await cookies()).get(VISITOR_COOKIE)?.value;
   const now = new Date();
   const car = await getCarSnapshot(visitorId);
+  // A car exists only for a valid visitor ID, which listNudges needs.
+  const nudges = car ? await listNudges(car.vehicle.visitorId, now) : [];
 
   return (
     <>
       <VisitorSync serverVisitorId={visitorId} />
-      {car ? <HealthDashboard dashboard={buildDashboard(car, now)} /> : <SetupForm />}
+      {car ? <HealthDashboard dashboard={buildDashboard(car, now)} nudges={nudges} /> : <SetupForm />}
     </>
   );
 }

@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { saveCar } from "@/lib/db/car-store";
 import { demoCar } from "@/lib/fixtures/demo-car";
+import { demoNudge } from "@/lib/fixtures/demo-nudge";
 import { isVisitorId } from "@/lib/visitor";
 import { setVisitorCookie } from "@/lib/visitor-cookie";
 
@@ -17,7 +18,10 @@ export async function loadDemoCarAction(_previous: DemoCarState, formData: FormD
   if (!isVisitorId(visitorId)) return { message: "Missing visitor ID. Reload the page and try again." };
 
   try {
-    await saveCar(visitorId, demoCar(new Date(), visitorId, randomUUID));
+    const now = new Date();
+    const car = demoCar(now, visitorId, randomUUID);
+    // The car's nudge comes from the real forecast; demoNudge never throws if Open-Meteo is down.
+    await saveCar(visitorId, car, [await demoNudge(car, now, randomUUID)]);
   } catch (error) {
     console.error("loadDemoCarAction failed", error);
     return { message: "Could not load the demo car. Please try again." };
