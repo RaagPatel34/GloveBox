@@ -1,5 +1,5 @@
 // The .ts extension lets `npm run eval:router` load this file under plain Node.
-import { BASELINE_INTERVALS, DAY_MS, isItemKind, isOdometerReading, isPlainDate } from "../intervals.ts";
+import { BASELINE_INTERVALS, DAY_MS, isItemKind, isOdometerReading, isPlainDate, parseMiles } from "../intervals.ts";
 import type { ScheduleItemKind } from "../types";
 import type { Chat } from "./chat";
 
@@ -56,9 +56,9 @@ export async function routeCommand(text: string, chat: Chat, now: Date): Promise
   return parseRoute(reply.content);
 }
 
-// "48,210" or 48210 -> 48210. Anything that is not a valid reading is undefined.
+// "48,210", "48.2k" or 48210 -> the reading. Anything that is not a valid reading is undefined.
 function toOdometer(value: unknown): number | undefined {
-  const n = typeof value === "string" && /^[\d,]+$/.test(value.trim()) ? Number(value.replace(/,/g, "")) : value;
+  const n = parseMiles(value);
   return isOdometerReading(n) ? n : undefined;
 }
 

@@ -1,4 +1,4 @@
-import { BASELINE_INTERVALS, estimateCarOdometer, itemStatus } from "../intervals";
+import { BASELINE_INTERVALS, estimateCarOdometer, itemStatus, parseMiles } from "../intervals";
 import { logService, updateOdometer, type OdometerUpdated, type ServiceLogged } from "../service-log";
 import type { CarSnapshot, ScheduleItemKind } from "../types";
 import type { Chat } from "./chat";
@@ -25,7 +25,7 @@ const ONE_CHANGE = "A change is already recorded for this message. Stop and repl
 
 // Every whole number in the user's words: "48,100 miles" -> 48100.
 function typedNumbers(text: string): number[] {
-  return (text.match(/\d[\d,]*/g) ?? []).map((n) => Number(n.replace(/,/g, "")));
+  return (text.match(/\d[\d,]*/g) ?? []).flatMap((n) => parseMiles(n) ?? []);
 }
 
 export function maintenanceTools(

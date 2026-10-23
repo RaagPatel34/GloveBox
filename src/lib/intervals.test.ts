@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DAY_MS, estimateOdometer, itemStatus } from "./intervals";
+import { DAY_MS, estimateOdometer, itemStatus, parseMiles } from "./intervals";
 import { inDays, NOW } from "./test-support";
 
 describe("estimateOdometer", () => {
@@ -76,4 +76,25 @@ describe("itemStatus", () => {
   it("is ok when the item has no due target at all", () => {
     expect(itemStatus({}, NOW, 48_000)).toBe("ok");
   });
+});
+
+describe("parseMiles", () => {
+  it.each([
+    [48_210, 48_210],
+    ["48210", 48_210],
+    ["48,210", 48_210],
+    [" 48 210 ", 48_210],
+    ["48k", 48_000],
+    ["48.2K", 48_200],
+    ["31.5", 31.5],
+  ])("reads %j as %d", (raw, miles) => {
+    expect(parseMiles(raw)).toBe(miles);
+  });
+
+  it.each([["lots"], ["-40"], [-40], ["48,210 miles"], ["10/15"], [""], [null], [Number.NaN]])(
+    "reads %j as nothing",
+    (raw) => {
+      expect(parseMiles(raw)).toBeUndefined();
+    },
+  );
 });
