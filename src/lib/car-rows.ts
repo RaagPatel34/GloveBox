@@ -35,7 +35,7 @@ export type ItemRow = {
   interval_source_url: string | null;
 };
 
-// What a driver may return for the same columns: timestamps as Date, numerics as strings.
+// Needed: the neon driver returns timestamptz as Date, not string (checked live); the string widening for numbers is defensive.
 type Loose<T, Times extends keyof T, Nums extends keyof T> = {
   [K in keyof T]: K extends Times ? T[K] | Date : K extends Nums ? T[K] | string : T[K];
 };
