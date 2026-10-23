@@ -80,14 +80,14 @@ export function parseGeocodeResult(body: unknown): (LatLng & { label: string }) 
   if (!Array.isArray(body) || body.length === 0) return null;
   const hit: unknown = body[0];
   if (typeof hit !== "object" || hit === null) return null;
-  const r = hit as Record<string, unknown>;
-  const lat = Number(r.lat);
-  const lng = Number(r.lon);
+  const fields = hit as Record<string, unknown>;
+  const lat = Number(fields.lat);
+  const lng = Number(fields.lon);
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
 
-  const display = typeof r.display_name === "string" ? r.display_name : "";
-  const name = typeof r.name === "string" && r.name !== "" ? r.name : display.split(",")[0].trim();
-  const address = typeof r.address === "object" && r.address !== null ? (r.address as Record<string, unknown>) : {};
+  const display = typeof fields.display_name === "string" ? fields.display_name : "";
+  const name = typeof fields.name === "string" && fields.name !== "" ? fields.name : display.split(",")[0].trim();
+  const address = typeof fields.address === "object" && fields.address !== null ? (fields.address as Record<string, unknown>) : {};
   const state = typeof address.state === "string" ? address.state : "";
   const label = [name, state].filter((part) => part !== "").join(", ");
   return { lat, lng, label: label === "" ? "Home" : label };
@@ -95,21 +95,21 @@ export function parseGeocodeResult(body: unknown): (LatLng & { label: string }) 
 
 export function buildSnapshot(args: {
   input: SetupInput;
-  epa: EpaVehicle;
+  epaVehicle: EpaVehicle;
   home: LatLng & { label: string };
   now: Date;
   newId: () => string;
 }): CarSnapshot {
-  const { input, epa, home, now, newId } = args;
+  const { input, epaVehicle, home, now, newId } = args;
   const vehicleId = newId();
   return {
     vehicle: {
       id: vehicleId,
       visitorId: input.visitorId,
-      year: epa.year,
-      make: epa.make,
-      model: epa.model,
-      epaMpg: epa.combinedMpg,
+      year: epaVehicle.year,
+      make: epaVehicle.make,
+      model: epaVehicle.model,
+      epaMpg: epaVehicle.combinedMpg,
       mpgOverride: input.mpgOverride,
       odometer: input.odometer,
       weeklyMiles: input.weeklyMiles,

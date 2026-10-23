@@ -23,31 +23,31 @@ export function SetupForm() {
   const visitor = useVisitorId();
   const [state, formAction, pending] = useActionState<SetupState, FormData>(saveCarAction, {});
 
-  const [sel, setSel] = useState<Selection>(EMPTY);
+  const [selection, setSelection] = useState<Selection>(EMPTY);
   const [years, setYears] = useState<MenuItem[]>([]);
   const [makes, setMakes] = useState<MenuItem[]>([]);
   const [models, setModels] = useState<MenuItem[]>([]);
   const [options, setOptions] = useState<MenuItem[]>([]);
-  const [epa, setEpa] = useState<EpaVehicle | null>(null);
+  const [epaVehicle, setEpaVehicle] = useState<EpaVehicle | null>(null);
   // Controlled, because React clears uncontrolled fields after every submit, including failed ones.
   const [typed, setTyped] = useState({ mpgOverride: "", odometer: "", weeklyMiles: "250", home: "" });
-  const bind = (name: keyof typeof typed) => ({
+  const fieldProps = (name: keyof typeof typed) => ({
     name,
     value: typed[name],
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => setTyped((t) => ({ ...t, [name]: e.target.value })),
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => setTyped((current) => ({ ...current, [name]: e.target.value })),
   });
   const [lookupError, setLookupError] = useState<string | null>(null);
   // Latest lookup wins: a slow earlier response must not overwrite a newer choice.
-  const ticket = useRef(0);
+  const latestLookup = useRef(0);
 
   async function lookup<T>(query: string, apply: (data: T) => void) {
-    const mine = ++ticket.current;
+    const thisLookup = ++latestLookup.current;
     setLookupError(null);
     try {
       const data = await getJson<T>(query);
-      if (mine === ticket.current) apply(data);
+      if (thisLookup === latestLookup.current) apply(data);
     } catch {
-      if (mine === ticket.current) setLookupError(`${EPA_UNREACHABLE} Try again in a moment.`);
+      if (thisLookup === latestLookup.current) setLookupError(`${EPA_UNREACHABLE} Try again in a moment.`);
     }
   }
 
@@ -62,46 +62,46 @@ export function SetupForm() {
   }, []);
 
   function chooseYear(year: string) {
-    setSel({ ...EMPTY, year });
+    setSelection({ ...EMPTY, year });
     setMakes([]);
     setModels([]);
     setOptions([]);
-    setEpa(null);
-    if (year) void lookup<{ items: MenuItem[] }>(`?year=${year}`, (d) => setMakes(d.items));
+    setEpaVehicle(null);
+    if (year) void lookup<{ items: MenuItem[] }>(`?year=${year}`, (menu) => setMakes(menu.items));
   }
 
   function chooseMake(make: string) {
-    setSel({ ...EMPTY, year: sel.year, make });
+    setSelection({ ...EMPTY, year: selection.year, make });
     setModels([]);
     setOptions([]);
-    setEpa(null);
+    setEpaVehicle(null);
     if (make) {
-      void lookup<{ items: MenuItem[] }>(`?year=${sel.year}&make=${encodeURIComponent(make)}`, (d) => setModels(d.items));
+      void lookup<{ items: MenuItem[] }>(`?year=${selection.year}&make=${encodeURIComponent(make)}`, (menu) => setModels(menu.items));
     }
   }
 
   function chooseModel(model: string) {
-    setSel({ ...EMPTY, year: sel.year, make: sel.make, model });
+    setSelection({ ...EMPTY, year: selection.year, make: selection.make, model });
     setOptions([]);
-    setEpa(null);
+    setEpaVehicle(null);
     if (model) {
-      const q = `?year=${sel.year}&make=${encodeURIComponent(sel.make)}&model=${encodeURIComponent(model)}`;
-      void lookup<{ items: MenuItem[] }>(q, (d) => {
-        setOptions(d.items);
+      const query = `?year=${selection.year}&make=${encodeURIComponent(selection.make)}&model=${encodeURIComponent(model)}`;
+      void lookup<{ items: MenuItem[] }>(query, (menu) => {
+        setOptions(menu.items);
         // A model with a single option needs no second choice.
-        if (d.items.length === 1) chooseOption(d.items[0].value, { ...sel, model });
+        if (menu.items.length === 1) chooseOption(menu.items[0].value, { ...selection, model });
       });
     }
   }
 
-  function chooseOption(optionId: string, base: Selection = sel) {
-    setSel({ ...base, optionId });
-    setEpa(null);
-    if (optionId) void lookup<{ vehicle: EpaVehicle }>(`?vehicleId=${optionId}`, (d) => setEpa(d.vehicle));
+  function chooseOption(optionId: string, base: Selection = selection) {
+    setSelection({ ...base, optionId });
+    setEpaVehicle(null);
+    if (optionId) void lookup<{ vehicle: EpaVehicle }>(`?vehicleId=${optionId}`, (data) => setEpaVehicle(data.vehicle));
   }
 
   const errors = state.errors ?? {};
-  const err = (name: keyof typeof errors) =>
+  const fieldError = (name: keyof typeof errors) =>
     errors[name] ? (
       <p role="alert" className="mt-1.5 text-sm text-overdue-text">
         {errors[name]}
@@ -118,12 +118,12 @@ export function SetupForm() {
 
       <form action={formAction} className="mt-8 grid gap-5 rounded-2xl bg-panel p-5 ring-1 ring-white/5 sm:p-8">
         <input type="hidden" name="visitorId" value={visitor?.id ?? ""} />
-        <input type="hidden" name="epaVehicleId" value={sel.optionId} />
+        <input type="hidden" name="epaVehicleId" value={selection.optionId} />
 
         <div className="grid grid-cols-2 gap-4">
           <label className={labelClass}>
             Year
-            <select className={fieldClass} value={sel.year} onChange={(e) => chooseYear(e.target.value)} required>
+            <select className={fieldClass} value={selection.year} onChange={(e) => chooseYear(e.target.value)} required>
               <option value="">Select…</option>
               {years.map((y) => (
                 <option key={y.value} value={y.value}>
@@ -136,7 +136,7 @@ export function SetupForm() {
             Make
             <select
               className={fieldClass}
-              value={sel.make}
+              value={selection.make}
               onChange={(e) => chooseMake(e.target.value)}
               disabled={makes.length === 0}
               required
@@ -155,7 +155,7 @@ export function SetupForm() {
           Model
           <select
             className={fieldClass}
-            value={sel.model}
+            value={selection.model}
             onChange={(e) => chooseModel(e.target.value)}
             disabled={models.length === 0}
             required
@@ -173,7 +173,7 @@ export function SetupForm() {
           Engine and transmission
           <select
             className={fieldClass}
-            value={sel.optionId}
+            value={selection.optionId}
             onChange={(e) => chooseOption(e.target.value)}
             disabled={options.length === 0}
             required
@@ -185,7 +185,7 @@ export function SetupForm() {
               </option>
             ))}
           </select>
-          {err("epaVehicleId")}
+          {fieldError("epaVehicleId")}
         </label>
 
         {lookupError && (
@@ -195,9 +195,9 @@ export function SetupForm() {
         )}
 
         <p aria-live="polite" className="rounded-xl bg-black/40 px-4 py-3 font-mono text-sm ring-1 ring-white/5">
-          {epa ? (
+          {epaVehicle ? (
             <>
-              <span className="tabular-nums text-ok-text">{epa.combinedMpg} MPG</span>
+              <span className="tabular-nums text-ok-text">{epaVehicle.combinedMpg} MPG</span>
               <span className="text-muted"> combined (EPA, fueleconomy.gov)</span>
             </>
           ) : (
@@ -207,30 +207,30 @@ export function SetupForm() {
 
         <label className={labelClass}>
           MPG override <span className="normal-case tracking-normal">(optional)</span>
-          <input {...bind("mpgOverride")} inputMode="decimal" placeholder={epa ? String(epa.combinedMpg) : "Your real-world MPG"} className={fieldClass} />
-          {err("mpgOverride")}
+          <input {...fieldProps("mpgOverride")} inputMode="decimal" placeholder={epaVehicle ? String(epaVehicle.combinedMpg) : "Your real-world MPG"} className={fieldClass} />
+          {fieldError("mpgOverride")}
         </label>
 
         <div className="grid grid-cols-2 gap-4">
           <label className={labelClass}>
             Odometer (mi)
-            <input {...bind("odometer")} inputMode="numeric" placeholder="48,000" required className={fieldClass} />
-            {err("odometer")}
+            <input {...fieldProps("odometer")} inputMode="numeric" placeholder="48,000" required className={fieldClass} />
+            {fieldError("odometer")}
           </label>
           <label className={labelClass}>
             Miles per week
-            <input {...bind("weeklyMiles")} inputMode="numeric" required className={fieldClass} />
-            {err("weeklyMiles")}
+            <input {...fieldProps("weeklyMiles")} inputMode="numeric" required className={fieldClass} />
+            {fieldError("weeklyMiles")}
           </label>
         </div>
 
         <label className={labelClass}>
           Home
-          <input {...bind("home")} placeholder="City, state, ZIP or landmark" autoComplete="off" required className={fieldClass} />
+          <input {...fieldProps("home")} placeholder="City, state, ZIP or landmark" autoComplete="off" required className={fieldClass} />
           <span className="mt-1.5 block normal-case tracking-normal text-muted">
             A city or ZIP is plenty. It is only used to find nearby gas and weather.
           </span>
-          {err("home")}
+          {fieldError("home")}
         </label>
 
         {state.message && (
@@ -238,11 +238,11 @@ export function SetupForm() {
             {state.message}
           </p>
         )}
-        {err("visitorId")}
+        {fieldError("visitorId")}
 
         <button
           type="submit"
-          disabled={pending || visitor === null || epa === null}
+          disabled={pending || visitor === null || epaVehicle === null}
           className="rounded-xl bg-ok px-5 py-3 text-base font-semibold text-black transition-opacity disabled:opacity-40"
         >
           {pending ? "Building your schedule…" : "Save car and open dashboard"}

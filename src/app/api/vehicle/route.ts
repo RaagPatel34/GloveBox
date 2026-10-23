@@ -7,7 +7,7 @@ import { createEpaClient, EPA_UNREACHABLE } from "@/lib/epa";
 //   ?year&make                   -> models
 //   ?year&make&model             -> engine/transmission options
 //   ?vehicleId                   -> { vehicle } with the EPA combined MPG
-const epa = createEpaClient();
+const epaClient = createEpaClient();
 
 const json = (body: unknown, status = 200) =>
   Response.json(body, {
@@ -16,11 +16,11 @@ const json = (body: unknown, status = 200) =>
   });
 
 export async function GET(request: Request) {
-  const p = new URL(request.url).searchParams;
-  const year = p.get("year");
-  const make = p.get("make");
-  const model = p.get("model");
-  const vehicleId = p.get("vehicleId");
+  const searchParams = new URL(request.url).searchParams;
+  const year = searchParams.get("year");
+  const make = searchParams.get("make");
+  const model = searchParams.get("model");
+  const vehicleId = searchParams.get("vehicleId");
 
   if (year !== null && !/^\d{4}$/.test(year)) return json({ error: "Invalid year" }, 400);
   for (const text of [make, model]) {
@@ -29,13 +29,13 @@ export async function GET(request: Request) {
 
   try {
     if (vehicleId !== null) {
-      const vehicle = await epa.vehicle(vehicleId);
+      const vehicle = await epaClient.vehicle(vehicleId);
       return vehicle ? json({ vehicle }) : json({ error: "Unknown vehicle" }, 404);
     }
-    if (year === null) return json({ items: await epa.years() });
-    if (make === null) return json({ items: await epa.makes(Number(year)) });
-    if (model === null) return json({ items: await epa.models(Number(year), make) });
-    return json({ items: await epa.options(Number(year), make, model) });
+    if (year === null) return json({ items: await epaClient.years() });
+    if (make === null) return json({ items: await epaClient.makes(Number(year)) });
+    if (model === null) return json({ items: await epaClient.models(Number(year), make) });
+    return json({ items: await epaClient.options(Number(year), make, model) });
   } catch {
     return json({ error: `${EPA_UNREACHABLE} Try again in a moment.` }, 502);
   }

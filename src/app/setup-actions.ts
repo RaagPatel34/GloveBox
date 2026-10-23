@@ -11,7 +11,7 @@ import { VISITOR_COOKIE, VISITOR_COOKIE_MAX_AGE } from "@/lib/visitor";
 
 export type SetupState = { errors?: SetupErrors; message?: string };
 
-const epa = createEpaClient();
+const epaClient = createEpaClient();
 
 // Server Functions are reachable by direct POST, so everything is re-validated here.
 // The EPA numbers come from fueleconomy.gov again, never from what the browser sent.
@@ -22,10 +22,10 @@ export async function saveCarAction(_previous: SetupState, formData: FormData): 
 
   let snapshot;
   try {
-    const [epaVehicle, home] = await Promise.all([epa.vehicle(input.epaVehicleId), geocode(input.home)]);
+    const [epaVehicle, home] = await Promise.all([epaClient.vehicle(input.epaVehicleId), geocode(input.home)]);
     if (epaVehicle === null) return { errors: { epaVehicleId: "That car was not found. Pick it again." } };
     if (home === null) return { errors: { home: "Could not find that place. Try a city and state, or a ZIP code." } };
-    snapshot = buildSnapshot({ input, epa: epaVehicle, home, now: new Date(), newId: randomUUID });
+    snapshot = buildSnapshot({ input, epaVehicle, home, now: new Date(), newId: randomUUID });
     await saveCar(input.visitorId, snapshot);
   } catch (error) {
     console.error("saveCarAction failed", error);

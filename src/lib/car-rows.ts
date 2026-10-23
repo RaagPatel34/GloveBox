@@ -47,75 +47,75 @@ type DriverItemRow = Loose<
 >;
 
 export function toRows(visitorId: string, snapshot: CarSnapshot): { vehicle: VehicleRow; items: ItemRow[] } {
-  const v = snapshot.vehicle;
+  const { vehicle } = snapshot;
   return {
     vehicle: {
-      id: v.id,
+      id: vehicle.id,
       visitor_id: visitorId,
-      year: v.year,
-      make: v.make,
-      model: v.model,
-      epa_mpg: v.epaMpg,
-      mpg_override: v.mpgOverride ?? null,
-      odometer: v.odometer,
-      weekly_miles: v.weeklyMiles,
-      home_label: v.home.label,
-      home_lat: v.home.lat,
-      home_lng: v.home.lng,
+      year: vehicle.year,
+      make: vehicle.make,
+      model: vehicle.model,
+      epa_mpg: vehicle.epaMpg,
+      mpg_override: vehicle.mpgOverride ?? null,
+      odometer: vehicle.odometer,
+      weekly_miles: vehicle.weeklyMiles,
+      home_label: vehicle.home.label,
+      home_lat: vehicle.home.lat,
+      home_lng: vehicle.home.lng,
       reading_at: snapshot.readingAt,
     },
-    items: snapshot.items.map((i) => ({
-      id: i.id,
-      vehicle_id: i.vehicleId,
-      kind: i.kind,
-      interval_days: i.intervalDays ?? null,
-      interval_miles: i.intervalMiles ?? null,
-      last_done_at: i.lastDoneAt ?? null,
-      last_done_odometer: i.lastDoneOdometer ?? null,
-      due_at: i.dueAt ?? null,
-      due_odometer: i.dueOdometer ?? null,
-      status: i.status,
-      interval_source_kind: i.intervalSource.kind,
-      interval_source_url: i.intervalSource.url ?? null,
+    items: snapshot.items.map((item) => ({
+      id: item.id,
+      vehicle_id: item.vehicleId,
+      kind: item.kind,
+      interval_days: item.intervalDays ?? null,
+      interval_miles: item.intervalMiles ?? null,
+      last_done_at: item.lastDoneAt ?? null,
+      last_done_odometer: item.lastDoneOdometer ?? null,
+      due_at: item.dueAt ?? null,
+      due_odometer: item.dueOdometer ?? null,
+      status: item.status,
+      interval_source_kind: item.intervalSource.kind,
+      interval_source_url: item.intervalSource.url ?? null,
     })),
   };
 }
 
-const iso = (value: string | Date): string => (value instanceof Date ? value.toISOString() : new Date(value).toISOString());
-const isoOrUndefined = (value: string | Date | null): string | undefined => (value === null ? undefined : iso(value));
-const num = (value: number | string): number => Number(value);
-const numOrUndefined = (value: number | string | null): number | undefined => (value === null ? undefined : Number(value));
+const toIsoString = (value: string | Date): string => (value instanceof Date ? value.toISOString() : new Date(value).toISOString());
+const toIsoStringOrUndefined = (value: string | Date | null): string | undefined => (value === null ? undefined : toIsoString(value));
+const toNumber = (value: number | string): number => Number(value);
+const toNumberOrUndefined = (value: number | string | null): number | undefined => (value === null ? undefined : Number(value));
 
 export function fromRows(vehicle: DriverVehicleRow, items: DriverItemRow[]): CarSnapshot {
   return {
     vehicle: {
       id: vehicle.id,
       visitorId: vehicle.visitor_id,
-      year: num(vehicle.year),
+      year: toNumber(vehicle.year),
       make: vehicle.make,
       model: vehicle.model,
-      epaMpg: num(vehicle.epa_mpg),
-      mpgOverride: numOrUndefined(vehicle.mpg_override),
-      odometer: num(vehicle.odometer),
-      weeklyMiles: num(vehicle.weekly_miles),
-      home: { label: vehicle.home_label, lat: num(vehicle.home_lat), lng: num(vehicle.home_lng) },
+      epaMpg: toNumber(vehicle.epa_mpg),
+      mpgOverride: toNumberOrUndefined(vehicle.mpg_override),
+      odometer: toNumber(vehicle.odometer),
+      weeklyMiles: toNumber(vehicle.weekly_miles),
+      home: { label: vehicle.home_label, lat: toNumber(vehicle.home_lat), lng: toNumber(vehicle.home_lng) },
     },
-    readingAt: iso(vehicle.reading_at),
+    readingAt: toIsoString(vehicle.reading_at),
     items: items.map(
-      (i): ScheduleItem => ({
-        id: i.id,
-        vehicleId: i.vehicle_id,
-        kind: i.kind as ScheduleItemKind,
-        intervalDays: numOrUndefined(i.interval_days),
-        intervalMiles: numOrUndefined(i.interval_miles),
-        lastDoneAt: isoOrUndefined(i.last_done_at),
-        lastDoneOdometer: numOrUndefined(i.last_done_odometer),
-        dueAt: isoOrUndefined(i.due_at),
-        dueOdometer: numOrUndefined(i.due_odometer),
-        status: i.status as ItemStatus,
+      (item): ScheduleItem => ({
+        id: item.id,
+        vehicleId: item.vehicle_id,
+        kind: item.kind as ScheduleItemKind,
+        intervalDays: toNumberOrUndefined(item.interval_days),
+        intervalMiles: toNumberOrUndefined(item.interval_miles),
+        lastDoneAt: toIsoStringOrUndefined(item.last_done_at),
+        lastDoneOdometer: toNumberOrUndefined(item.last_done_odometer),
+        dueAt: toIsoStringOrUndefined(item.due_at),
+        dueOdometer: toNumberOrUndefined(item.due_odometer),
+        status: item.status as ItemStatus,
         intervalSource: {
-          kind: i.interval_source_kind === "manufacturer" ? "manufacturer" : "baseline",
-          ...(i.interval_source_url === null ? {} : { url: i.interval_source_url }),
+          kind: item.interval_source_kind === "manufacturer" ? "manufacturer" : "baseline",
+          ...(item.interval_source_url === null ? {} : { url: item.interval_source_url }),
         },
       }),
     ),

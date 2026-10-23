@@ -105,7 +105,7 @@ describe("buildSnapshot", () => {
         mpgOverride: 31,
         home: "Buena Park, CA",
       },
-      epa: {
+      epaVehicle: {
         epaVehicleId: "40848",
         year: 2019,
         make: "Honda",

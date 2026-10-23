@@ -79,8 +79,8 @@ describe("createEpaClient", () => {
     const { fn, calls } = fakeFetch({
       "/menu/make?year=2019": { menuItem: [{ text: "Honda", value: "Honda" }] },
     });
-    const epa = createEpaClient(fn);
-    expect(await epa.makes(2019)).toEqual([{ text: "Honda", value: "Honda" }]);
+    const epaClient = createEpaClient(fn);
+    expect(await epaClient.makes(2019)).toEqual([{ text: "Honda", value: "Honda" }]);
     expect(calls[0]).toBe("https://www.fueleconomy.gov/ws/rest/vehicle/menu/make?year=2019");
   });
 
@@ -88,8 +88,8 @@ describe("createEpaClient", () => {
     const { fn, calls } = fakeFetch({
       "/menu/options?year=2019&make=Honda&model=Accord+2.0T+Sport%2FTouring": null,
     });
-    const epa = createEpaClient(fn);
-    expect(await epa.options(2019, "Honda", "Accord 2.0T Sport/Touring")).toEqual([]);
+    const epaClient = createEpaClient(fn);
+    expect(await epaClient.options(2019, "Honda", "Accord 2.0T Sport/Touring")).toEqual([]);
     expect(calls).toHaveLength(1);
   });
 
@@ -104,8 +104,8 @@ describe("createEpaClient", () => {
         fuelType1: "Regular Gasoline",
       },
     });
-    const epa = createEpaClient(fn);
-    expect((await epa.vehicle("40848"))?.combinedMpg).toBe(33);
+    const epaClient = createEpaClient(fn);
+    expect((await epaClient.vehicle("40848"))?.combinedMpg).toBe(33);
   });
 
   it("returns null for an unknown vehicle id and throws on server errors", async () => {
