@@ -1,10 +1,10 @@
 import { cookies } from "next/headers";
 import { getCarSnapshot } from "@/lib/car";
 import { runCommand } from "@/lib/command";
+import { commandReply } from "@/lib/command-reply";
 import { updateCar } from "@/lib/db/car-store";
 import { addProposals, loadProposals } from "@/lib/db/proposal-store";
 import { missingNebiusConfig, nebiusChat } from "@/lib/nebius";
-import type { CommandReply } from "@/lib/types";
 import { VISITOR_COOKIE } from "@/lib/visitor";
 
 // The command bar: POST { text } -> CommandReply. The car is the one the visitor cookie
@@ -14,8 +14,7 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    const reply: CommandReply = { model: null, message: "Send the command as JSON: { text }.", changes: [], proposals: 0 };
-    return Response.json(reply, { status: 400 });
+    return Response.json(commandReply(null, "Send the command as JSON: { text }."), { status: 400 });
   }
   const text = typeof body === "object" && body !== null ? (body as Record<string, unknown>).text : undefined;
   const visitorId = (await cookies()).get(VISITOR_COOKIE)?.value;
@@ -39,7 +38,6 @@ export async function POST(request: Request) {
     return Response.json(reply);
   } catch (error) {
     console.error("POST /api/command failed", error);
-    const reply: CommandReply = { model: null, message: "Could not load your car. Please try again.", changes: [], proposals: 0 };
-    return Response.json(reply, { status: 500 });
+    return Response.json(commandReply(null, "Could not load your car. Please try again."), { status: 500 });
   }
 }
