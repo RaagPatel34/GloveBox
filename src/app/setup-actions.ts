@@ -1,13 +1,12 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { saveCar } from "@/lib/db/car-store";
 import { createEpaClient } from "@/lib/epa";
 import { geocode } from "@/lib/geocode";
 import { buildSnapshot, parseSetupInput, type SetupErrors } from "@/lib/setup";
-import { VISITOR_COOKIE, VISITOR_COOKIE_MAX_AGE } from "@/lib/visitor";
+import { setVisitorCookie } from "@/lib/visitor-cookie";
 
 export type SetupState = { errors?: SetupErrors; message?: string };
 
@@ -32,11 +31,6 @@ export async function saveCarAction(_previous: SetupState, formData: FormData): 
     return { message: "Could not save your car. Please try again." };
   }
 
-  (await cookies()).set(VISITOR_COOKIE, input.visitorId, {
-    maxAge: VISITOR_COOKIE_MAX_AGE,
-    path: "/",
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-  });
+  await setVisitorCookie(input.visitorId);
   redirect("/");
 }

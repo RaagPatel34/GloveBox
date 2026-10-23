@@ -1,3 +1,4 @@
+import { LoadDemoCarButton } from "@/components/demo/LoadDemoCarButton";
 import type { Dashboard } from "@/lib/dashboard";
 import { ItemTile } from "./ItemTile";
 import { OdometerHero } from "./OdometerHero";
@@ -29,6 +30,11 @@ export function HealthDashboard({ dashboard }: { dashboard: Dashboard }) {
           <ItemTile key={item.id} item={item} />
         ))}
       </ul>
+
+      <footer className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-white/5 pt-5">
+        <p className="text-sm text-muted">Load the demo car to replace this car, or to reset the demo.</p>
+        <LoadDemoCarButton className="rounded-xl px-4 py-2.5 text-sm font-semibold text-foreground ring-1 ring-white/20 transition-opacity hover:ring-white/40 disabled:opacity-40" />
+      </footer>
     </main>
   );
 }

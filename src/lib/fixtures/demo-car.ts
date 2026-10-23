@@ -1,12 +1,13 @@
-import { BASELINE_INTERVALS, DAY_MS } from "../intervals";
+import { BASELINE_INTERVALS, DAY_MS, estimateOdometer, itemStatus } from "../intervals";
 import type { CarSnapshot, ScheduleItem, ScheduleItemKind, Vehicle } from "../types";
 
 // The spec's demo car: a 2019 Honda Civic at about 48,000 mi, ~250 mi/week.
 // Last wash 26 days ago -> overdue. Oil change ~400 mi away -> due soon. The rest are OK.
 //
 // Everything is dated relative to `now`, so the picture never goes stale.
-// To show a real saved car instead, return a CarSnapshot from your own loader
-// (see getCarSnapshot in src/lib/car.ts) and leave this file for the demo button.
+// It is built for one visitor with fresh ids each time: vehicle and item ids are primary keys,
+// so two visitors (or one visitor loading it twice) must not share them. The "Load demo car"
+// action saves this over whatever car the visitor had.
 
 type Service = {
   kind: ScheduleItemKind;
@@ -39,10 +40,10 @@ const SERVICES: Service[] = [
   { kind: "brake_check", daysAgo: 120, atOdometer: 45_000 },
 ];
 
-export function demoCar(now: Date): CarSnapshot {
+export function demoCar(now: Date, visitorId: string, newId: () => string): CarSnapshot {
   const vehicle: Vehicle = {
-    id: "demo-civic",
-    visitorId: "demo",
+    id: newId(),
+    visitorId,
     year: 2019,
     make: "Honda",
     model: "Civic",
@@ -52,6 +53,9 @@ export function demoCar(now: Date): CarSnapshot {
     weeklyMiles: 250,
     home: { lat: 33.8442, lng: -117.9987, label: "Knott's Berry Farm, Buena Park, CA" },
   };
+
+  const readingAt = new Date(now.getTime() - 7 * DAY_MS);
+  const odometerNow = estimateOdometer(vehicle, readingAt, now);
 
   const items = SERVICES.map((s): ScheduleItem => {
     const base = BASELINE_INTERVALS[s.kind];
@@ -64,7 +68,7 @@ export function demoCar(now: Date): CarSnapshot {
       intervalMiles === undefined || s.atOdometer === undefined ? undefined : s.atOdometer + intervalMiles;
 
     return {
-      id: `demo-${s.kind}`,
+      id: newId(),
       vehicleId: vehicle.id,
       kind: s.kind,
       intervalDays,
@@ -73,15 +77,14 @@ export function demoCar(now: Date): CarSnapshot {
       lastDoneOdometer: s.atOdometer,
       dueAt: dueAt?.toISOString(),
       dueOdometer,
-      // Stale by design: the dashboard works status out from the due targets.
-      status: "ok",
+      status: itemStatus({ dueAt: dueAt?.toISOString(), dueOdometer }, now, odometerNow),
       intervalSource: s.intervalSource ?? { kind: "baseline" },
     };
   });
 
   return {
     vehicle,
-    readingAt: new Date(now.getTime() - 7 * DAY_MS).toISOString(),
+    readingAt: readingAt.toISOString(),
     items,
   };
 }
