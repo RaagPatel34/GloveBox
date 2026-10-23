@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { evaluateNudge } from "./nudge";
+import { randomUUID } from "node:crypto";
+import { demoCar } from "./fixtures/demo-car";
+import { evaluateNudge, NUDGE_TTL_MS, nudgeCutoff, washChanged } from "./nudge";
+import { inDays, NOW } from "./test-support";
 import type { AirQuality, WeatherForecast } from "./weather";
 
 const PLACE = "Knott's Berry Farm, Buena Park, CA";
@@ -95,6 +98,11 @@ describe("evaluateNudge: dry window", () => {
     );
   });
 
+  it("does not claim a dry week from a forecast that stops early", () => {
+    const short = { days: week().days.slice(0, 3) };
+    expect(evaluateNudge(input({ weather: short }))?.text).toBe("Dry through Saturday, a good time to wash.");
+  });
+
   it("words a due-soon wash as due soon", () => {
     expect(evaluateNudge(input({ washStatus: "due_soon" }))?.reason).toMatch(/and the wash is due soon\.$/);
   });
@@ -122,9 +130,9 @@ describe("evaluateNudge: smoke", () => {
     );
   });
 
-  it("acts on smoke that is forecast but not here yet", () => {
+  it("acts on smoke that is forecast but not here yet, without telling you to rinse ash that has not fallen", () => {
     const nudge = evaluateNudge(input({ air: { ...clearAir, pm25Peak24h: 48 }, washStatus: "ok" }));
-    expect(nudge?.text).toMatch(/^Smoky air/);
+    expect(nudge?.text).toBe("Smoke expected: check the cabin air filter, and rinse the ash off once the air clears.");
     expect(nudge?.reason).toContain("PM2.5 is 8 µg/m³ now and may reach 48 over the next 24 hours");
   });
 
@@ -153,5 +161,35 @@ describe("evaluateNudge: data missing", () => {
 
   it("says nothing with neither", () => {
     expect(evaluateNudge(input({ weather: undefined, air: undefined }))).toBeNull();
+  });
+});
+
+describe("nudgeCutoff", () => {
+  it("is the moment a nudge made now would stop being shown, counted back from `now`", () => {
+    expect(nudgeCutoff(NOW).toISOString()).toBe("2026-10-21T00:00:00.000Z");
+    expect(NOW.getTime() - nudgeCutoff(NOW).getTime()).toBe(NUDGE_TTL_MS);
+  });
+});
+
+describe("washChanged", () => {
+  const before = demoCar(NOW, "11111111-2222-4333-8444-555555555555", randomUUID);
+  const withItems = (change: (item: (typeof before.items)[number]) => (typeof before.items)[number]) => ({
+    ...before,
+    items: before.items.map(change),
+  });
+
+  it("is true when the wash was logged", () => {
+    const after = withItems((i) => (i.kind === "wash" ? { ...i, lastDoneAt: NOW.toISOString(), dueAt: inDays(14) } : i));
+    expect(washChanged(before, after)).toBe(true);
+  });
+
+  it("is true when the wash's due date was moved", () => {
+    expect(washChanged(before, withItems((i) => (i.kind === "wash" ? { ...i, dueAt: inDays(30) } : i)))).toBe(true);
+  });
+
+  it("is false when only other items or the odometer changed", () => {
+    const after = withItems((i) => (i.kind === "oil" ? { ...i, lastDoneAt: NOW.toISOString(), dueAt: inDays(90) } : i));
+    expect(washChanged(before, after)).toBe(false);
+    expect(washChanged(before, { ...before, vehicle: { ...before.vehicle, odometer: before.vehicle.odometer + 40 } })).toBe(false);
   });
 });

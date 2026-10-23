@@ -1,4 +1,4 @@
-import type { ItemStatus } from "./types";
+import type { CarSnapshot, ItemStatus } from "./types";
 import type { AirQuality, ForecastDay, WeatherForecast } from "./weather";
 
 // Decides whether the weather and air call for a nudge, and words it. Pure: the caller
@@ -28,6 +28,20 @@ const RAIN_INCHES_UNSURE = 0.1;
 // A nudge reflects a forecast that is a day or two old at most; after this it is not shown.
 export const NUDGE_TTL_MS = 36 * 60 * 60 * 1000;
 
+// Nudges made at or before this moment are no longer shown (and can be deleted).
+export const nudgeCutoff = (now: Date): Date => new Date(now.getTime() - NUDGE_TTL_MS);
+
+// True when the car's wash was logged or rescheduled between two snapshots. Every stored nudge
+// was worded against the wash's state at the time ("the wash is overdue, but rain would undo
+// it"), so it no longer holds; the next check (the daily job, #16) writes a fresh one.
+export function washChanged(before: CarSnapshot, after: CarSnapshot): boolean {
+  const key = (car: CarSnapshot) => {
+    const wash = car.items.find((item) => item.kind === "wash");
+    return JSON.stringify([wash?.lastDoneAt, wash?.lastDoneOdometer, wash?.dueAt, wash?.dueOdometer]);
+  };
+  return key(before) !== key(after);
+}
+
 export type NudgeInput = {
   // Either may be missing when its service could not be reached: the other still counts.
   weather?: WeatherForecast;
@@ -50,8 +64,13 @@ function smokeNudge(air: AirQuality, place: string): NudgeDraft {
   const reading =
     peak > now ? `${now} µg/m³ now and may reach ${peak} over the next 24 hours` : `${now} µg/m³ now`;
   const aqi = air.usAqi === null ? "" : ` (US AQI ${air.usAqi})`;
+  // Smoke already here: ash is falling. Smoke only forecast: the filter check is the part that applies now.
+  const text =
+    air.pm25Now >= SMOKE_PM25
+      ? "Smoky air: rinse the ash off soon and check the cabin air filter."
+      : "Smoke expected: check the cabin air filter, and rinse the ash off once the air clears.";
   return {
-    text: "Smoky air: rinse the ash off soon and check the cabin air filter.",
+    text,
     reason:
       `PM2.5 is ${reading} near ${place}${aqi}. ` +
       `From ${SMOKE_PM25} µg/m³ up the air is unhealthy for sensitive people, ` +
@@ -81,7 +100,9 @@ function washNudge(weather: WeatherForecast, washState: string, place: string): 
   if (firstRain === -1 || firstRain >= RAIN_WINDOW_DAYS) {
     // A dry window to wash in, up to the next rain (or the end of the forecast).
     const lastDry = firstRain === -1 ? days.length - 1 : firstRain - 1;
-    const horizon = firstRain === -1 ? "all week" : `until ${dayName(days, firstRain)}`;
+    // "All week" only for a full week: a forecast cut short says how far it goes.
+    const horizon =
+      firstRain !== -1 ? `until ${dayName(days, firstRain)}` : days.length >= 7 ? "all week" : `through ${weekday(days[lastDry].date)}`;
     return {
       text: `Dry ${horizon}, a good time to wash.`,
       reason: `No rain in Open-Meteo's forecast through ${weekday(days[lastDry].date)} near ${place}, and the wash is ${washState}.`,
