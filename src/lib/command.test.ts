@@ -279,6 +279,15 @@ describe("runCommand: input it cannot act on", () => {
     },
   );
 
+  it("takes up to 500 characters, and says so when there are more", async () => {
+    const tooLong = await send("x".repeat(501), scriptedChat({}));
+    expect(tooLong.reply.message).toMatch(/500 characters or fewer/);
+
+    const chat = scriptedChat({ nano: [route({ intent: "unknown" })] });
+    await send("x".repeat(500), chat);
+    expect(chat.requests).toHaveLength(1);
+  });
+
   it("asks for a car first when there is none", async () => {
     const chat = scriptedChat({});
     const { reply } = await send("just got a car wash", chat, null);

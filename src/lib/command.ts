@@ -1,6 +1,7 @@
 import type { Chat } from "./agent/chat";
 import { runMaintenanceAgent, type ActionRoute, type MaintenanceEffect } from "./agent/maintenance";
 import { routeCommand } from "./agent/router";
+import { MAX_COMMAND_LENGTH } from "./command-limits";
 import { buildDashboard } from "./dashboard";
 import { formatReadDate, numberFormat, STATUS_LABEL } from "./readout";
 import type { CarSnapshot, CommandReply } from "./types";
@@ -8,8 +9,6 @@ import type { CarSnapshot, CommandReply } from "./types";
 // One command-bar input, end to end: Nano routes it, Super records service logs and
 // odometer readings, and the reply is written here from what the tools changed.
 // Every failure becomes a reply the user can act on; nothing here throws.
-
-export const MAX_COMMAND_LENGTH = 500;
 
 const EXAMPLES = "Try something you did, like “just got a car wash”, or your odometer, like “odometer is 48,210”.";
 
@@ -30,7 +29,7 @@ export async function runCommand(args: {
   const { car, chat, now } = args;
   const text = typeof args.text === "string" ? args.text.trim() : "";
   if (text === "" || text.length > MAX_COMMAND_LENGTH) {
-    return reply(null, `Type what happened, in under ${MAX_COMMAND_LENGTH} characters. ${EXAMPLES}`);
+    return reply(null, `Type what happened, in ${MAX_COMMAND_LENGTH} characters or fewer. ${EXAMPLES}`);
   }
   if (!car) return reply(null, "Set up your car first, or load the demo car.");
   if (!chat) {
