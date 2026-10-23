@@ -1,4 +1,4 @@
-import { pacificDate, parsePlainDate, sameDueDay } from "./days";
+import { pacificDateAhead, parsePlainDate, sameDueDay } from "./days";
 import { estimateCarOdometer, isOdometerReading, itemStatus } from "./intervals";
 import { numberFormat } from "./readout";
 import type { CarSnapshot, DueTarget, Proposal, ScheduleItemKind } from "./types";
@@ -47,8 +47,8 @@ export function proposeAdjustment(
     const day = input.dueAt;
     const pinned = parsePlainDate(day);
     if (!pinned) return refuse(`"${String(day)}" is not a date. Use YYYY-MM-DD.`);
-    const earliest = pacificDate(now, -1);
-    const latest = pacificDate(now, -item.intervalDays);
+    const earliest = pacificDateAhead(now, 1);
+    const latest = pacificDateAhead(now, item.intervalDays);
     if (day < earliest || day > latest) return refuse(`The new due date must be from ${earliest} to ${latest}.`);
     // The day it is already due keeps its stored time, so it is not shown as a move.
     to.dueAt = sameDueDay(pinned.toISOString(), from.dueAt) ? from.dueAt : pinned.toISOString();

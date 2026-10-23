@@ -12,6 +12,11 @@ export function pacificDate(now: Date, daysBack = 0): string {
   return new Date(today.getTime() - daysBack * DAY_MS).toISOString().slice(0, 10);
 }
 
+// YYYY-MM-DD in California, `days` days after `now`.
+export function pacificDateAhead(now: Date, days: number): string {
+  return pacificDate(now, -days);
+}
+
 // A calendar day "2026-10-25" as a moment: noon UTC, which is the same day in California.
 // Null for anything that is not a real day in that form; a day past the month's end
 // would otherwise roll over into the next month.
