@@ -11,7 +11,9 @@ import type { CarSnapshot, CommandReply, Proposal } from "./types";
 // written here from what the tools did.
 // Every failure becomes a reply the user can act on; nothing here throws.
 
-const EXAMPLES = "Try something you did, like “just got a car wash”, or your odometer, like “odometer is 48,210”.";
+const EXAMPLES =
+  "Try something you did, like “just got a car wash”, your odometer, like “odometer is 48,210”, " +
+  "or something coming up, like “camping trip, 300 miles on dirt roads”.";
 
 const reply = (
   model: CommandReply["model"],
@@ -58,7 +60,11 @@ export async function runCommand(args: {
       case "unknown":
         return reply("nano", `I couldn't tell what to do with that. ${EXAMPLES}`);
       case "errand":
-        return reply("nano", "That sounds like an errand. Trip planning is coming soon; for now I can log a service or an odometer reading.");
+        return reply(
+          "nano",
+          "That sounds like an errand. Trip planning is coming soon; for now I can log a service or an odometer " +
+            "reading, or suggest schedule changes for something coming up, like a camping trip.",
+        );
     }
     route = routed;
     state = await runMaintenanceAgent({ chat: tracked, car, now, text, route, newId, pending });

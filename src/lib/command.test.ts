@@ -478,6 +478,8 @@ describe("runCommand: input it cannot act on", () => {
     expect(saved).toEqual([]);
     expect(reply).toMatchObject({ model: "nano", changes: [] });
     expect(reply.message).toMatch(/car wash/);
+    // Life events are something it can do too.
+    expect(reply.message).toMatch(/coming up, like “camping trip/);
   });
 
   it("says errand planning is not here yet rather than guessing", async () => {
@@ -486,6 +488,7 @@ describe("runCommand: input it cannot act on", () => {
     expect(saved).toEqual([]);
     expect(reply.model).toBe("nano");
     expect(reply.message).toMatch(/trip|errand/i);
+    expect(reply.message).toMatch(/something coming up/);
   });
 
   it("explains, without a crash or a badge, when the AI is not set up", async () => {
