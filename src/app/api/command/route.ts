@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { getCarSnapshot } from "@/lib/car";
 import { runCommand } from "@/lib/command";
 import { updateCar } from "@/lib/db/car-store";
+import { addProposals } from "@/lib/db/proposal-store";
 import { missingNebiusConfig, nebiusChat } from "@/lib/nebius";
 import type { CommandReply } from "@/lib/types";
 import { VISITOR_COOKIE } from "@/lib/visitor";
@@ -13,7 +14,7 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    const reply: CommandReply = { model: null, message: "Send the command as JSON: { text }.", changes: [] };
+    const reply: CommandReply = { model: null, message: "Send the command as JSON: { text }.", changes: [], proposals: 0 };
     return Response.json(reply, { status: 400 });
   }
   const text = typeof body === "object" && body !== null ? (body as Record<string, unknown>).text : undefined;
@@ -31,11 +32,12 @@ export async function POST(request: Request) {
       now: new Date(),
       // getCarSnapshot only returns a car for a valid visitor ID.
       save: (next) => updateCar(visitorId!, next),
+      saveProposals: (proposals) => addProposals(visitorId!, proposals),
     });
     return Response.json(reply);
   } catch (error) {
     console.error("POST /api/command failed", error);
-    const reply: CommandReply = { model: null, message: "Could not load your car. Please try again.", changes: [] };
+    const reply: CommandReply = { model: null, message: "Could not load your car. Please try again.", changes: [], proposals: 0 };
     return Response.json(reply, { status: 500 });
   }
 }

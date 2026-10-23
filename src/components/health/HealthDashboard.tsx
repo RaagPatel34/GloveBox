@@ -1,11 +1,12 @@
 import { CommandBar } from "@/components/command/CommandBar";
 import { LoadDemoCarButton } from "@/components/demo/LoadDemoCarButton";
+import { ProposalCards } from "@/components/proposals/ProposalCards";
 import type { Dashboard } from "@/lib/dashboard";
 import { ItemTile } from "./ItemTile";
 import { OdometerHero } from "./OdometerHero";
 
 // "Instrument panel": an estimated-odometer hero with a status count strip, the command
-// bar, then one tile per upkeep item, most urgent first.
+// bar and any suggested schedule changes, then one tile per upkeep item, most urgent first.
 export function HealthDashboard({ dashboard }: { dashboard: Dashboard }) {
   const { vehicle, odometerEstimate, readingAt, counts, items } = dashboard;
 
@@ -26,6 +27,8 @@ export function HealthDashboard({ dashboard }: { dashboard: Dashboard }) {
       />
 
       <CommandBar />
+
+      <ProposalCards cards={dashboard.proposals} />
 
       <h2 className="sr-only">Upkeep, most urgent first</h2>
       <ul className="mt-4 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-4">
