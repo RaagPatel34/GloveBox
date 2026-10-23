@@ -101,6 +101,8 @@ export type CommandReply = {
   // One line per change made, written by code from tool results, never by the model.
   // Non-empty means the car changed and the dashboard should reload.
   changes: string[];
+  // How many proposal cards this reply added. Above zero, the dashboard should reload to show them.
+  proposals: number;
 };
 
 // Everything the dashboard needs to know about one car. This is the seam for loading:
