@@ -1,7 +1,7 @@
 import { pacificDate, pacificDateAhead, parsePlainDate, sameDueDay } from "./days";
 import { estimateCarOdometer, isOdometerReading, itemStatus } from "./intervals";
 import { numberFormat } from "./readout";
-import type { CarSnapshot, DueTarget, Proposal, ScheduleItemKind } from "./types";
+import type { CarSnapshot, DueTarget, Proposal, ScheduleItem, ScheduleItemKind } from "./types";
 
 // Proposals: schedule changes the maintenance agent suggests for a life event. Making one
 // never touches the car; only the user's Apply does. Pure, so the rules are tested
@@ -15,6 +15,27 @@ function dueTarget(item: DueTarget): DueTarget {
     ...(item.dueAt === undefined ? {} : { dueAt: item.dueAt }),
     ...(item.dueOdometer === undefined ? {} : { dueOdometer: item.dueOdometer }),
   };
+}
+
+// Where a due point that moves may land: from tomorrow up to one interval ahead, or from
+// today's estimated odometer up to one interval on. Only what moves is checked. Checked
+// when a proposal is made and again on Apply, as a card can wait days to be applied.
+// Returns why it is outside, or null.
+function outsideWindow(car: CarSnapshot, item: ScheduleItem, from: DueTarget, to: DueTarget, now: Date): string | null {
+  if (to.dueAt !== undefined && !sameDueDay(to.dueAt, from.dueAt) && item.intervalDays !== undefined) {
+    const day = pacificDate(new Date(to.dueAt));
+    const earliest = pacificDateAhead(now, 1);
+    const latest = pacificDateAhead(now, item.intervalDays);
+    if (day < earliest || day > latest) return `The new due date must be from ${earliest} to ${latest}.`;
+  }
+  if (to.dueOdometer !== undefined && to.dueOdometer !== from.dueOdometer && item.intervalMiles !== undefined) {
+    const lowest = estimateCarOdometer(car, now);
+    const highest = lowest + item.intervalMiles;
+    if (to.dueOdometer < lowest || to.dueOdometer > highest) {
+      return `The new due mileage must be from ${numberFormat.format(lowest)} to ${numberFormat.format(highest)} mi.`;
+    }
+  }
+  return null;
 }
 
 // The rule Super is told in the tool description, and again when it breaks it.
@@ -47,15 +68,8 @@ export function proposeAdjustment(
 
   if (input.dueAt !== undefined) {
     if (item.intervalDays === undefined) return refuse(`${input.kind} is tracked by mileage only.`);
-    const day = input.dueAt;
-    const pinned = parsePlainDate(day);
-    if (!pinned) return refuse(`"${String(day)}" is not a date. Use YYYY-MM-DD.`);
-    const earliest = pacificDateAhead(now, 1);
-    const latest = pacificDateAhead(now, item.intervalDays);
-    if (day < earliest || day > latest) return refuse(`The new due date must be from ${earliest} to ${latest}.`);
-    if (from.dueAt !== undefined && day > pacificDate(new Date(from.dueAt))) {
-      return refuse(`${SOONER} ${input.kind} is due ${pacificDate(new Date(from.dueAt))} now: give an earlier date, or skip it.`);
-    }
+    const pinned = parsePlainDate(input.dueAt);
+    if (!pinned) return refuse(`"${String(input.dueAt)}" is not a date. Use YYYY-MM-DD.`);
     // The day it is already due keeps its stored time, so it is not shown as a move.
     to.dueAt = sameDueDay(pinned.toISOString(), from.dueAt) ? from.dueAt : pinned.toISOString();
   }
@@ -63,19 +77,19 @@ export function proposeAdjustment(
   if (input.dueOdometer !== undefined) {
     if (item.intervalMiles === undefined) return refuse(`${input.kind} is tracked by date only.`);
     if (!isOdometerReading(input.dueOdometer)) return refuse("The new due mileage must be whole miles.");
-    const lowest = estimateCarOdometer(car, now);
-    const highest = lowest + item.intervalMiles;
-    if (input.dueOdometer < lowest || input.dueOdometer > highest) {
-      return refuse(
-        `The new due mileage must be from ${numberFormat.format(lowest)} to ${numberFormat.format(highest)} mi.`,
-      );
-    }
-    if (from.dueOdometer !== undefined && input.dueOdometer > from.dueOdometer) {
-      return refuse(
-        `${SOONER} ${input.kind} is due at ${numberFormat.format(from.dueOdometer)} mi now: give a lower mileage, or skip it.`,
-      );
-    }
     to.dueOdometer = input.dueOdometer;
+  }
+
+  const outside = outsideWindow(car, item, from, to, now);
+  if (outside) return refuse(outside);
+
+  if (from.dueAt !== undefined && to.dueAt !== undefined && pacificDate(new Date(to.dueAt)) > pacificDate(new Date(from.dueAt))) {
+    return refuse(`${SOONER} ${input.kind} is due ${pacificDate(new Date(from.dueAt))} now: give an earlier date, or skip it.`);
+  }
+  if (from.dueOdometer !== undefined && to.dueOdometer !== undefined && to.dueOdometer > from.dueOdometer) {
+    return refuse(
+      `${SOONER} ${input.kind} is due at ${numberFormat.format(from.dueOdometer)} mi now: give a lower mileage, or skip it.`,
+    );
   }
 
   if (sameDueDay(to.dueAt, from.dueAt) && to.dueOdometer === from.dueOdometer) {
@@ -99,6 +113,8 @@ export function proposeAdjustment(
 
 export type Decision = "apply" | "dismiss";
 
+export const CHANGED_SINCE = "Your schedule for this item changed since this was suggested. Dismiss it instead.";
+
 export type DecisionResult =
   | { ok: true; proposal: Proposal; car: CarSnapshot | null }
   | { ok: false; error: string };
@@ -109,6 +125,7 @@ export type DecisionResult =
 //
 // A proposal is made against the schedule as it was then. If the item has moved since (a
 // service logged, another proposal applied), applying it would undo that, so it is refused.
+// So is one whose new due point has passed while the card waited.
 export function decideProposal(car: CarSnapshot, proposal: Proposal, decision: Decision, now: Date): DecisionResult {
   if (proposal.state !== "pending") return { ok: false, error: `That suggestion was already ${proposal.state}.` };
   if (decision === "dismiss") return { ok: true, proposal: { ...proposal, state: "dismissed" }, car: null };
@@ -116,7 +133,10 @@ export function decideProposal(car: CarSnapshot, proposal: Proposal, decision: D
   const item = car.items.find((i) => i.id === proposal.itemId);
   if (!item) return { ok: false, error: "That item is no longer on your car." };
   if (!sameDueDay(item.dueAt, proposal.from.dueAt) || item.dueOdometer !== proposal.from.dueOdometer) {
-    return { ok: false, error: "Your schedule for this item changed since this was suggested. Dismiss it instead." };
+    return { ok: false, error: CHANGED_SINCE };
+  }
+  if (outsideWindow(car, item, proposal.from, proposal.to, now)) {
+    return { ok: false, error: "This suggestion is out of date: its new due point has already passed. Dismiss it instead." };
   }
 
   const moved = { ...item, dueAt: proposal.to.dueAt, dueOdometer: proposal.to.dueOdometer };

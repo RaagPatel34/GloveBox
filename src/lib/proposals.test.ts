@@ -136,6 +136,20 @@ describe("decideProposal", () => {
     expect(decideProposal(logged.car, proposal, "dismiss", NOW).ok).toBe(true);
   });
 
+  it.each([
+    ["a due date that has since passed", { kind: "oil", dueAt: "2026-10-25" }],
+    ["a due mileage the car has since driven past", { kind: "oil", dueOdometer: 48_000 }],
+  ])("refuses to apply %s, so Apply never sets a due point in the past", (_label, input) => {
+    const made = propose(input);
+    if (!made.ok) throw new Error(made.error);
+    // A week later: Oct 29, and about 48,250 mi.
+    const weekLater = new Date(NOW.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    const result = decideProposal(car, made.proposal, "apply", weekLater);
+    expect(result).toEqual({ ok: false, error: expect.stringMatching(/out of date.*Dismiss/) });
+    expect(decideProposal(car, made.proposal, "dismiss", weekLater).ok).toBe(true);
+  });
+
   it("applies a proposal whose due date was read on the same day the item is due", () => {
     // The card was made from a due date of noon; the item is stored at 18:34 the same day.
     const proposal = { ...filterProposal(), from: { dueAt: "2026-11-05T12:00:00.000Z" }, to: { dueAt: "2026-11-01T12:00:00.000Z" } };
