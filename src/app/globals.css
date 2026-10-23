@@ -1,26 +1,37 @@
 @import "tailwindcss";
 
+/* One dark "instrument cluster" look, regardless of the system theme. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: dark;
+  --background: #0d0e0f;
+  --foreground: #e9e7e2;
+  --panel: #151719;
+  --muted: #8b8a86;
+  --status-overdue: #ff6a3d;
+  --status-overdue-text: #ff8a63;
+  --status-due-soon: #f2a815;
+  --status-due-soon-text: #f5bd4a;
+  --status-ok: #5fd0a0;
+  --status-ok-text: #7fdcb3;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-panel: var(--panel);
+  --color-muted: var(--muted);
+  --color-overdue: var(--status-overdue);
+  --color-overdue-text: var(--status-overdue-text);
+  --color-due-soon: var(--status-due-soon);
+  --color-due-soon-text: var(--status-due-soon-text);
+  --color-ok: var(--status-ok);
+  --color-ok-text: var(--status-ok-text);
+  --font-sans: var(--font-body), system-ui, sans-serif;
+  --font-mono: var(--font-numeric), ui-monospace, monospace;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
 }

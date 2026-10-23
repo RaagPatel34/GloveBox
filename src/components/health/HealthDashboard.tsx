@@ -1,0 +1,48 @@
+import type { Dashboard } from "@/lib/dashboard";
+import { ItemTile } from "./ItemTile";
+import { OdometerHero } from "./OdometerHero";
+
+// "Instrument panel": an estimated-odometer hero with a status count strip,
+// then one tile per upkeep item, most urgent first.
+export function HealthDashboard({ dashboard }: { dashboard: Dashboard }) {
+  const { vehicle, odometerEstimate, readingAt, counts, items } = dashboard;
+
+  return (
+    <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-16 pt-6 sm:px-6 sm:pt-10">
+      <header className="flex items-baseline justify-between gap-4 font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
+        <span className="text-foreground">GloveBox</span>
+        <h1 className="text-right font-normal">
+          {vehicle.year} {vehicle.make} {vehicle.model}
+        </h1>
+      </header>
+
+      <OdometerHero
+        vehicle={vehicle}
+        odometerEstimate={odometerEstimate}
+        readingAt={readingAt}
+        counts={counts}
+      />
+
+      <h2 className="sr-only">Upkeep, most urgent first</h2>
+      <ul className="mt-4 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-4">
+        {items.map((item) => (
+          <ItemTile key={item.id} item={item} />
+        ))}
+      </ul>
+    </main>
+  );
+}
+
+// Shown while the dashboard waits for a request (it depends on the current time).
+export function HealthDashboardSkeleton() {
+  return (
+    <main
+      aria-busy="true"
+      aria-label="Loading dashboard"
+      className="mx-auto w-full max-w-5xl flex-1 px-4 pt-6 sm:px-6 sm:pt-10"
+    >
+      <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-foreground">GloveBox</p>
+      <div className="mt-6 h-40 rounded-2xl bg-panel ring-1 ring-white/5 sm:mt-8" />
+    </main>
+  );
+}

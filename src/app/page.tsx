@@ -1,10 +1,22 @@
+import { connection } from "next/server";
+import { Suspense } from "react";
+import { HealthDashboard, HealthDashboardSkeleton } from "@/components/health/HealthDashboard";
+import { getCarSnapshot } from "@/lib/car";
+import { buildDashboard } from "@/lib/dashboard";
+
 export default function Home() {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-4 px-4 py-24">
-      <h1 className="text-4xl font-semibold tracking-tight">GloveBox</h1>
-      <p className="text-lg text-zinc-600 dark:text-zinc-400">
-        Your car&apos;s co-pilot for upkeep and trip costs. Dashboard coming soon.
-      </p>
-    </main>
+    <Suspense fallback={<HealthDashboardSkeleton />}>
+      <LiveDashboard />
+    </Suspense>
   );
+}
+
+// Statuses depend on the current time, so this renders per request rather than
+// being baked into the static shell.
+async function LiveDashboard() {
+  await connection();
+  const now = new Date();
+  const car = await getCarSnapshot(now);
+  return <HealthDashboard dashboard={buildDashboard(car, now)} />;
 }
