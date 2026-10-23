@@ -1,5 +1,5 @@
 import { pacificDate } from "./agent/router";
-import { estimateCarOdometer, isOdometerReading, isPlainDate } from "./intervals";
+import { estimateCarOdometer, isOdometerReading, isPlainDate, itemStatus } from "./intervals";
 import { numberFormat } from "./readout";
 import type { CarSnapshot, DueTarget, Proposal, ScheduleItemKind } from "./types";
 
@@ -85,5 +85,39 @@ export function proposeAdjustment(
       model: "super",
       state: "pending",
     },
+  };
+}
+
+export type Decision = "apply" | "dismiss";
+
+export type DecisionResult =
+  | { ok: true; proposal: Proposal; car: CarSnapshot | null }
+  | { ok: false; error: string };
+
+const sameTime = (a: string | undefined, b: string | undefined) =>
+  a === b || (a !== undefined && b !== undefined && new Date(a).getTime() === new Date(b).getTime());
+
+// The user's Apply or Dismiss on a pending card. Apply returns the car with the item moved
+// to `to` and its status recomputed, so the dashboard shows the change at once; Dismiss
+// returns no car, as nothing on it changes.
+//
+// A proposal is made against the schedule as it was then. If the item has moved since (a
+// service logged, another proposal applied), applying it would undo that, so it is refused.
+export function decideProposal(car: CarSnapshot, proposal: Proposal, decision: Decision, now: Date): DecisionResult {
+  if (proposal.state !== "pending") return { ok: false, error: `That suggestion was already ${proposal.state}.` };
+  if (decision === "dismiss") return { ok: true, proposal: { ...proposal, state: "dismissed" }, car: null };
+
+  const item = car.items.find((i) => i.id === proposal.itemId);
+  if (!item) return { ok: false, error: "That item is no longer on your car." };
+  if (!sameTime(item.dueAt, proposal.from.dueAt) || item.dueOdometer !== proposal.from.dueOdometer) {
+    return { ok: false, error: "Your schedule for this item changed since this was suggested. Dismiss it instead." };
+  }
+
+  const moved = { ...item, dueAt: proposal.to.dueAt, dueOdometer: proposal.to.dueOdometer };
+  moved.status = itemStatus(moved, now, estimateCarOdometer(car, now));
+  return {
+    ok: true,
+    proposal: { ...proposal, state: "applied" },
+    car: { ...car, items: car.items.map((i) => (i.id === item.id ? moved : i)) },
   };
 }
