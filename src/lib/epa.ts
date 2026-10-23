@@ -18,7 +18,6 @@ export type EpaVehicle = {
   model: string;
   // EPA combined fuel economy (comb08). MPGe for electric vehicles.
   combinedMpg: number;
-  fuelType: string;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -52,7 +51,6 @@ export function parseVehicleDetail(body: unknown): EpaVehicle | null {
     make: body.make,
     model: body.model,
     combinedMpg,
-    fuelType: typeof body.fuelType1 === "string" ? body.fuelType1 : "",
   };
 }
 

@@ -111,7 +111,6 @@ describe("buildSnapshot", () => {
         make: "Honda",
         model: "Civic 4Dr",
         combinedMpg: 33,
-        fuelType: "Regular Gasoline",
       },
       home: { lat: 33.87, lng: -117.99, label: "Buena Park, California" },
       now: NOW,

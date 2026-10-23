@@ -52,7 +52,6 @@ describe("parseVehicleDetail", () => {
       make: "Porsche",
       model: "911 Turbo Cabriolet",
       combinedMpg: 21,
-      fuelType: "Premium Gasoline",
     });
   });
 
