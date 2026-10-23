@@ -1,3 +1,4 @@
+import type { Loose } from "./car-rows";
 import type { DueTarget, ModelTier, Proposal } from "./types";
 
 // Mapping between a Proposal and its flat row in Postgres (see src/lib/db/schema.ts).
@@ -17,12 +18,7 @@ export type ProposalRow = {
   state: string;
 };
 
-type DriverProposalRow = Omit<ProposalRow, "from_due_at" | "to_due_at" | "from_due_odometer" | "to_due_odometer"> & {
-  from_due_at: string | Date | null;
-  to_due_at: string | Date | null;
-  from_due_odometer: number | string | null;
-  to_due_odometer: number | string | null;
-};
+type DriverProposalRow = Loose<ProposalRow, "from_due_at" | "to_due_at", "from_due_odometer" | "to_due_odometer">;
 
 export function proposalToRow(proposal: Proposal): ProposalRow {
   return {
