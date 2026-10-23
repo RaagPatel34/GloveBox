@@ -14,6 +14,27 @@ export async function loadCar(visitorId: string): Promise<CarSnapshot | null> {
   return fromRows(vehicles[0], items);
 }
 
+// Writes back what the agents can change on an existing car: the odometer reading and each
+// item's service and due fields. Updated in place rather than replaced, so rows that hang off
+// the vehicle (proposals, nudges) are kept. Scoped to the visitor's own vehicle.
+export async function updateCar(visitorId: string, snapshot: CarSnapshot): Promise<void> {
+  if (!isVisitorId(visitorId)) throw new Error("Invalid visitor ID");
+  const sql = getSql();
+  const { vehicle, items } = toRows(visitorId, snapshot);
+
+  await sql.transaction([
+    sql`UPDATE vehicles SET odometer = ${vehicle.odometer}, reading_at = ${vehicle.reading_at}
+        WHERE id = ${vehicle.id} AND visitor_id = ${visitorId}`,
+    ...items.map(
+      (item) =>
+        sql`UPDATE schedule_items SET last_done_at = ${item.last_done_at}, last_done_odometer = ${item.last_done_odometer},
+              due_at = ${item.due_at}, due_odometer = ${item.due_odometer}, status = ${item.status}
+            WHERE id = ${item.id}
+              AND vehicle_id = (SELECT id FROM vehicles WHERE id = ${vehicle.id} AND visitor_id = ${visitorId})`,
+    ),
+  ]);
+}
+
 // Replaces whatever car the visitor had with this one, atomically: the vehicle and all
 // of its schedule items land together or not at all.
 export async function saveCar(visitorId: string, snapshot: CarSnapshot): Promise<void> {
