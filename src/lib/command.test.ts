@@ -111,6 +111,84 @@ describe("runCommand: service logs", () => {
   });
 });
 
+describe("runCommand: Super can only record what the router read", () => {
+  // Nano routes `text` as `routed`; Super makes `calls` in one turn, then stops.
+  const attempt = (routed: object, text: string, ...calls: [string, unknown][]) =>
+    send(text, scriptedChat({ nano: [route(routed)], super: [callTools(...calls), say("Done.")] }));
+
+  it("logs only the item the router named", async () => {
+    const { saved } = await attempt({ intent: "service_log", item: "wash" }, "just got a car wash", ["logService", { item: "oil" }]);
+    expect(saved).toEqual([]);
+  });
+
+  it("cannot change the odometer on a service log", async () => {
+    const { saved } = await attempt({ intent: "service_log", item: "wash" }, "just got a car wash", [
+      "updateOdometer",
+      { miles: 60_000 },
+    ]);
+    expect(saved).toEqual([]);
+  });
+
+  it("cannot log a service on an odometer reading", async () => {
+    const { saved } = await attempt({ intent: "odometer", odometer: 48_450 }, "odometer is 48,450", [
+      "logService",
+      { item: "wash" },
+    ]);
+    expect(saved).toEqual([]);
+  });
+
+  it("records one change per message", async () => {
+    const { saved, reply } = await attempt(
+      { intent: "service_log" },
+      "did the oil and the wash",
+      ["logService", { item: "oil" }],
+      ["logService", { item: "wash" }],
+    );
+    expect(reply.changes).toHaveLength(1);
+    expect(saved[0].items.find((i) => i.kind === "wash")!.lastDoneAt).not.toBe(NOW.toISOString());
+  });
+
+  it("uses the router's date and mileage when Super leaves them out", async () => {
+    const { saved, reply } = await attempt(
+      { intent: "service_log", item: "oil", date: "2026-10-21", odometer: 47_900 },
+      "changed the oil yesterday at 47,900",
+      ["logService", { item: "oil" }],
+    );
+    const oil = saved[0].items.find((i) => i.kind === "oil")!;
+    expect(oil.lastDoneAt?.slice(0, 10)).toBe("2026-10-21");
+    expect(oil.lastDoneOdometer).toBe(47_900);
+    expect(reply.changes[0]).toMatch(/^Oil change \(synthetic\) logged Oct 21 at 47,900 mi\./);
+  });
+
+  it("refuses a date or mileage that contradicts the router's", async () => {
+    const routed = { intent: "service_log", item: "oil", date: "2026-10-21", odometer: 47_900 };
+    const text = "changed the oil yesterday at 47,900";
+    expect((await attempt(routed, text, ["logService", { item: "oil", odometer: 49_999 }])).saved).toEqual([]);
+    expect((await attempt(routed, text, ["logService", { item: "oil", date: "2026-10-01" }])).saved).toEqual([]);
+  });
+
+  it("refuses a date or mileage the user never gave", async () => {
+    const routed = { intent: "service_log", item: "oil" };
+    expect((await attempt(routed, "changed the oil", ["logService", { item: "oil", odometer: 47_000 }])).saved).toEqual([]);
+    expect((await attempt(routed, "changed the oil", ["logService", { item: "oil", date: "2026-10-01" }])).saved).toEqual([]);
+  });
+
+  it("ignores a router mileage that is not in the user's words", async () => {
+    const { saved } = await attempt({ intent: "service_log", item: "wash", odometer: 52_000 }, "just got a car wash", [
+      "logService",
+      { item: "wash" },
+    ]);
+    expect(saved[0].items.find((i) => i.kind === "wash")!.lastDoneOdometer).toBe(48_000);
+    expect(saved[0].vehicle.odometer).toBe(47_750);
+  });
+
+  it("sets only the reading the user typed", async () => {
+    const odometer = { intent: "odometer", odometer: 48_450 };
+    expect((await attempt(odometer, "odometer is 48,450", ["updateOdometer", { miles: 49_000 }])).saved).toEqual([]);
+    expect((await attempt(odometer, "update my odometer", ["updateOdometer", { miles: 48_450 }])).saved).toEqual([]);
+  });
+});
+
 describe("runCommand: input it cannot act on", () => {
   it("answers input the router cannot place with examples to try, from Nano, without calling Super", async () => {
     const chat = scriptedChat({ nano: [route({ intent: "unknown" })] });
