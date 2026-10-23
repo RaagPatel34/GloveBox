@@ -1,4 +1,4 @@
-import { pacificDateAhead, parsePlainDate, sameDueDay } from "./days";
+import { pacificDate, pacificDateAhead, parsePlainDate, sameDueDay } from "./days";
 import { estimateCarOdometer, isOdometerReading, itemStatus } from "./intervals";
 import { numberFormat } from "./readout";
 import type { CarSnapshot, DueTarget, Proposal, ScheduleItemKind } from "./types";
@@ -17,13 +17,16 @@ function dueTarget(item: DueTarget): DueTarget {
   };
 }
 
+// The rule Super is told in the tool description, and again when it breaks it.
+export const SOONER = "Life events add wear, so a due point can only move sooner, never later.";
+
 // A proposal to move one item's due date and/or mileage. `from` is read from the car,
 // never from the model, so the card shows what the schedule says today.
 //
 // The new due point must be one the item tracks, and a real move: from tomorrow up to one
-// interval ahead, or from today's estimated odometer up to one interval on. A due date is
-// a calendar day ("2026-10-25"); like a logged service's, it is pinned to noon UTC, which
-// is the same day in California.
+// interval ahead, or from today's estimated odometer up to one interval on. It must also
+// be no later than the item's current due point (see SOONER). A due date is a calendar
+// day ("2026-10-25"); like a logged service's, it is pinned to noon UTC (see parsePlainDate).
 export function proposeAdjustment(
   car: CarSnapshot,
   input: { kind: ScheduleItemKind; dueAt?: string; dueOdometer?: number; reason: string },
@@ -50,6 +53,9 @@ export function proposeAdjustment(
     const earliest = pacificDateAhead(now, 1);
     const latest = pacificDateAhead(now, item.intervalDays);
     if (day < earliest || day > latest) return refuse(`The new due date must be from ${earliest} to ${latest}.`);
+    if (from.dueAt !== undefined && day > pacificDate(new Date(from.dueAt))) {
+      return refuse(`${SOONER} ${input.kind} is due ${pacificDate(new Date(from.dueAt))} now: give an earlier date, or skip it.`);
+    }
     // The day it is already due keeps its stored time, so it is not shown as a move.
     to.dueAt = sameDueDay(pinned.toISOString(), from.dueAt) ? from.dueAt : pinned.toISOString();
   }
@@ -62,6 +68,11 @@ export function proposeAdjustment(
     if (input.dueOdometer < lowest || input.dueOdometer > highest) {
       return refuse(
         `The new due mileage must be from ${numberFormat.format(lowest)} to ${numberFormat.format(highest)} mi.`,
+      );
+    }
+    if (from.dueOdometer !== undefined && input.dueOdometer > from.dueOdometer) {
+      return refuse(
+        `${SOONER} ${input.kind} is due at ${numberFormat.format(from.dueOdometer)} mi now: give a lower mileage, or skip it.`,
       );
     }
     to.dueOdometer = input.dueOdometer;

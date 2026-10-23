@@ -1,6 +1,6 @@
 import { pacificDate } from "../days";
 import { BASELINE_INTERVALS, estimateCarOdometer, itemStatus, parseMiles } from "../intervals";
-import { proposeAdjustment } from "../proposals";
+import { proposeAdjustment, SOONER } from "../proposals";
 import { logService, updateOdometer, type OdometerUpdated, type ServiceLogged } from "../service-log";
 import type { CarSnapshot, Proposal, ScheduleItemKind } from "../types";
 import type { Chat } from "./chat";
@@ -87,7 +87,8 @@ export function maintenanceTools(
         name: "proposeAdjustment",
         description:
           "Suggest moving one item's due date and/or due mileage because of the user's event. Give at least one " +
-          "of newDueAt and newDueOdometer. The user sees it as a card and decides: nothing changes until they apply it.",
+          `of newDueAt and newDueOdometer. ${SOONER} ` +
+          "The user sees it as a card and decides: nothing changes until they apply it.",
         parameters: {
           type: "object",
           properties: {

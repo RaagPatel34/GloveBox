@@ -362,6 +362,20 @@ describe("runCommand: life events", () => {
     expect(proposals).toHaveLength(1);
   });
 
+  it("tells Super that a life event can only bring a due point sooner, and refuses a later one", async () => {
+    const chat = scriptedChat({
+      nano: [route({ intent: "event" })],
+      super: [callTools(["proposeAdjustment", { item: "oil", newDueOdometer: 55_000, reason: OIL_REASON }]), say("Done.")],
+    });
+    const { proposals } = await send(DEMO_EVENT, chat);
+
+    expect(proposals).toEqual([]);
+    const [first, second] = chat.requests.filter((r) => r.tier === "super");
+    const tool = first.tools!.find((t) => t.type === "function" && t.function.name === "proposeAdjustment")!;
+    expect(tool.type === "function" && tool.function.description).toMatch(/sooner, never later/);
+    expect(JSON.parse(second.messages.at(-1)!.content as string).error).toMatch(/sooner, never later/);
+  });
+
   it("keeps the proposals already made when Super's closing reply fails", async () => {
     const chat = scriptedChat({
       nano: [route({ intent: "event" })],

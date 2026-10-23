@@ -22,12 +22,32 @@ describe("proposeAdjustment", () => {
     expect(result.proposal.to).toEqual({ dueAt: "2026-10-25T12:00:00.000Z", dueOdometer: 48_400 });
   });
 
-  it("takes from tomorrow up to one interval ahead, and from today's odometer up to one interval on", () => {
-    // Today is 2026-10-22 in California; the demo car is at about 48,000 mi.
+  it("takes from tomorrow and from today's odometer, up to the due point the item has now", () => {
+    // Today is 2026-10-22 in California; the demo car is at about 48,000 mi. Oil is due
+    // 2026-12-26 or at 48,400 mi.
     expect(propose({ kind: "oil", dueAt: "2026-10-23" }).ok).toBe(true);
-    expect(propose({ kind: "oil", dueAt: "2027-10-22" }).ok).toBe(true);
+    expect(propose({ kind: "oil", dueAt: "2026-12-25" }).ok).toBe(true);
     expect(propose({ kind: "oil", dueOdometer: 48_000 }).ok).toBe(true);
-    expect(propose({ kind: "oil", dueOdometer: 55_500 }).ok).toBe(true);
+    expect(propose({ kind: "oil", dueOdometer: 48_399 }).ok).toBe(true);
+  });
+
+  it("takes up to one interval ahead for an item with no due point yet", () => {
+    const unset = { ...car, items: car.items.map((i) => (i.kind === "oil" ? { ...i, dueAt: undefined, dueOdometer: undefined } : i)) };
+    const proposeUnset = (input: { dueAt?: string; dueOdometer?: number }) =>
+      proposeAdjustment(unset, { kind: "oil", reason: REASON, ...input }, NOW, randomUUID);
+    expect(proposeUnset({ dueAt: "2027-10-22" }).ok).toBe(true);
+    expect(proposeUnset({ dueOdometer: 55_500 }).ok).toBe(true);
+    expect(proposeUnset({ dueAt: "2027-10-23" }).ok).toBe(false);
+    expect(proposeUnset({ dueOdometer: 55_501 }).ok).toBe(false);
+  });
+
+  it.each([
+    ["a later date", { kind: "oil", dueAt: "2026-12-27" }, /only move sooner.*2026-12-26/],
+    ["a later mileage", { kind: "oil", dueOdometer: 48_401 }, /only move sooner.*48,400 mi/],
+    ["a later mileage with a sooner date", { kind: "oil", dueAt: "2026-11-01", dueOdometer: 49_000 }, /only move sooner/],
+  ])("refuses %s: a life event adds wear, so it never pushes a due point back", (_label, input, error) => {
+    const result = propose(input);
+    expect(result).toEqual({ ok: false, error: expect.stringMatching(error) });
   });
 
   it.each([
