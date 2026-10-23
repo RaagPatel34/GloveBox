@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { callTools, say, scriptedChat, type ScriptedChat } from "./agent/scripted-chat";
-import { runCommand } from "./command";
+import { describeEffects, runCommand } from "./command";
 import { buildDashboard } from "./dashboard";
 import { demoCar } from "./fixtures/demo-car";
+import { logService, updateOdometer } from "./service-log";
 import { inDays, NOW } from "./test-support";
 import type { CarSnapshot } from "./types";
 
@@ -216,6 +217,20 @@ describe("runCommand: Super can only record what the router read", () => {
     const odometer = { intent: "odometer", odometer: 48_450 };
     expect((await attempt(odometer, "odometer is 48,450", ["updateOdometer", { miles: 49_000 }])).saved).toEqual([]);
     expect((await attempt(odometer, "update my odometer", ["updateOdometer", { miles: 48_450 }])).saved).toEqual([]);
+  });
+});
+
+describe("describeEffects", () => {
+  it("describes each change as it was made, not as the car ended up", () => {
+    const logged = logService(demoCar(NOW, VISITOR, randomUUID), { kind: "oil", odometer: 47_900 }, NOW);
+    if (!logged.ok) throw new Error(logged.error);
+    // 55,000 is within 500 mi of the new oil due point, so oil ends up due soon.
+    const read = updateOdometer(logged.car, 55_000, NOW);
+    if (!read.ok) throw new Error(read.error);
+
+    const lines = describeEffects([logged.effect, read.effect]);
+    expect(lines[0]).toBe("Oil change (synthetic) logged Oct 22 at 47,900 mi. OK, next due at 55,400 mi.");
+    expect(lines).toContain("Oil change (synthetic): OK → Due soon.");
   });
 });
 

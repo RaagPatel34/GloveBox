@@ -99,6 +99,7 @@ describe("logService", () => {
       doneAt: NOW.toISOString(),
       doneOdometer: 48_000,
       status: "ok",
+      next: { kind: "days", dueAt: inDays(14) },
     });
   });
 

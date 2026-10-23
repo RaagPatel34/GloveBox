@@ -8,6 +8,7 @@ import {
   itemStatus,
   MAX_ODOMETER,
 } from "./intervals";
+import { tighterLimit } from "./limits";
 import type { CarSnapshot, ItemStatus, ScheduleItem, ScheduleItemKind } from "./types";
 
 // What the maintenance agent's write tools do to a car: log a service, correct the odometer.
@@ -22,6 +23,8 @@ export type ServiceLogged = {
   doneAt: string;
   doneOdometer: number;
   status: ItemStatus;
+  // The due point that limits it, as on the dashboard tile, as of when it was logged.
+  next: { kind: "days"; dueAt: string } | { kind: "miles"; dueOdometer: number } | null;
 };
 
 export type OdometerUpdated = {
@@ -96,6 +99,7 @@ export function logService(
   const items = car.items.map((i) =>
     i.id === item.id ? updated : moved ? { ...i, status: itemStatus(i, now, odometerNow) } : i,
   );
+  const limit = tighterLimit(updated, now, odometerNow, read.vehicle.weeklyMiles);
 
   return {
     ok: true,
@@ -107,6 +111,12 @@ export function logService(
       doneAt: updated.lastDoneAt!,
       doneOdometer,
       status: updated.status,
+      next:
+        limit?.kind === "days" && dueAt !== undefined
+          ? { kind: "days", dueAt }
+          : limit?.kind === "miles" && dueOdometer !== undefined
+            ? { kind: "miles", dueOdometer }
+            : null,
     },
   };
 }

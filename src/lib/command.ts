@@ -2,7 +2,6 @@ import type { Chat } from "./agent/chat";
 import { runMaintenanceAgent, type ActionRoute, type MaintenanceEffect } from "./agent/maintenance";
 import { routeCommand } from "./agent/router";
 import { MAX_COMMAND_LENGTH } from "./command-limits";
-import { buildDashboard } from "./dashboard";
 import { formatReadDate, numberFormat, STATUS_LABEL } from "./readout";
 import type { CarSnapshot, CommandReply } from "./types";
 
@@ -72,7 +71,7 @@ export async function runCommand(args: {
     return reply("super", "Could not save that change. Please try again.");
   }
 
-  return reply("super", "Done.", describeEffects(state.effects, state.car, now));
+  return reply("super", "Done.", describeEffects(state.effects));
 }
 
 // What to try when Super recorded nothing, by what the router read.
@@ -86,9 +85,9 @@ function nothingRecorded(route: ActionRoute): string {
   return "I couldn't log that. Check the date or mileage, like “changed the oil yesterday at 48,100”.";
 }
 
-// The lines the user sees. Every number comes from an effect or the updated car.
-export function describeEffects(effects: MaintenanceEffect[], car: CarSnapshot, now: Date): string[] {
-  const dashboard = buildDashboard(car, now);
+// The lines the user sees. Every number comes from an effect, so each line describes
+// the change as it was made.
+export function describeEffects(effects: MaintenanceEffect[]): string[] {
   return effects.flatMap((effect): string[] => {
     if (effect.type === "odometer_updated") {
       return [
@@ -98,19 +97,17 @@ export function describeEffects(effects: MaintenanceEffect[], car: CarSnapshot, 
         ),
       ];
     }
-    const shown = dashboard.items.find((i) => i.kind === effect.kind)!;
-    const item = car.items.find((i) => i.kind === effect.kind)!;
     // The due point that limits it, as on the tile. A date or mileage rather than "14 days
     // left", which the dashboard (re-rendered a moment later) could already show as 13.
     const next =
-      shown.limit?.kind === "days" && item.dueAt !== undefined
-        ? ` next due ${formatReadDate(new Date(item.dueAt))}`
-        : shown.limit?.kind === "miles" && item.dueOdometer !== undefined
-          ? ` next due at ${numberFormat.format(item.dueOdometer)} mi`
+      effect.next?.kind === "days"
+        ? ` next due ${formatReadDate(new Date(effect.next.dueAt))}`
+        : effect.next?.kind === "miles"
+          ? ` next due at ${numberFormat.format(effect.next.dueOdometer)} mi`
           : "";
     return [
       `${effect.label} logged ${formatReadDate(new Date(effect.doneAt))} at ${numberFormat.format(effect.doneOdometer)} mi. ` +
-        `${STATUS_LABEL[shown.status]}${next ? `,${next}` : ""}.`,
+        `${STATUS_LABEL[effect.status]}${next ? `,${next}` : ""}.`,
     ];
   });
 }
