@@ -42,7 +42,8 @@ describe("runCommand: service logs", () => {
     expect(dashboard.counts).toEqual({ overdue: 0, due_soon: 1, ok: 7 });
 
     expect(reply.model).toBe("super");
-    expect(reply.changes).toEqual(["Exterior wash logged Oct 22 at 48,000 mi. OK, 14 days left."]);
+    // A due date, not "14 days left": the dashboard reloads a moment later and must agree.
+    expect(reply.changes).toEqual(["Exterior wash logged Oct 22 at 48,000 mi. OK, next due Nov 5."]);
   });
 
   it("“odometer is 48,450” updates the car and every status that depends on it", async () => {
@@ -76,7 +77,7 @@ describe("runCommand: service logs", () => {
     const shown = [reply.message, ...reply.changes].join("\n");
 
     expect(shown).not.toMatch(/99,999|12,345|Jan 1/);
-    expect(reply.changes).toEqual(["Oil change (synthetic) logged Oct 22 at 47,900 mi. OK, 7,400 mi left."]);
+    expect(reply.changes).toEqual(["Oil change (synthetic) logged Oct 22 at 47,900 mi. OK, next due at 55,400 mi."]);
   });
 
   it("gives Super the current schedule, the user's words and the router's reading", async () => {

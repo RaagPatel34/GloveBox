@@ -2,7 +2,7 @@ import type { Chat } from "./agent/chat";
 import { runMaintenanceAgent, type MaintenanceEffect } from "./agent/maintenance";
 import { routeCommand } from "./agent/router";
 import { buildDashboard } from "./dashboard";
-import { formatLimit, formatReadDate, numberFormat, STATUS_LABEL } from "./readout";
+import { formatReadDate, numberFormat, STATUS_LABEL } from "./readout";
 import type { CarSnapshot, CommandReply } from "./types";
 
 // One command-bar input, end to end: Nano routes it, Super records service logs and
@@ -80,11 +80,19 @@ export function describeEffects(effects: MaintenanceEffect[], car: CarSnapshot, 
         ),
       ];
     }
-    const item = dashboard.items.find((i) => i.kind === effect.kind)!;
-    const { value, unit } = formatLimit(item.limit);
+    const shown = dashboard.items.find((i) => i.kind === effect.kind)!;
+    const item = car.items.find((i) => i.kind === effect.kind)!;
+    // The due point that limits it, as on the tile. A date or mileage rather than "14 days
+    // left", which the dashboard (re-rendered a moment later) could already show as 13.
+    const next =
+      shown.limit?.kind === "days" && item.dueAt !== undefined
+        ? ` next due ${formatReadDate(new Date(item.dueAt))}`
+        : shown.limit?.kind === "miles" && item.dueOdometer !== undefined
+          ? ` next due at ${numberFormat.format(item.dueOdometer)} mi`
+          : "";
     return [
       `${effect.label} logged ${formatReadDate(new Date(effect.doneAt))} at ${numberFormat.format(effect.doneOdometer)} mi. ` +
-        `${STATUS_LABEL[item.status]}, ${unit ? `${value} ${unit}` : value}.`,
+        `${STATUS_LABEL[shown.status]}${next ? `,${next}` : ""}.`,
     ];
   });
 }
