@@ -105,6 +105,27 @@ describe("buildDashboard", () => {
     expect(card.source).toEqual({ kind: "manufacturer", url: "https://example.com/manual" });
   });
 
+  it("keeps items with no due target in their original order, after those with one", () => {
+    const dash = buildDashboard(
+      snapshot([
+        item({ kind: "cabin_filter" }),
+        item({ kind: "engine_filter" }),
+        item({ kind: "wipers", dueAt: inDays(90) }),
+      ]),
+      NOW,
+    );
+    expect(dash.items.map((i) => i.kind)).toEqual(["wipers", "cabin_filter", "engine_filter"]);
+  });
+
+  it("gives an item with an unreadable due date no limit and no used share, never NaN", () => {
+    const dash = buildDashboard(
+      snapshot([item({ kind: "wipers", dueAt: "not a date", intervalDays: 365 })]),
+      NOW,
+    );
+    expect(dash.items[0].limit).toBeNull();
+    expect(dash.items[0].usedPercent).toBeNull();
+  });
+
   it("leaves used share empty when the interval is unknown", () => {
     const dash = buildDashboard(snapshot([item({ kind: "wipers", dueAt: inDays(10) })]), NOW);
     expect(dash.items[0].usedPercent).toBeNull();
@@ -119,5 +140,12 @@ describe("odometerDigits", () => {
 
   it("grows past six digits instead of truncating", () => {
     expect(odometerDigits(1_234_567)).toEqual(["1", "2", "3", "4", "5", "6", "7"]);
+  });
+
+  it("shows zeros rather than NaN or Infinity for bad input", () => {
+    const zeros = ["0", "0", "0", "0", "0", "0"];
+    expect(odometerDigits(Number.NaN)).toEqual(zeros);
+    expect(odometerDigits(Infinity)).toEqual(zeros);
+    expect(odometerDigits(-5)).toEqual(zeros);
   });
 });

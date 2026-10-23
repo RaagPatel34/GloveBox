@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatLimit, intervalUsed } from "./readout";
+import { formatLimit, formatReadDate, intervalUsed, numberFormat } from "./readout";
 import { inDays, NOW } from "./test-support";
 
 describe("intervalUsed", () => {
@@ -65,5 +65,53 @@ describe("formatLimit", () => {
 
   it("says so when there is no due target", () => {
     expect(formatLimit(null)).toEqual({ value: "—", unit: "No due date" });
+  });
+
+  it("falls back to no due date rather than showing NaN or Infinity", () => {
+    const none = { value: "—", unit: "No due date" };
+    expect(formatLimit({ kind: "days", remaining: Number.NaN, inDays: Number.NaN })).toEqual(none);
+    expect(formatLimit({ kind: "miles", remaining: Number.NaN, inDays: Number.NaN })).toEqual(none);
+    expect(formatLimit({ kind: "miles", remaining: Infinity, inDays: Infinity })).toEqual(none);
+  });
+});
+
+describe("intervalUsed with bad input", () => {
+  it("is null when the interval is zero, negative or not a number", () => {
+    expect(intervalUsed({ intervalDays: 0, dueAt: inDays(5) }, NOW, 48_000)).toBeNull();
+    expect(intervalUsed({ intervalMiles: 0, dueOdometer: 48_400 }, NOW, 48_000)).toBeNull();
+    expect(intervalUsed({ intervalDays: -14, dueAt: inDays(5) }, NOW, 48_000)).toBeNull();
+    expect(intervalUsed({ intervalDays: Number.NaN, dueAt: inDays(5) }, NOW, 48_000)).toBeNull();
+  });
+
+  it("is null when the due date cannot be read", () => {
+    expect(intervalUsed({ intervalDays: 14, dueAt: "not a date" }, NOW, 48_000)).toBeNull();
+  });
+
+  it("is null when the due mileage is not a number", () => {
+    expect(intervalUsed({ intervalMiles: 7_500, dueOdometer: Number.NaN }, NOW, 48_000)).toBeNull();
+  });
+
+  it("skips the unusable measure and uses the other", () => {
+    const item = { intervalDays: 0, dueAt: inDays(5), intervalMiles: 20_000, dueOdometer: 50_000 };
+    expect(intervalUsed(item, NOW, 48_000)).toBeCloseTo(0.9, 5);
+  });
+});
+
+describe("formatReadDate", () => {
+  it("uses the California calendar day, whatever zone the server runs in", () => {
+    // 02:00 UTC on Oct 23 is 7pm on Oct 22 in California (PDT).
+    expect(formatReadDate(new Date("2026-10-23T02:00:00.000Z"))).toBe("Oct 22");
+    // 07:30 UTC on Jan 15 is 11:30pm on Jan 14 in California (PST).
+    expect(formatReadDate(new Date("2026-01-15T07:30:00.000Z"))).toBe("Jan 14");
+  });
+
+  it("shows a dash for a date that cannot be read", () => {
+    expect(formatReadDate(new Date("not a date"))).toBe("—");
+  });
+});
+
+describe("numberFormat", () => {
+  it("groups thousands", () => {
+    expect(numberFormat.format(48_250)).toBe("48,250");
   });
 });

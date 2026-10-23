@@ -23,6 +23,10 @@ export type Dashboard = {
 };
 
 
+function compareAscending(a: number, b: number): number {
+  return a === b ? 0 : a < b ? -1 : 1;
+}
+
 export function buildDashboard(car: CarSnapshot, now: Date): Dashboard {
   const { vehicle } = car;
   const readingAt = new Date(car.readingAt);
@@ -45,8 +49,8 @@ export function buildDashboard(car: CarSnapshot, now: Date): Dashboard {
   items.sort(
     (a, b) =>
       STATUS_RANK[a.status] - STATUS_RANK[b.status] ||
-      (a.limit?.inDays ?? Infinity) - (b.limit?.inDays ?? Infinity) ||
-      0,
+      // Items with no limit go last. Compared explicitly: Infinity - Infinity is NaN.
+      compareAscending(a.limit?.inDays ?? Infinity, b.limit?.inDays ?? Infinity),
   );
 
   const counts: Record<ItemStatus, number> = { overdue: 0, due_soon: 0, ok: 0 };
@@ -56,6 +60,8 @@ export function buildDashboard(car: CarSnapshot, now: Date): Dashboard {
 }
 
 // One tile per digit, zero-padded to at least six places like a real odometer.
+// A value that is not a finite number reads as zero rather than "NaN".
 export function odometerDigits(miles: number): string[] {
-  return String(Math.max(0, Math.round(miles))).padStart(6, "0").split("");
+  const whole = Number.isFinite(miles) ? Math.max(0, Math.round(miles)) : 0;
+  return String(whole).padStart(6, "0").split("");
 }
