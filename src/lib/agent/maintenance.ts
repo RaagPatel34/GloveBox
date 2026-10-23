@@ -1,10 +1,11 @@
+import { pacificDate } from "../days";
 import { BASELINE_INTERVALS, estimateCarOdometer, itemStatus, parseMiles } from "../intervals";
 import { proposeAdjustment } from "../proposals";
 import { logService, updateOdometer, type OdometerUpdated, type ServiceLogged } from "../service-log";
 import type { CarSnapshot, Proposal, ScheduleItemKind } from "../types";
 import type { Chat } from "./chat";
 import { runToolLoop, type Tool } from "./loop";
-import { pacificDate, type Route } from "./router";
+import type { Route } from "./router";
 
 // The maintenance agent (Super): reads the schedule and records what the user did, or,
 // for a life event, proposes schedule changes for the user to Apply or Dismiss.
