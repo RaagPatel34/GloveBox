@@ -1,4 +1,4 @@
-import { buildDashboard } from "../dashboard";
+import { BASELINE_INTERVALS, estimateCarOdometer, itemStatus } from "../intervals";
 import { logService, updateOdometer, type OdometerUpdated, type ServiceLogged } from "../service-log";
 import type { CarSnapshot, ScheduleItemKind } from "../types";
 import type { Chat } from "./chat";
@@ -40,23 +40,21 @@ export function maintenanceTools(
       "The car's upkeep items with status, last service and due date/mileage, plus today's estimated odometer.",
     parameters: { type: "object", properties: {} },
     run: () => {
-      const dashboard = buildDashboard(state.car, now);
+      const odometerEstimate = estimateCarOdometer(state.car, now);
       return {
         // The calendar day in California, the same "today" the router used.
         today: pacificDate(now),
-        odometerEstimate: dashboard.odometerEstimate,
-        items: dashboard.items.map((shown) => {
-          const item = state.car.items.find((i) => i.id === shown.id)!;
-          return {
-            item: item.kind,
-            label: shown.label,
-            status: shown.status,
-            lastDoneAt: item.lastDoneAt ?? null,
-            lastDoneOdometer: item.lastDoneOdometer ?? null,
-            dueAt: item.dueAt ?? null,
-            dueOdometer: item.dueOdometer ?? null,
-          };
-        }),
+        odometerEstimate,
+        items: state.car.items.map((item) => ({
+          item: item.kind,
+          label: BASELINE_INTERVALS[item.kind].label,
+          // Recomputed as on the dashboard: the stored status goes stale as time passes.
+          status: itemStatus(item, now, odometerEstimate),
+          lastDoneAt: item.lastDoneAt ?? null,
+          lastDoneOdometer: item.lastDoneOdometer ?? null,
+          dueAt: item.dueAt ?? null,
+          dueOdometer: item.dueOdometer ?? null,
+        })),
       };
     },
   };
