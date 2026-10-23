@@ -45,3 +45,6 @@ export function itemStatus(
   if (daysLeft <= DUE_SOON_DAYS || milesLeft <= DUE_SOON_MILES) return "due_soon";
   return "ok";
 }
+
+// Most urgent first, for sorting and for picking the limit that explains a status.
+export const STATUS_RANK: Record<ItemStatus, number> = { overdue: 0, due_soon: 1, ok: 2 };

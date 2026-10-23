@@ -93,3 +93,72 @@ describe("tighterLimit", () => {
     expect(tighterLimit({}, NOW, ODO, WEEKLY)).toBeNull();
   });
 });
+
+describe("tighterLimit when the status is overdue or due soon", () => {
+  const ODO = 48_000;
+
+  it("shows the mileage that made it due soon when the car is barely driven", () => {
+    // 450 mi is due soon (within 500), but at 10 mi/wk that is ~315 days away.
+    // The date is a comfortable 20 days off, so it must not be the one shown.
+    const limit = tighterLimit({ dueAt: inDays(20), dueOdometer: ODO + 450 }, NOW, ODO, 10);
+    expect(limit?.kind).toBe("miles");
+    expect(limit?.remaining).toBe(450);
+  });
+
+  it("shows the mileage that made it due soon when the car is not driven at all", () => {
+    const limit = tighterLimit({ dueAt: inDays(20), dueOdometer: ODO + 450 }, NOW, ODO, 0);
+    expect(limit?.kind).toBe("miles");
+    expect(limit?.remaining).toBe(450);
+  });
+
+  it("shows the date that made it due soon, even if a mileage converts to fewer days", () => {
+    // 600 mi is not due soon, but at 2,000 mi/wk it is ~2 days away. The date (6 days) is due soon.
+    const limit = tighterLimit({ dueAt: inDays(6), dueOdometer: ODO + 600 }, NOW, ODO, 2_000);
+    expect(limit?.kind).toBe("days");
+    expect(limit?.remaining).toBe(6);
+  });
+
+  it("shows the date that made it overdue, even if the mileage is only due soon", () => {
+    const limit = tighterLimit({ dueAt: inDays(-1), dueOdometer: ODO + 100 }, NOW, ODO, 2_000);
+    expect(limit?.kind).toBe("days");
+    expect(limit?.remaining).toBe(-1);
+  });
+
+  it("shows the mileage that made it overdue, even if the date is only due soon", () => {
+    const limit = tighterLimit({ dueAt: inDays(2), dueOdometer: ODO - 10 }, NOW, ODO, 10);
+    expect(limit?.kind).toBe("miles");
+    expect(limit?.remaining).toBe(-10);
+  });
+
+  it("shows the most urgent of two limits that are both due soon", () => {
+    // 100 mi at 250/wk is ~2.8 days; the date is 5 days off.
+    const limit = tighterLimit({ dueAt: inDays(5), dueOdometer: ODO + 100 }, NOW, ODO, 250);
+    expect(limit?.kind).toBe("miles");
+  });
+
+  it("stays on whichever runs out first when everything is OK", () => {
+    const byMiles = tighterLimit({ dueAt: inDays(60), dueOdometer: ODO + 1_000 }, NOW, ODO, 250);
+    expect(byMiles?.kind).toBe("miles"); // ~28 days
+    const byDate = tighterLimit({ dueAt: inDays(20), dueOdometer: ODO + 5_000 }, NOW, ODO, 250);
+    expect(byDate?.kind).toBe("days");
+  });
+});
+
+describe("tighterLimit with bad input", () => {
+  const ODO = 48_000;
+
+  it("ignores a date that cannot be read and falls back to the mileage", () => {
+    const limit = tighterLimit({ dueAt: "not a date", dueOdometer: ODO + 400 }, NOW, ODO, 250);
+    expect(limit?.kind).toBe("miles");
+  });
+
+  it("has nothing to show when the only target is unreadable", () => {
+    expect(tighterLimit({ dueAt: "not a date" }, NOW, ODO, 250)).toBeNull();
+    expect(tighterLimit({ dueOdometer: Number.NaN }, NOW, ODO, 250)).toBeNull();
+  });
+
+  it("treats unusable weekly miles as a car that is not driven", () => {
+    expect(milesToDays(500, Number.NaN)).toBe(Infinity);
+    expect(milesToDays(-5, Number.NaN)).toBe(-Infinity);
+  });
+});

@@ -1,4 +1,4 @@
-import { BASELINE_INTERVALS, estimateOdometer, itemStatus } from "./intervals";
+import { BASELINE_INTERVALS, estimateOdometer, itemStatus, STATUS_RANK } from "./intervals";
 import { tighterLimit, type Limit } from "./limits";
 import { intervalUsed } from "./readout";
 import type { CarSnapshot, ItemStatus, ScheduleItem, ScheduleItemKind, Vehicle } from "./types";
@@ -22,7 +22,6 @@ export type Dashboard = {
   counts: Record<ItemStatus, number>;
 };
 
-const STATUS_RANK: Record<ItemStatus, number> = { overdue: 0, due_soon: 1, ok: 2 };
 
 export function buildDashboard(car: CarSnapshot, now: Date): Dashboard {
   const { vehicle } = car;
