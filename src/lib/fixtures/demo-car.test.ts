@@ -1,4 +1,4 @@
-﻿import { randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { buildDashboard } from "../dashboard";
 import { demoCar } from "./demo-car";
@@ -71,4 +71,3 @@ describe("demoCar", () => {
     expect(stored).toEqual(Object.fromEntries(dash.items.map((i) => [i.kind, i.status])));
   });
 });
-
