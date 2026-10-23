@@ -15,6 +15,16 @@ export const BASELINE_INTERVALS: Record<
   brake_check: { label: "Brake inspection", days: 365, miles: 12000 },
 };
 
+export function isItemKind(value: unknown): value is ScheduleItemKind {
+  return typeof value === "string" && Object.hasOwn(BASELINE_INTERVALS, value);
+}
+
+export const MAX_ODOMETER = 1_000_000;
+
+export function isOdometerReading(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= MAX_ODOMETER;
+}
+
 export const DUE_SOON_DAYS = 7;
 export const DUE_SOON_MILES = 500;
 

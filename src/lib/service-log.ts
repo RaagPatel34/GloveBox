@@ -1,5 +1,12 @@
-import { BASELINE_INTERVALS, DAY_MS, estimateOdometer, itemStatus } from "./intervals";
-import { MAX_ODOMETER } from "./setup";
+import {
+  BASELINE_INTERVALS,
+  DAY_MS,
+  estimateOdometer,
+  isItemKind,
+  isOdometerReading,
+  itemStatus,
+  MAX_ODOMETER,
+} from "./intervals";
 import type { CarSnapshot, ItemStatus, ScheduleItem, ScheduleItemKind } from "./types";
 
 // What the maintenance agent's write tools do to a car: log a service, correct the odometer.
@@ -25,14 +32,6 @@ export type OdometerUpdated = {
 };
 
 export type Result<E> = { ok: true; car: CarSnapshot; effect: E } | { ok: false; error: string };
-
-export function isItemKind(value: unknown): value is ScheduleItemKind {
-  return typeof value === "string" && Object.hasOwn(BASELINE_INTERVALS, value);
-}
-
-export function isOdometerReading(value: unknown): value is number {
-  return typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= MAX_ODOMETER;
-}
 
 // Services logged further back than this are almost certainly a misread date.
 const MAX_DAYS_BACK = 3 * 365;

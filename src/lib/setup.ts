@@ -1,4 +1,5 @@
 import type { EpaVehicle } from "./epa";
+import { MAX_ODOMETER } from "./intervals";
 import { buildBaselineSchedule } from "./schedule";
 import type { CarSnapshot, LatLng } from "./types";
 import { isVisitorId } from "./visitor";
@@ -18,7 +19,6 @@ export type SetupInput = {
 export type SetupFields = keyof SetupInput;
 export type SetupErrors = Partial<Record<SetupFields, string>>;
 
-export const MAX_ODOMETER = 1_000_000;
 export const MAX_WEEKLY_MILES = 2_000;
 
 // "48,000" -> 48000. Anything that is not a plain non-negative number is NaN.

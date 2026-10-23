@@ -9,6 +9,7 @@
     "lint": "eslint",
     "db:migrate": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env.local scripts/migrate.mts",
     "smoke": "node --env-file-if-exists=.env.local scripts/smoke-test.mts",
+    "eval:router": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env.local scripts/eval-router.mts",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
