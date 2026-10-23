@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildDashboard, odometerDigits, type CarSnapshot } from "./dashboard";
-import { DAY_MS } from "./intervals";
+import { inDays, NOW } from "./test-support";
 import type { ScheduleItem, Vehicle } from "./types";
-
-const NOW = new Date("2026-10-22T12:00:00.000Z");
-const inDays = (n: number) => new Date(NOW.getTime() + n * DAY_MS).toISOString();
 
 const vehicle: Vehicle = {
   id: "v1",

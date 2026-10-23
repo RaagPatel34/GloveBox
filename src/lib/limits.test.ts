@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { milesToDays, tighterLimit } from "./limits";
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-const NOW = new Date("2026-10-22T12:00:00.000Z");
-const inDays = (n: number) => new Date(NOW.getTime() + n * DAY_MS).toISOString();
+import { inDays, NOW } from "./test-support";
 
 describe("milesToDays", () => {
   it("converts miles to days at the weekly-miles rate", () => {
