@@ -39,13 +39,13 @@ function compareAscending(a: number, b: number): number {
   return a === b ? 0 : a < b ? -1 : 1;
 }
 
-// Dismissed cards are gone, and so are cards for an item the car no longer has.
+// Dismissed cards are gone, and so are hidden ones and cards for an item the car no longer has.
 function proposalCards(car: CarSnapshot, proposals: Proposal[]): ProposalCard[] {
   const day = (iso: string | undefined) => (iso === undefined ? "—" : formatReadDate(new Date(iso)));
   const miles = (n: number | undefined) => (n === undefined ? "—" : `${numberFormat.format(n)} mi`);
   return proposals.flatMap((proposal): ProposalCard[] => {
     const item = car.items.find((i) => i.id === proposal.itemId);
-    if (!item || proposal.state === "dismissed") return [];
+    if (!item || proposal.state === "dismissed" || proposal.hiddenAt !== undefined) return [];
     const { from, to } = proposal;
     const moves = [
       ...(!sameDueDay(from.dueAt, to.dueAt) ? [{ from: day(from.dueAt), to: day(to.dueAt) }] : []),

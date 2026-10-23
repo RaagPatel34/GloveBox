@@ -187,6 +187,14 @@ describe("buildDashboard: proposal cards", () => {
     expect(dash.proposals.map((p) => [p.id, p.state])).toEqual([["applied", "applied"]]);
   });
 
+  it("leaves out applied cards the user has hidden", () => {
+    const dash = buildDashboard(snapshot([oil]), NOW, [
+      proposal({ id: "shown", state: "applied" }),
+      proposal({ id: "hidden", state: "applied", hiddenAt: "2026-10-22T13:00:00.000Z" }),
+    ]);
+    expect(dash.proposals.map((p) => p.id)).toEqual(["shown"]);
+  });
+
   it("has no cards when there are no proposals", () => {
     expect(buildDashboard(snapshot([oil]), NOW).proposals).toEqual([]);
   });

@@ -53,6 +53,8 @@ export type Proposal = {
   reason: string;
   model: ModelTier;
   state: "pending" | "applied" | "dismissed";
+  // When the user hid an applied card. It stays applied, but the dashboard no longer shows it.
+  hiddenAt?: string;
 };
 
 export type GasPrice = {

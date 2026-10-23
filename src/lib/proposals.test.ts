@@ -125,6 +125,21 @@ describe("decideProposal", () => {
     expect(result).toEqual({ ok: false, error: expect.stringMatching(new RegExp(state)) });
   });
 
+  it("Hide puts away an applied card, which stays applied, and leaves the car as it was", () => {
+    const applied = { ...filterProposal(), state: "applied" as const };
+    const result = decideProposal(car, applied, "hide", NOW);
+    expect(result).toEqual({
+      ok: true,
+      decision: "hide",
+      proposal: { ...applied, hiddenAt: NOW.toISOString() },
+      car: null,
+    });
+  });
+
+  it("refuses to hide a card that has not been applied", () => {
+    expect(decideProposal(car, filterProposal(), "hide", NOW).ok).toBe(false);
+  });
+
   it("refuses to apply a proposal the schedule has moved on from, so a newer service is not undone", () => {
     const proposal = filterProposal();
     const logged = logService(car, { kind: "engine_filter" }, NOW);

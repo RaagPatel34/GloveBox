@@ -49,8 +49,12 @@ export const SCHEMA_STATEMENTS: string[] = [
     reason             text NOT NULL,
     model              text NOT NULL,
     state              text NOT NULL,
+    -- Set when the user hides an applied card; it stays applied.
+    hidden_at          timestamptz,
     -- clock_timestamp, not now(): proposals saved in one transaction keep the order they were made in.
     created_at         timestamptz NOT NULL DEFAULT clock_timestamp()
   )`,
+  // For a proposals table made before hidden_at was added.
+  `ALTER TABLE proposals ADD COLUMN IF NOT EXISTS hidden_at timestamptz`,
   `CREATE INDEX IF NOT EXISTS proposals_vehicle_id_idx ON proposals (vehicle_id)`,
 ];

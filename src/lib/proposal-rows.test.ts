@@ -27,11 +27,14 @@ describe("proposal rows", () => {
       reason: filter.reason,
       model: "super",
       state: "pending",
+      hidden_at: null,
     });
   });
 
   it("rebuilds the same proposal that was stored", () => {
     expect(proposalFromRow(proposalToRow(proposal))).toEqual(proposal);
+    const hidden: Proposal = { ...proposal, state: "applied", hiddenAt: "2026-10-23T09:00:00.000Z" };
+    expect(proposalFromRow(proposalToRow(hidden))).toEqual(hidden);
   });
 
   it("reads what the driver returns: timestamps as Date, numbers as strings", () => {
@@ -42,7 +45,8 @@ describe("proposal rows", () => {
       from_due_odometer: "48400",
       to_due_odometer: "48000",
       state: "applied",
+      hidden_at: new Date("2026-10-23T09:00:00.000Z"),
     };
-    expect(proposalFromRow(row)).toEqual({ ...proposal, state: "applied" });
+    expect(proposalFromRow(row)).toEqual({ ...proposal, state: "applied", hiddenAt: "2026-10-23T09:00:00.000Z" });
   });
 });

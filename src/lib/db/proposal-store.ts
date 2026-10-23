@@ -1,18 +1,18 @@
-import { toRows } from "../car-rows";
 import { proposalFromRow, proposalToRow, type ProposalRow } from "../proposal-rows";
-import type { CarSnapshot, Proposal } from "../types";
+import type { Decided } from "../proposals";
+import type { Proposal } from "../types";
 import { isVisitorId } from "../visitor";
 import { getSql } from "./sql";
 
 // Postgres access for the visitor's proposal cards. Kept thin, like car-store.ts: the rules
 // are in proposals.ts. Every query is scoped to the visitor's own vehicle.
 
-// The cards to show: pending and applied, in the order they were made. Dismissed ones are gone.
+// The cards to show: pending and applied, in the order they were made. Dismissed and hidden ones are gone.
 export async function loadProposals(visitorId: string): Promise<Proposal[]> {
   if (!isVisitorId(visitorId)) return [];
   const sql = getSql();
   const rows = (await sql`SELECT p.* FROM proposals p JOIN vehicles v ON v.id = p.vehicle_id
-    WHERE v.visitor_id = ${visitorId} AND p.state <> 'dismissed'
+    WHERE v.visitor_id = ${visitorId} AND p.state <> 'dismissed' AND p.hidden_at IS NULL
     ORDER BY p.created_at`) as ProposalRow[];
   return rows.map(proposalFromRow);
 }
@@ -42,19 +42,28 @@ export async function addProposals(visitorId: string, proposals: Proposal[]): Pr
   );
 }
 
-// Records the user's decision on a pending proposal. For Apply, `car` is the car with the
-// item moved (see decideProposal), and the item's due fields are written in the same
-// transaction, so the card and the schedule never disagree. Only a still-pending proposal
-// changes anything: a second click, or one from another tab, is a no-op.
-export async function saveDecision(visitorId: string, proposal: Proposal, car: CarSnapshot | null): Promise<void> {
+// Records the user's decision on a card (see decideProposal). Apply writes the moved item's
+// due fields in the same transaction, so the card and the schedule never disagree. Only a
+// still-pending card is applied or dismissed, and only an applied one hidden: a second
+// click, or one from another tab, is a no-op.
+export async function saveDecision(visitorId: string, decided: Decided): Promise<void> {
   if (!isVisitorId(visitorId)) throw new Error("Invalid visitor ID");
   const sql = getSql();
-  const item = car && toRows(visitorId, car).items.find((i) => i.id === proposal.itemId);
+  const { proposal } = decided;
 
+  if (decided.decision === "hide") {
+    await sql`UPDATE proposals SET hidden_at = ${proposal.hiddenAt ?? null}
+        WHERE id = ${proposal.id} AND state = 'applied' AND hidden_at IS NULL
+          AND vehicle_id = (SELECT id FROM vehicles WHERE id = ${proposal.vehicleId} AND visitor_id = ${visitorId})`;
+    return;
+  }
+
+  const item = decided.car?.items.find((i) => i.id === proposal.itemId);
   await sql.transaction([
     ...(item
       ? [
-          sql`UPDATE schedule_items SET due_at = ${item.due_at}, due_odometer = ${item.due_odometer}, status = ${item.status}
+          sql`UPDATE schedule_items SET due_at = ${item.dueAt ?? null}, due_odometer = ${item.dueOdometer ?? null},
+                status = ${item.status}
               WHERE id = ${item.id}
                 AND vehicle_id = (SELECT id FROM vehicles WHERE id = ${proposal.vehicleId} AND visitor_id = ${visitorId})
                 AND EXISTS (SELECT 1 FROM proposals WHERE id = ${proposal.id} AND state = 'pending')`,
