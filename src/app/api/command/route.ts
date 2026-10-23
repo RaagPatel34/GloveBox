@@ -13,7 +13,8 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return Response.json({ error: "Send JSON: { text }" }, { status: 400 });
+    const reply: CommandReply = { model: null, message: "Send the command as JSON: { text }.", changes: [] };
+    return Response.json(reply, { status: 400 });
   }
   const text = typeof body === "object" && body !== null ? (body as Record<string, unknown>).text : undefined;
   const visitorId = (await cookies()).get(VISITOR_COOKIE)?.value;
