@@ -149,3 +149,36 @@ body { margin: 0; background: var(--paper); color: var(--ink); font-family: Aria
 
 
 .cloud-garage { min-height:100vh; background:var(--background); color:var(--foreground); --font-body:Arial; --font-numeric:monospace; }
+
+/* Focused dashboard with supporting tools in their own sections. */
+.app-shell [hidden] { display: none !important; }
+.app-shell .garage-nav { display:flex; gap:8px; overflow-x:auto; padding:18px 0; border-bottom:1px solid var(--line); }
+.app-shell .garage-nav a { white-space:nowrap; padding:11px 18px; border-radius:8px; color:var(--muted); font-size:13px; }
+.app-shell .garage-nav a[aria-current="page"] { background:var(--ink); color:var(--paper); }
+.app-shell .garage-nav a:hover { background:#e5ecdf; color:var(--ink); }
+.app-shell .dashboard-heading { display:flex; align-items:center; justify-content:space-between; gap:24px; padding:28px 0 24px; }
+.app-shell .dashboard-heading h1 { font-size:32px; letter-spacing:-1px; }
+.app-shell .dashboard-heading .eyebrow { margin-bottom:10px; }
+.app-shell .dashboard-heading .helper { margin-top:10px; }
+.app-shell .vehicle-card { min-height:180px; padding:22px 28px; }
+.app-shell .car-art { max-width:280px; justify-self:center; }
+.app-shell .workspace { display:flex; flex-direction:column; gap:24px; margin-top:24px; }
+.app-shell .workspace .maintenance { order:2; width:100%; }
+.app-shell .workspace .copilot { order:1; width:100%; padding:20px 24px; }
+.app-shell .copilot h2 { max-width:none; font-size:18px; }
+.app-shell .copilot > p { margin:8px 0 14px; }
+.app-shell .copilot form { display:grid; grid-template-columns:minmax(0,1fr) 230px; column-gap:20px; }
+.app-shell .copilot form > label { grid-column:1; }
+.app-shell .copilot textarea { grid-column:1; grid-row:2 / 4; min-height:80px; }
+.app-shell .copilot .example-button { grid-column:1; grid-row:4; padding-bottom:0; }
+.app-shell .copilot .mode-row { grid-column:2; grid-row:2; }
+.app-shell .copilot .primary { grid-column:2; grid-row:3; }
+.app-shell .health-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
+@media (max-width:760px) {
+ .app-shell .dashboard-heading { align-items:start; flex-direction:column; gap:10px; }
+ .app-shell .dashboard-heading h1 { font-size:28px; }
+ .app-shell .garage-nav { gap:2px; }.app-shell .garage-nav a { padding:10px 12px; font-size:12px; }
+ .app-shell .health-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .app-shell .copilot form { display:block; }.app-shell .copilot .mode-row { margin:14px 0; }
+ .app-shell .copilot { padding:18px; }
+}
