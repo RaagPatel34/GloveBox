@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { saveCarAction, type SetupState } from "@/app/setup-actions";
+import { LoadDemoCarButton } from "@/components/demo/LoadDemoCarButton";
 import { useVisitorId } from "@/components/visitor/useVisitorId";
 import { EPA_UNREACHABLE, type EpaVehicle, type MenuItem } from "@/lib/epa";
 
@@ -116,7 +117,15 @@ export function SetupForm() {
         Pick your car and GloveBox builds its upkeep schedule. No account needed: your car is saved to this browser.
       </p>
 
-      <form action={formAction} className="mt-8 grid gap-5 rounded-2xl bg-panel p-5 ring-1 ring-white/5 sm:p-8">
+      <section className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-panel p-5 ring-1 ring-white/5">
+        <p className="min-w-0 flex-1 basis-56 text-sm text-muted">
+          <span className="font-semibold text-foreground">Just looking?</span> Try a 2019 Honda Civic that already has
+          upkeep due.
+        </p>
+        <LoadDemoCarButton className="rounded-xl bg-ok px-5 py-3 text-base font-semibold text-black transition-opacity disabled:opacity-40" />
+      </section>
+
+      <form action={formAction} className="mt-6 grid gap-5 rounded-2xl bg-panel p-5 ring-1 ring-white/5 sm:p-8">
         <input type="hidden" name="visitorId" value={visitor?.id ?? ""} />
         <input type="hidden" name="epaVehicleId" value={selection.optionId} />
 
