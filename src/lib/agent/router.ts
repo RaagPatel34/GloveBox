@@ -1,5 +1,5 @@
 // The .ts extension lets `npm run eval:router` load this file under plain Node.
-import { BASELINE_INTERVALS, isItemKind, isOdometerReading } from "../intervals.ts";
+import { BASELINE_INTERVALS, DAY_MS, isItemKind, isOdometerReading } from "../intervals.ts";
 import type { ScheduleItemKind } from "../types";
 import type { Chat } from "./chat";
 
@@ -39,11 +39,17 @@ function systemPrompt(today: string): string {
 // The calendar day in California, where GloveBox is used, so "yesterday" means the same to the model and the user.
 const pacificDay = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles" });
 
+// YYYY-MM-DD in California, `daysBack` days before `now`.
+export function pacificDate(now: Date, daysBack = 0): string {
+  const today = new Date(`${pacificDay.format(now)}T12:00:00.000Z`);
+  return new Date(today.getTime() - daysBack * DAY_MS).toISOString().slice(0, 10);
+}
+
 export async function routeCommand(text: string, chat: Chat, now: Date): Promise<Route> {
   const reply = await chat({
     tier: "nano",
     messages: [
-      { role: "system", content: systemPrompt(pacificDay.format(now)) },
+      { role: "system", content: systemPrompt(pacificDate(now)) },
       { role: "user", content: text },
     ],
   });
@@ -96,11 +102,14 @@ export function parseRoute(raw: string | null): Route {
   }
 }
 
-// How a route differs from an example's expectation, one line per field. Fields the
-// expectation leaves out are not checked. Empty means it matches.
+// How a route differs from an example's expectation, one line per field. A field the
+// expectation leaves out must be absent, so an invented odometer or date is a miss.
+// Empty means it matches.
 export function checkRoute(actual: Route, expected: Route): string[] {
   const got = actual as Record<string, unknown>;
-  return Object.entries(expected)
-    .filter(([key, value]) => got[key] !== value)
-    .map(([key, value]) => `${key}: expected ${JSON.stringify(value)}, got ${JSON.stringify(got[key]) ?? "undefined"}`);
+  const want = expected as Record<string, unknown>;
+  const show = (value: unknown) => JSON.stringify(value) ?? "undefined";
+  return [...new Set([...Object.keys(want), ...Object.keys(got)])]
+    .filter((key) => got[key] !== want[key])
+    .map((key) => `${key}: expected ${show(want[key])}, got ${show(got[key])}`);
 }

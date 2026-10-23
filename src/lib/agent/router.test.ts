@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { BASELINE_INTERVALS } from "../intervals";
 import { NOW } from "../test-support";
-import { ROUTER_EXAMPLES } from "./router-examples";
+import { checkRouterExample, expectedRoute, ROUTER_EXAMPLES } from "./router-examples";
 import { checkRoute, parseRoute, routeCommand } from "./router";
 import { say, scriptedChat } from "./scripted-chat";
 
@@ -11,10 +11,35 @@ describe("routeCommand on the fixed example set", () => {
     expect([...intents].sort()).toEqual(["errand", "event", "odometer", "service_log", "unknown"]);
   });
 
-  it.each(ROUTER_EXAMPLES)("routes $input", async ({ input, expected, sample }) => {
-    const chat = scriptedChat({ nano: [say(sample)] });
-    const route = await routeCommand(input, chat, NOW);
-    expect(checkRoute(route, expected)).toEqual([]);
+  // The same check `npm run eval:router` runs against the real Nano, here with the sample reply.
+  it.each(ROUTER_EXAMPLES)("routes $input", async (example) => {
+    const chat = scriptedChat({ nano: [say(example.sample)] });
+    const { problems } = await checkRouterExample(example, chat, NOW);
+    expect(problems).toEqual([]);
+  });
+
+  it("expects dates as the calendar day in California", () => {
+    const byInput = Object.fromEntries(ROUTER_EXAMPLES.map((e) => [e.input, e]));
+    // 2026-10-23 04:00 UTC is still Oct 22 in Buena Park.
+    const evening = new Date("2026-10-23T04:00:00.000Z");
+    expect(expectedRoute(byInput["changed the oil today at 48,100 miles"], evening)).toEqual({
+      intent: "service_log",
+      item: "oil",
+      date: "2026-10-22",
+      odometer: 48_100,
+    });
+    expect(expectedRoute(byInput["put new wiper blades on yesterday"], evening)).toEqual({
+      intent: "service_log",
+      item: "wipers",
+      date: "2026-10-21",
+    });
+  });
+
+  it("misses a reply that invents a field the input never gave", async () => {
+    const [wash] = ROUTER_EXAMPLES;
+    const chat = scriptedChat({ nano: [say('{"intent":"service_log","item":"wash","odometer":48000}')] });
+    const { problems } = await checkRouterExample(wash, chat, NOW);
+    expect(problems).toEqual(["odometer: expected undefined, got 48000"]);
   });
 });
 
@@ -68,8 +93,14 @@ describe("parseRoute", () => {
 });
 
 describe("checkRoute", () => {
-  it("lists each field that does not match, and ignores fields the example leaves out", () => {
-    expect(checkRoute({ intent: "service_log", item: "oil", date: "2026-10-22" }, { intent: "service_log", item: "oil" })).toEqual([]);
+  it("lists each field that does not match, including fields the example says are absent", () => {
+    expect(checkRoute({ intent: "service_log", item: "oil" }, { intent: "service_log", item: "oil" })).toEqual([]);
+    expect(checkRoute({ intent: "service_log", item: "wash", odometer: 48_000 }, { intent: "service_log", item: "wash" })).toEqual([
+      "odometer: expected undefined, got 48000",
+    ]);
+    expect(checkRoute({ intent: "service_log", item: "oil", date: "2026-10-22" }, { intent: "service_log", item: "oil" })).toEqual([
+      'date: expected undefined, got "2026-10-22"',
+    ]);
     expect(checkRoute({ intent: "service_log", item: "oil" }, { intent: "service_log", item: "wash" })).toEqual([
       'item: expected "wash", got "oil"',
     ]);
