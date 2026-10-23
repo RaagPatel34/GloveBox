@@ -56,6 +56,14 @@ describe("parseSetupInput", () => {
     if (result.ok) return;
     expect(Object.keys(result.errors).sort()).toEqual(["odometer", "weeklyMiles"]);
   });
+
+  it("rejects fractional miles, since the database stores whole miles", () => {
+    const result = parseSetupInput(form({ ...valid, odometer: "48000.5", weeklyMiles: "250.5" }));
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(Object.keys(result.errors).sort()).toEqual(["odometer", "weeklyMiles"]);
+    expect(result.errors.weeklyMiles).toBe("Enter your weekly mileage as a whole number of miles (up to 2,000).");
+  });
 });
 
 describe("parseGeocodeResult", () => {

@@ -47,8 +47,8 @@ export function parseSetupInput(
   }
 
   const weeklyMiles = toNumber(data.get("weeklyMiles"));
-  if (!Number.isFinite(weeklyMiles) || weeklyMiles > MAX_WEEKLY_MILES) {
-    errors.weeklyMiles = `Enter a weekly mileage between 0 and ${MAX_WEEKLY_MILES.toLocaleString("en-US")}.`;
+  if (!Number.isInteger(weeklyMiles) || weeklyMiles > MAX_WEEKLY_MILES) {
+    errors.weeklyMiles = `Enter your weekly mileage as a whole number of miles (up to ${MAX_WEEKLY_MILES.toLocaleString("en-US")}).`;
   }
 
   const overrideRaw = data.get("mpgOverride");
