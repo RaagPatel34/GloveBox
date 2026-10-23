@@ -1,10 +1,11 @@
+import { pacificDate } from "../days";
 import { BASELINE_INTERVALS, estimateCarOdometer, itemStatus, parseMiles } from "../intervals";
-import { proposeAdjustment } from "../proposals";
+import { proposeAdjustment, SOONER } from "../proposals";
 import { logService, updateOdometer, type OdometerUpdated, type ServiceLogged } from "../service-log";
 import type { CarSnapshot, Proposal, ScheduleItemKind } from "../types";
 import type { Chat } from "./chat";
 import { runToolLoop, type Tool } from "./loop";
-import { pacificDate, type Route } from "./router";
+import type { Route } from "./router";
 
 // The maintenance agent (Super): reads the schedule and records what the user did, or,
 // for a life event, proposes schedule changes for the user to Apply or Dismiss.
@@ -51,13 +52,19 @@ function typedMileages(text: string, odometer: number): number[] {
 export function maintenanceTools(
   state: MaintenanceState,
   now: Date,
-  { route, text, newId }: { route: AgentRoute; text: string; newId: () => string },
+  { route, text, newId, pending = [] }: { route: AgentRoute; text: string; newId: () => string; pending?: Proposal[] },
 ): Tool[] {
   const typed = typedMileages(text, estimateCarOdometer(state.car, now));
+  // The suggestion still waiting on the user for an item, from an earlier message.
+  const waiting = (itemId: string) => {
+    const proposal = pending.find((p) => p.itemId === itemId && p.state === "pending");
+    return proposal ? { ...proposal.to, reason: proposal.reason } : null;
+  };
   const getSchedule: Tool = {
     name: "getSchedule",
     description:
-      "The car's upkeep items with status, last service and due date/mileage, plus today's estimated odometer.",
+      "The car's upkeep items with status, last service, due date/mileage and any suggestion still waiting " +
+      "on the user, plus today's estimated odometer.",
     parameters: { type: "object", properties: {} },
     run: () => {
       const odometerEstimate = estimateCarOdometer(state.car, now);
@@ -74,6 +81,7 @@ export function maintenanceTools(
           lastDoneOdometer: item.lastDoneOdometer ?? null,
           dueAt: item.dueAt ?? null,
           dueOdometer: item.dueOdometer ?? null,
+          pendingSuggestion: waiting(item.id),
         })),
       };
     },
@@ -86,7 +94,9 @@ export function maintenanceTools(
         name: "proposeAdjustment",
         description:
           "Suggest moving one item's due date and/or due mileage because of the user's event. Give at least one " +
-          "of newDueAt and newDueOdometer. The user sees it as a card and decides: nothing changes until they apply it.",
+          `of newDueAt and newDueOdometer. ${SOONER} ` +
+          "The user sees it as a card and decides: nothing changes until they apply it. A suggestion for an item " +
+          "that already has one waiting (pendingSuggestion in getSchedule) replaces it.",
         parameters: {
           type: "object",
           properties: {
@@ -224,14 +234,17 @@ export async function runMaintenanceAgent(args: {
   text: string;
   route: AgentRoute;
   newId: () => string;
+  // Suggestions from earlier messages still waiting on the user.
+  pending?: Proposal[];
 }): Promise<MaintenanceState> {
   const state: MaintenanceState = { car: args.car, effects: [], proposals: [] };
   const prompt = args.route.intent === "event" ? eventPrompt : actionPrompt;
+  const { route, text, newId, pending } = args;
   try {
     await runToolLoop({
       chat: args.chat,
       tier: "super",
-      tools: maintenanceTools(state, args.now, { route: args.route, text: args.text, newId: args.newId }),
+      tools: maintenanceTools(state, args.now, { route, text, newId, pending }),
       messages: [
         { role: "system", content: prompt(pacificDate(args.now)) },
         { role: "user", content: `${args.text}\n\n(The router read this as ${JSON.stringify(args.route)}.)` },

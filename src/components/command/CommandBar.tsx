@@ -3,15 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { MAX_COMMAND_LENGTH } from "@/lib/command-limits";
+import { commandReply } from "@/lib/command-reply";
 import type { CommandReply } from "@/lib/types";
 import { ModelBadge } from "./ModelBadge";
 
-const UNREACHABLE: CommandReply = {
-  model: null,
-  message: "Could not reach GloveBox. Check your connection and try again.",
-  changes: [],
-  proposals: 0,
-};
+const UNREACHABLE = commandReply(null, "Could not reach GloveBox. Check your connection and try again.");
 
 async function sendCommand(text: string): Promise<CommandReply> {
   try {
@@ -22,7 +18,7 @@ async function sendCommand(text: string): Promise<CommandReply> {
     });
     const body = (await res.json()) as Partial<CommandReply>;
     return typeof body.message === "string"
-      ? { model: body.model ?? null, message: body.message, changes: body.changes ?? [], proposals: body.proposals ?? 0 }
+      ? commandReply(body.model ?? null, body.message, body.changes, body.proposals)
       : UNREACHABLE;
   } catch {
     return UNREACHABLE;

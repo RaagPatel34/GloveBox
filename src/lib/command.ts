@@ -3,6 +3,7 @@ import type { Chat } from "./agent/chat";
 import { runMaintenanceAgent, type ActionRoute, type AgentRoute, type MaintenanceEffect } from "./agent/maintenance";
 import { routeCommand } from "./agent/router";
 import { MAX_COMMAND_LENGTH } from "./command-limits";
+import { commandReply as reply } from "./command-reply";
 import { formatReadDate, numberFormat, STATUS_LABEL } from "./readout";
 import type { CarSnapshot, CommandReply, Proposal } from "./types";
 
@@ -11,18 +12,15 @@ import type { CarSnapshot, CommandReply, Proposal } from "./types";
 // written here from what the tools did.
 // Every failure becomes a reply the user can act on; nothing here throws.
 
-const EXAMPLES = "Try something you did, like “just got a car wash”, or your odometer, like “odometer is 48,210”.";
-
-const reply = (
-  model: CommandReply["model"],
-  message: string,
-  changes: string[] = [],
-  proposals = 0,
-): CommandReply => ({ model, message, changes, proposals });
+const EXAMPLES =
+  "Try something you did, like “just got a car wash”, your odometer, like “odometer is 48,210”, " +
+  "or something coming up, like “camping trip, 300 miles on dirt roads”.";
 
 export async function runCommand(args: {
   text: unknown;
   car: CarSnapshot | null;
+  // The visitor's cards still waiting on Apply or Dismiss. A new suggestion for one of their items replaces it.
+  pending?: Proposal[];
   // Null when the AI is not configured (see missingNebiusConfig).
   chat: Chat | null;
   now: Date;
@@ -30,7 +28,7 @@ export async function runCommand(args: {
   saveProposals: (proposals: Proposal[]) => Promise<void>;
   newId?: () => string;
 }): Promise<CommandReply> {
-  const { car, chat, now, newId = randomUUID } = args;
+  const { car, chat, now, pending = [], newId = randomUUID } = args;
   const text = typeof args.text === "string" ? args.text.trim() : "";
   if (text === "" || text.length > MAX_COMMAND_LENGTH) {
     return reply(null, `Type what happened, in ${MAX_COMMAND_LENGTH} characters or fewer. ${EXAMPLES}`);
@@ -56,10 +54,14 @@ export async function runCommand(args: {
       case "unknown":
         return reply("nano", `I couldn't tell what to do with that. ${EXAMPLES}`);
       case "errand":
-        return reply("nano", "That sounds like an errand. Trip planning is coming soon; for now I can log a service or an odometer reading.");
+        return reply(
+          "nano",
+          "That sounds like an errand. Trip planning is coming soon; for now I can log a service or an odometer " +
+            "reading, or suggest schedule changes for something coming up, like a camping trip.",
+        );
     }
     route = routed;
-    state = await runMaintenanceAgent({ chat: tracked, car, now, text, route, newId });
+    state = await runMaintenanceAgent({ chat: tracked, car, now, text, route, newId, pending });
   } catch (error) {
     console.error("runCommand: model call failed", error);
     return reply(answered, "Could not reach the AI just now. Please try again in a moment.");

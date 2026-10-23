@@ -25,6 +25,7 @@ async function LiveDashboard() {
   const visitorId = (await cookies()).get(VISITOR_COOKIE)?.value;
   const now = new Date();
   const car = await getCarSnapshot(visitorId);
+  // getCarSnapshot only returns a car for a valid visitor ID.
   const proposals = car ? await getProposals(visitorId!) : [];
 
   return (

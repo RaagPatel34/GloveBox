@@ -1,3 +1,4 @@
+import { parsePlainDate } from "./days";
 import {
   BASELINE_INTERVALS,
   DAY_MS,
@@ -42,12 +43,12 @@ const MAX_DAYS_BACK = 3 * 365;
 
 const ODOMETER_ERROR = `The odometer must be a whole number of miles up to ${MAX_ODOMETER}.`;
 
-// "2026-10-15" or a full ISO timestamp. A bare date is pinned to noon UTC, which is the
-// same calendar day in California. Returns an error string for anything else.
+// "2026-10-15" or a full ISO timestamp. A bare date is pinned to noon UTC (see
+// parsePlainDate). Returns an error string for anything else.
 function parseServiceDate(raw: string | undefined, now: Date): Date | string {
   if (raw === undefined) return now;
-  const date = isPlainDate(raw) ? new Date(`${raw}T12:00:00.000Z`) : new Date(raw);
-  if (!/^\d{4}-\d{2}-\d{2}/.test(raw) || Number.isNaN(date.getTime())) {
+  const date = isPlainDate(raw) ? parsePlainDate(raw) : new Date(raw);
+  if (!date || !/^\d{4}-\d{2}-\d{2}/.test(raw) || Number.isNaN(date.getTime())) {
     return `"${raw}" is not a date. Use YYYY-MM-DD.`;
   }
   // A bare date for today is pinned to noon, which may still be ahead of `now`: use now.
