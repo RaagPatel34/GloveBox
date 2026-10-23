@@ -1,16 +1,20 @@
+import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { fromRows, toRows } from "./car-rows";
 import { demoCar } from "./fixtures/demo-car";
 import { NOW } from "./test-support";
 
+const VISITOR = "3f2b8c1e-9d4a-4f6b-8a1c-2e7d5b9a0c11";
+const demoFor = (visitorId: string) => demoCar(NOW, visitorId, randomUUID);
+
 describe("toRows", () => {
-  const snapshot = demoCar(NOW);
-  const rows = toRows("3f2b8c1e-9d4a-4f6b-8a1c-2e7d5b9a0c11", snapshot);
+  const snapshot = demoFor(VISITOR);
+  const rows = toRows(VISITOR, snapshot);
 
   it("flattens the vehicle into snake_case columns keyed by the visitor", () => {
     expect(rows.vehicle).toMatchObject({
-      id: "demo-civic",
-      visitor_id: "3f2b8c1e-9d4a-4f6b-8a1c-2e7d5b9a0c11",
+      id: snapshot.vehicle.id,
+      visitor_id: VISITOR,
       year: 2019,
       make: "Honda",
       model: "Civic",
@@ -41,18 +45,18 @@ describe("toRows", () => {
 
 describe("fromRows", () => {
   it("rebuilds the same snapshot that was stored", () => {
-    const snapshot = demoCar(NOW);
-    const { vehicle, items } = toRows("3f2b8c1e-9d4a-4f6b-8a1c-2e7d5b9a0c11", snapshot);
+    const snapshot = demoFor(VISITOR);
+    const { vehicle, items } = toRows(VISITOR, snapshot);
     const back = fromRows(vehicle, items);
     // The visitor on the rebuilt vehicle is the one the rows were keyed by.
     expect(back).toEqual({
       ...snapshot,
-      vehicle: { ...snapshot.vehicle, visitorId: "3f2b8c1e-9d4a-4f6b-8a1c-2e7d5b9a0c11" },
+      vehicle: { ...snapshot.vehicle, visitorId: VISITOR },
     });
   });
 
   it("accepts what Postgres drivers hand back: Date timestamps and string numerics", () => {
-    const snapshot = demoCar(NOW);
+    const snapshot = demoFor("v");
     const { vehicle, items } = toRows("v", snapshot);
     const driverVehicle = {
       ...vehicle,
