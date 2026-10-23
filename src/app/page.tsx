@@ -23,9 +23,16 @@ async function LiveDashboard() {
   await connection();
   const visitorId = (await cookies()).get(VISITOR_COOKIE)?.value;
   const now = new Date();
-  const car = await getCarSnapshot(visitorId);
-  // A car exists only for a valid visitor ID, which listNudges needs.
-  const nudges = car ? await listNudges(car.vehicle.visitorId, now) : [];
+  // The nudges need only the visitor ID, not the car, so both load at once. listNudges
+  // returns none for an invalid ID. Nudges are a bonus: if their table is missing (migration
+  // not run) or the database hiccups, the car still shows, as GET /api/nudges would answer 500.
+  const [car, nudges] = await Promise.all([
+    getCarSnapshot(visitorId),
+    listNudges(visitorId ?? "", now).catch((error) => {
+      console.error("Could not load nudges for the dashboard", error);
+      return [];
+    }),
+  ]);
 
   return (
     <>
