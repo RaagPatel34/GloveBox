@@ -42,7 +42,8 @@ export function maintenanceTools(
     run: () => {
       const dashboard = buildDashboard(state.car, now);
       return {
-        today: now.toISOString(),
+        // The calendar day in California, the same "today" the router used.
+        today: pacificDate(now),
         odometerEstimate: dashboard.odometerEstimate,
         items: dashboard.items.map((shown) => {
           const item = state.car.items.find((i) => i.id === shown.id)!;
@@ -139,8 +140,9 @@ function apply(
   return { ok: true, ...result.effect };
 }
 
-const SYSTEM_PROMPT = [
+const systemPrompt = (today: string) => [
   "You are GloveBox's maintenance agent. The user told you about upkeep they did or their odometer reading.",
+  `Today is ${today}.`,
   "Record it with the tool you have: logService for a service, updateOdometer for a reading. Call getSchedule if",
   "you need to see the items first. Record one change only. If a tool returns an error, fix the arguments or stop.",
   "Never state numbers yourself: the app shows the user what the tools changed. When done, reply in one short sentence.",
@@ -159,7 +161,7 @@ export async function runMaintenanceAgent(args: {
     tier: "super",
     tools: maintenanceTools(state, args.now, { route: args.route, text: args.text }),
     messages: [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: systemPrompt(pacificDate(args.now)) },
       { role: "user", content: `${args.text}\n\n(The router read this as ${JSON.stringify(args.route)}.)` },
     ],
   });

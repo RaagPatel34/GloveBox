@@ -9,13 +9,18 @@ import type { CarSnapshot } from "./types";
 
 const VISITOR = "11111111-2222-4333-8444-555555555555";
 
-async function send(text: unknown, chat: ScriptedChat | null, car: CarSnapshot | null = demoCar(NOW, VISITOR, randomUUID)) {
+async function send(
+  text: unknown,
+  chat: ScriptedChat | null,
+  car: CarSnapshot | null = demoCar(NOW, VISITOR, randomUUID),
+  now = NOW,
+) {
   const saved: CarSnapshot[] = [];
   const reply = await runCommand({
     text,
     car,
     chat,
-    now: NOW,
+    now,
     save: async (next) => {
       saved.push(next);
     },
@@ -94,6 +99,19 @@ describe("runCommand: service logs", () => {
     const schedule = JSON.parse(chat.requests.filter((r) => r.tier === "super")[1].messages.at(-1)!.content as string);
     expect(schedule.odometerEstimate).toBe(48_000);
     expect(schedule.items.find((i: { item: string }) => i.item === "wash").status).toBe("overdue");
+  });
+
+  it("tells Super today's date in California, as it tells Nano", async () => {
+    const chat = scriptedChat({
+      nano: [route({ intent: "service_log", item: "wash" })],
+      super: [callTools(["getSchedule", {}]), say("Done.")],
+    });
+    // 2026-10-23 04:00 UTC is still Oct 22 in Buena Park.
+    await send("got a car wash yesterday", chat, undefined, new Date("2026-10-23T04:00:00.000Z"));
+
+    const [first, second] = chat.requests.filter((r) => r.tier === "super");
+    expect(first.messages[0].content).toContain("Today is 2026-10-22.");
+    expect(JSON.parse(second.messages.at(-1)!.content as string).today).toBe("2026-10-22");
   });
 
   it("saves nothing, with a helpful reply, when Super does not log anything", async () => {
