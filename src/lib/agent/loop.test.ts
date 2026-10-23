@@ -67,6 +67,34 @@ describe("runToolLoop", () => {
     expect(JSON.parse(toolMessage.content as string).error).toMatch(message);
   });
 
+  it("sends a tool that returns nothing back as null, so the tool message is still valid", async () => {
+    const silent: Tool = { ...add, run: () => undefined };
+    const chat = scriptedChat({ super: [callTools(["add", { a: 1, b: 1 }]), say("Done.")] });
+
+    await runToolLoop({ chat, tier: "super", messages: user, tools: [silent] });
+
+    expect(chat.requests[1].messages.at(-1)).toMatchObject({ role: "tool", content: "null" });
+  });
+
+  it("stops without asking the model again once the caller's stop condition holds", async () => {
+    const chat = scriptedChat({ super: [callTools(["add", { a: 2, b: 3 }]), say("It is five.")] });
+
+    const result = await runToolLoop({
+      chat,
+      tier: "super",
+      messages: user,
+      tools: [add],
+      stopWhen: (calls) => calls.some((c) => c.name === "add"),
+    });
+
+    expect(chat.requests).toHaveLength(1);
+    expect(result).toEqual({
+      text: null,
+      calls: [{ name: "add", args: { a: 2, b: 3 }, result: { sum: 5 } }],
+      finished: true,
+    });
+  });
+
   it("is bounded: a model that never stops calling tools is cut off after maxSteps turns", async () => {
     const forever = Array.from({ length: 10 }, () => callTools(["add", { a: 1, b: 1 }]));
     const chat = scriptedChat({ super: forever });

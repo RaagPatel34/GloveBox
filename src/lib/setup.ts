@@ -1,5 +1,5 @@
 import type { EpaVehicle } from "./epa";
-import { MAX_ODOMETER } from "./intervals";
+import { MAX_ODOMETER, parseMiles } from "./intervals";
 import { buildBaselineSchedule } from "./schedule";
 import type { CarSnapshot, LatLng } from "./types";
 import { isVisitorId } from "./visitor";
@@ -21,11 +21,9 @@ export type SetupErrors = Partial<Record<SetupFields, string>>;
 
 export const MAX_WEEKLY_MILES = 2_000;
 
-// "48,000" -> 48000. Anything that is not a plain non-negative number is NaN.
+// "48,000" or "48k" -> 48000. Anything parseMiles cannot read is NaN.
 function toNumber(raw: FormDataEntryValue | null): number {
-  if (typeof raw !== "string") return NaN;
-  const cleaned = raw.replace(/[,\s]/g, "");
-  return /^\d+(\.\d+)?$/.test(cleaned) ? Number(cleaned) : NaN;
+  return (typeof raw === "string" ? parseMiles(raw) : undefined) ?? NaN;
 }
 
 export function parseSetupInput(

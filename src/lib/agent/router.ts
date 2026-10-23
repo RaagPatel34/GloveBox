@@ -1,5 +1,5 @@
 // The .ts extension lets `npm run eval:router` load this file under plain Node.
-import { BASELINE_INTERVALS, DAY_MS, isItemKind, isOdometerReading, isPlainDate } from "../intervals.ts";
+import { BASELINE_INTERVALS, DAY_MS, isItemKind, isOdometerReading, isPlainDate, parseMiles } from "../intervals.ts";
 import type { ScheduleItemKind } from "../types";
 import type { Chat } from "./chat";
 
@@ -56,30 +56,55 @@ export async function routeCommand(text: string, chat: Chat, now: Date): Promise
   return parseRoute(reply.content);
 }
 
-// "48,210" or 48210 -> 48210. Anything that is not a valid reading is undefined.
+// "48,210", "48.2k" or 48210 -> the reading. Anything that is not a valid reading is undefined.
 function toOdometer(value: unknown): number | undefined {
-  const n = typeof value === "string" && /^[\d,]+$/.test(value.trim()) ? Number(value.replace(/,/g, "")) : value;
+  const n = parseMiles(value);
   return isOdometerReading(n) ? n : undefined;
+}
+
+// The JSON object that ends last in the text: the answer comes after any reasoning or
+// draft, and stray braces in prose around it are skipped. Undefined if there is none.
+function lastJsonObject(text: string): Record<string, unknown> | undefined {
+  let best: { end: number; value: Record<string, unknown> } | undefined;
+  for (let start = text.indexOf("{"); start !== -1; start = text.indexOf("{", start + 1)) {
+    const end = matchingBrace(text, start);
+    // At the same end, the earlier start is the outer object.
+    if (end === -1 || (best && end <= best.end)) continue;
+    try {
+      const value: unknown = JSON.parse(text.slice(start, end + 1));
+      if (typeof value === "object" && value !== null) best = { end, value: value as Record<string, unknown> };
+    } catch {
+      // Not JSON: reasoning in braces, say.
+    }
+  }
+  return best?.value;
+}
+
+// The index of the "}" closing the "{" at `start`, skipping braces inside strings; -1 if none.
+function matchingBrace(text: string, start: number): number {
+  let depth = 0;
+  let inString = false;
+  for (let i = start; i < text.length; i++) {
+    const c = text[i];
+    if (inString) {
+      if (c === "\\") i++;
+      else if (c === '"') inString = false;
+    } else if (c === '"') inString = true;
+    else if (c === "{") depth++;
+    else if (c === "}" && --depth === 0) return i;
+  }
+  return -1;
 }
 
 export function parseRoute(raw: string | null): Route {
   const unknown: Route = { intent: "unknown" };
   if (raw === null) return unknown;
 
-  // Reasoning models may think out loud first, or wrap the JSON in a code fence.
-  const text = raw.replace(/<think>[\s\S]*?<\/think>/g, "");
-  const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
-  if (start === -1 || end < start) return unknown;
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(text.slice(start, end + 1));
-  } catch {
-    return unknown;
-  }
-  if (typeof parsed !== "object" || parsed === null) return unknown;
-  const fields = parsed as Record<string, unknown>;
+  // Reasoning models may think out loud first, or wrap the JSON in a code fence. Thinking
+  // that never closes was cut off, so it has no answer; a lone </think> ends the thinking.
+  const text = raw.replace(/<think>[\s\S]*?(<\/think>|$)/g, "").replace(/^[\s\S]*<\/think>/, "");
+  const fields = lastJsonObject(text);
+  if (fields === undefined) return unknown;
 
   switch (fields.intent) {
     case "service_log": {

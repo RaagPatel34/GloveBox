@@ -3,7 +3,8 @@ import type { ModelTier } from "../types";
 import type { Chat } from "./chat";
 
 // The tool-calling loop every agent shares: ask the model, run the tools it calls, hand
-// the results back, repeat until it answers in plain text or runs out of turns.
+// the results back, repeat until it answers in plain text or runs out of turns, or the
+// caller's stopWhen says the job is done (so there is no closing reply to wait on, or to fail).
 // Tools are registered by name; each agent passes its own set.
 //
 // A failed call (unknown tool, bad JSON, a tool that throws) goes back to the model as
@@ -20,7 +21,7 @@ export type Tool = {
 export type ToolCallRecord = { name: string; args: unknown; result: unknown };
 
 export type LoopResult = {
-  // The model's last plain-text answer, or null if it was cut off.
+  // The model's last plain-text answer, or null if it was cut off or stopWhen ended it.
   text: string | null;
   calls: ToolCallRecord[];
   // False when maxSteps ran out while the model was still calling tools.
@@ -36,6 +37,8 @@ export async function runToolLoop(args: {
   tools: Tool[];
   // Model turns, not tool calls: each turn may call several tools.
   maxSteps?: number;
+  // Checked after each turn's tool calls: true ends the loop without asking the model again.
+  stopWhen?: (calls: ToolCallRecord[]) => boolean;
 }): Promise<LoopResult> {
   const { chat, tier, tools, maxSteps = DEFAULT_MAX_STEPS } = args;
   const byName = new Map(tools.map((tool) => [tool.name, tool]));
@@ -63,8 +66,10 @@ export async function runToolLoop(args: {
     for (const call of reply.toolCalls) {
       const { args: parsed, result } = await runOne(byName.get(call.name), call.name, call.arguments);
       calls.push({ name: call.name, args: parsed, result });
-      messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
+      // A tool that returns nothing still needs JSON content: undefined would not serialize.
+      messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result ?? null) });
     }
+    if (args.stopWhen?.(calls)) return { text: null, calls, finished: true };
   }
 
   return { text: null, calls, finished: false };

@@ -25,6 +25,16 @@ export function isOdometerReading(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= MAX_ODOMETER;
 }
 
+// A mileage as people write it: 48210, "48,210", "48 210", "48k", "48.2k" -> 48200.
+// Anything else is undefined. No range check: callers apply their own, such as isOdometerReading.
+export function parseMiles(value: unknown): number | undefined {
+  if (typeof value === "number") return Number.isFinite(value) && value >= 0 ? value : undefined;
+  if (typeof value !== "string") return undefined;
+  const match = /^(\d+(?:\.\d+)?)(k?)$/i.exec(value.replace(/[,\s]/g, ""));
+  if (!match) return undefined;
+  return match[2] === "" ? Number(match[1]) : Math.round(Number(match[1]) * 1000);
+}
+
 // A calendar date written YYYY-MM-DD, with no time.
 export function isPlainDate(value: unknown): value is string {
   return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);

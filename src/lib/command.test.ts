@@ -70,6 +70,20 @@ describe("runCommand: service logs", () => {
     ]);
   });
 
+  it("saves the change as soon as it is recorded, without waiting on another model reply", async () => {
+    // No closing sentence in the script: asking Super again would fail and lose the wash.
+    const chat = scriptedChat({
+      nano: [route({ intent: "service_log", item: "wash" })],
+      super: [callTools(["logService", { item: "wash" }])],
+    });
+
+    const { reply, saved } = await send("just got a car wash", chat);
+
+    expect(saved).toHaveLength(1);
+    expect(chat.requests.filter((r) => r.tier === "super")).toHaveLength(1);
+    expect(reply.changes).toEqual(["Exterior wash logged Oct 22 at 48,000 mi. OK, next due Nov 5."]);
+  });
+
   it("shows only numbers the tools computed, never the model's own", async () => {
     const chat = scriptedChat({
       nano: [route({ intent: "service_log", item: "oil" })],
@@ -211,6 +225,26 @@ describe("runCommand: Super can only record what the router read", () => {
     ]);
     expect(saved[0].items.find((i) => i.kind === "wash")!.lastDoneOdometer).toBe(48_000);
     expect(saved[0].vehicle.odometer).toBe(47_750);
+  });
+
+  it.each([
+    ["a shorthand mileage", "rotated the tires at 48k", { item: "tire_rotation", odometer: 48_000 }, 48],
+    ["a date", "changed the oil on 10/15", { item: "oil", date: "2026-10-15" }, 15],
+    ["a count of days", "changed the oil 3 days ago", { item: "oil", date: "2026-10-19" }, 3],
+    ["a year", "changed the oil in March 2026", { item: "oil", date: "2026-03-15" }, 2026],
+  ])("does not take a number from %s as a mileage", async (_label, text, fields, odometer) => {
+    const { saved } = await attempt({ intent: "service_log", ...fields }, text, [
+      "logService",
+      { item: fields.item, odometer },
+    ]);
+    expect(saved).toEqual([]);
+  });
+
+  it("counts “47.5k” as the user typing 47,500", async () => {
+    const routed = { intent: "service_log", item: "tire_rotation", odometer: 47_500 };
+    const { saved } = await attempt(routed, "rotated the tires at 47.5k", ["logService", { item: "tire_rotation" }]);
+    // Not the 48,000 estimate: the router's reading is used.
+    expect(saved[0].items.find((i) => i.kind === "tire_rotation")!.lastDoneOdometer).toBe(47_500);
   });
 
   it("sets only the reading the user typed", async () => {
