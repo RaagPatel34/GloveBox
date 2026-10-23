@@ -1,10 +1,7 @@
 import { odometerDigits } from "@/lib/dashboard";
-import { STATUS_LABEL } from "@/lib/readout";
+import { formatReadDate, numberFormat, STATUS_LABEL } from "@/lib/readout";
 import type { ItemStatus, Vehicle } from "@/lib/types";
 import { TONE } from "./tone";
-
-const numberFormat = new Intl.NumberFormat("en-US");
-const dateFormat = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });
 
 const STATUS_ORDER: ItemStatus[] = ["overdue", "due_soon", "ok"];
 
@@ -45,17 +42,21 @@ export function OdometerHero({
           </span>
         </p>
         <p className="mt-3 font-mono text-xs text-muted">
-          Read {dateFormat.format(readingAt)} · +{numberFormat.format(vehicle.weeklyMiles)} mi/wk
+          Read {formatReadDate(readingAt)} · +{numberFormat.format(vehicle.weeklyMiles)} mi/wk
         </p>
       </div>
 
       <dl aria-label="Items by status" className="grid grid-cols-3 gap-2 text-center">
         {STATUS_ORDER.map((status) => (
-          <div key={status} className={`rounded-xl bg-black/40 px-3 py-3 ring-1 ${TONE[status].ring}`}>
-            <dd className={`font-mono text-2xl tabular-nums ${TONE[status].text}`}>{counts[status]}</dd>
+          // Term first in the markup (valid <dl>); the count is shown above its label.
+          <div
+            key={status}
+            className={`flex flex-col-reverse rounded-xl bg-black/40 px-3 py-3 ring-1 ${TONE[status].ring}`}
+          >
             <dt className="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] text-muted">
               {STATUS_LABEL[status]}
             </dt>
+            <dd className={`font-mono text-2xl tabular-nums ${TONE[status].text}`}>{counts[status]}</dd>
           </div>
         ))}
       </dl>
