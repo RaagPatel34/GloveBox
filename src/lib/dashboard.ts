@@ -1,6 +1,6 @@
+import { sameDueDay } from "./days";
 import { BASELINE_INTERVALS, estimateCarOdometer, itemStatus, STATUS_RANK } from "./intervals";
 import { tighterLimit, type Limit } from "./limits";
-import { sameDueDay } from "./days";
 import { formatReadDate, intervalUsed, numberFormat } from "./readout";
 import type { CarSnapshot, ItemStatus, ModelTier, Proposal, ScheduleItem, ScheduleItemKind, Vehicle } from "./types";
 
