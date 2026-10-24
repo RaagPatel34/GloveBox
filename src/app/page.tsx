@@ -6,6 +6,7 @@ import { SetupForm } from "@/components/setup/SetupForm";
 import { VisitorSync } from "@/components/visitor/VisitorSync";
 import { getCarSnapshot } from "@/lib/car";
 import { buildDashboard } from "@/lib/dashboard";
+import { listNudges } from "@/lib/db/nudge-store";
 import { VISITOR_COOKIE } from "@/lib/visitor";
 
 export default function Home() {
@@ -22,12 +23,21 @@ async function LiveDashboard() {
   await connection();
   const visitorId = (await cookies()).get(VISITOR_COOKIE)?.value;
   const now = new Date();
-  const car = await getCarSnapshot(visitorId);
+  // The nudges need only the visitor ID, not the car, so both load at once. listNudges
+  // returns none for an invalid ID. Nudges are a bonus: if their table is missing (migration
+  // not run) or the database hiccups, the car still shows, as GET /api/nudges would answer 500.
+  const [car, nudges] = await Promise.all([
+    getCarSnapshot(visitorId),
+    listNudges(visitorId ?? "", now).catch((error) => {
+      console.error("Could not load nudges for the dashboard", error);
+      return [];
+    }),
+  ]);
 
   return (
     <>
       <VisitorSync serverVisitorId={visitorId} />
-      {car ? <HealthDashboard dashboard={buildDashboard(car, now)} /> : <SetupForm />}
+      {car ? <HealthDashboard dashboard={buildDashboard(car, now)} nudges={nudges} /> : <SetupForm />}
     </>
   );
 }

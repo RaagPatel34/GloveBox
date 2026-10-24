@@ -38,4 +38,14 @@ export const SCHEMA_STATEMENTS: string[] = [
     UNIQUE (vehicle_id, kind)
   )`,
   `CREATE INDEX IF NOT EXISTS schedule_items_vehicle_id_idx ON schedule_items (vehicle_id)`,
+  // Weather and air-quality nudges, written by "Load demo car" and the daily job, shown on the
+  // dashboard while fresh. Removed with the vehicle.
+  `CREATE TABLE IF NOT EXISTS nudges (
+    id          text PRIMARY KEY,
+    vehicle_id  text NOT NULL REFERENCES vehicles (id) ON DELETE CASCADE,
+    text        text NOT NULL,
+    reason      text NOT NULL,
+    created_at  timestamptz NOT NULL DEFAULT now()
+  )`,
+  `CREATE INDEX IF NOT EXISTS nudges_vehicle_id_created_at_idx ON nudges (vehicle_id, created_at DESC)`,
 ];

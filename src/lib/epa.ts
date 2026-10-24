@@ -6,6 +6,7 @@
 //   - a menu with exactly one entry has `menuItem` as an object, not an array
 //   - every number in the vehicle record is a string
 // Parsing is pure and tested; the client takes `fetch` as an argument so tests need no network.
+import type { FetchLike } from "./weather";
 
 const BASE = "https://www.fueleconomy.gov/ws/rest/vehicle";
 
@@ -56,8 +57,6 @@ export function parseVehicleDetail(body: unknown): EpaVehicle | null {
     combinedMpg,
   };
 }
-
-type FetchLike = (url: string) => Promise<Response>;
 
 export type EpaClient = {
   years(): Promise<MenuItem[]>;
