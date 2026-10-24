@@ -1,13 +1,17 @@
+import { pacificDate } from "../days";
 import { BASELINE_INTERVALS, estimateCarOdometer, itemStatus, parseMiles } from "../intervals";
+import { proposeAdjustment, SOONER } from "../proposals";
 import { logService, updateOdometer, type OdometerUpdated, type ServiceLogged } from "../service-log";
-import type { CarSnapshot, ScheduleItemKind } from "../types";
+import type { CarSnapshot, Proposal, ScheduleItemKind } from "../types";
 import type { Chat } from "./chat";
 import { runToolLoop, type Tool } from "./loop";
-import { pacificDate, type Route } from "./router";
+import type { Route } from "./router";
 
-// The maintenance agent (Super): reads the schedule and records what the user did.
+// The maintenance agent (Super): reads the schedule and records what the user did, or,
+// for a life event, proposes schedule changes for the user to Apply or Dismiss.
 // Its tools work on an in-memory copy of the car; the caller saves the result.
 // Each write tool also records an effect, which is what the reply is built from.
+// Proposals are kept apart from effects: making one never changes the car.
 //
 // The route decides what Super may write: one service log (of the item the router
 // named, if it named one) or one odometer reading. Dates and mileages are owned by
@@ -16,10 +20,13 @@ import { pacificDate, type Route } from "./router";
 
 export type MaintenanceEffect = ServiceLogged | OdometerUpdated;
 
-export type MaintenanceState = { car: CarSnapshot; effects: MaintenanceEffect[] };
+export type MaintenanceState = { car: CarSnapshot; effects: MaintenanceEffect[]; proposals: Proposal[] };
 
-// The routes Super acts on.
+// The routes Super records a change for.
 export type ActionRoute = Extract<Route, { intent: "service_log" | "odometer" }>;
+
+// The routes Super acts on: a change to record, or a life event to propose changes for.
+export type AgentRoute = ActionRoute | Extract<Route, { intent: "event" }>;
 
 const ONE_CHANGE = "A change is already recorded for this message. Stop and reply.";
 
@@ -45,13 +52,19 @@ function typedMileages(text: string, odometer: number): number[] {
 export function maintenanceTools(
   state: MaintenanceState,
   now: Date,
-  { route, text }: { route: ActionRoute; text: string },
+  { route, text, newId, pending = [] }: { route: AgentRoute; text: string; newId: () => string; pending?: Proposal[] },
 ): Tool[] {
   const typed = typedMileages(text, estimateCarOdometer(state.car, now));
+  // The suggestion still waiting on the user for an item, from an earlier message.
+  const waiting = (itemId: string) => {
+    const proposal = pending.find((p) => p.itemId === itemId && p.state === "pending");
+    return proposal ? { ...proposal.to, reason: proposal.reason } : null;
+  };
   const getSchedule: Tool = {
     name: "getSchedule",
     description:
-      "The car's upkeep items with status, last service and due date/mileage, plus today's estimated odometer.",
+      "The car's upkeep items with status, last service, due date/mileage and any suggestion still waiting " +
+      "on the user, plus today's estimated odometer.",
     parameters: { type: "object", properties: {} },
     run: () => {
       const odometerEstimate = estimateCarOdometer(state.car, now);
@@ -68,10 +81,54 @@ export function maintenanceTools(
           lastDoneOdometer: item.lastDoneOdometer ?? null,
           dueAt: item.dueAt ?? null,
           dueOdometer: item.dueOdometer ?? null,
+          pendingSuggestion: waiting(item.id),
         })),
       };
     },
   };
+
+  if (route.intent === "event") {
+    return [
+      getSchedule,
+      {
+        name: "proposeAdjustment",
+        description:
+          "Suggest moving one item's due date and/or due mileage because of the user's event. Give at least one " +
+          `of newDueAt and newDueOdometer. ${SOONER} ` +
+          "The user sees it as a card and decides: nothing changes until they apply it. A suggestion for an item " +
+          "that already has one waiting (pendingSuggestion in getSchedule) replaces it.",
+        parameters: {
+          type: "object",
+          properties: {
+            item: { type: "string", enum: state.car.items.map((i) => i.kind) },
+            newDueAt: { type: "string", description: "The new due date, YYYY-MM-DD" },
+            newDueOdometer: { type: "integer", description: "The new due mileage" },
+            reason: { type: "string", description: "One short sentence the user will read" },
+          },
+          required: ["item", "reason"],
+        },
+        run: (args) => {
+          if (state.proposals.some((p) => state.car.items.find((i) => i.id === p.itemId)?.kind === args.item)) {
+            return { error: `A change to ${String(args.item)} is already proposed for this message.` };
+          }
+          const result = proposeAdjustment(
+            state.car,
+            {
+              kind: args.item as ScheduleItemKind,
+              dueAt: args.newDueAt as string | undefined,
+              dueOdometer: args.newDueOdometer as number | undefined,
+              reason: args.reason as string,
+            },
+            now,
+            newId,
+          );
+          if (!result.ok) return { error: result.error };
+          state.proposals.push(result.proposal);
+          return { ok: true, from: result.proposal.from, to: result.proposal.to };
+        },
+      },
+    ];
+  }
 
   if (route.intent === "odometer") {
     return [
@@ -152,7 +209,7 @@ function apply(
   return { ok: true, ...result.effect };
 }
 
-const systemPrompt = (today: string) => [
+const actionPrompt = (today: string) => [
   "You are GloveBox's maintenance agent. The user told you about upkeep they did or their odometer reading.",
   `Today is ${today}.`,
   "Record it with the tool you have: logService for a service, updateOdometer for a reading. Call getSchedule if",
@@ -160,24 +217,46 @@ const systemPrompt = (today: string) => [
   "Never state numbers yourself: the app shows the user what the tools changed. When done, reply in one short sentence.",
 ].join("\n");
 
+const eventPrompt = (today: string) => [
+  "You are GloveBox's maintenance agent. The user told you about something coming up, like a trip or a change",
+  "in how they drive.",
+  `Today is ${today}.`,
+  "Call getSchedule first. Then call proposeAdjustment for each item the event really affects, for example",
+  "an oil change or air filter coming due sooner after dusty or long driving. Only propose what the event",
+  "explains; it is fine to propose nothing. The user applies or dismisses each proposal; you change nothing.",
+  "If a tool returns an error, fix the arguments or skip that item. When done, reply in one short sentence.",
+].join("\n");
+
 export async function runMaintenanceAgent(args: {
   chat: Chat;
   car: CarSnapshot;
   now: Date;
   text: string;
-  route: ActionRoute;
+  route: AgentRoute;
+  newId: () => string;
+  // Suggestions from earlier messages still waiting on the user.
+  pending?: Proposal[];
 }): Promise<MaintenanceState> {
-  const state: MaintenanceState = { car: args.car, effects: [] };
-  await runToolLoop({
-    chat: args.chat,
-    tier: "super",
-    tools: maintenanceTools(state, args.now, { route: args.route, text: args.text }),
-    messages: [
-      { role: "system", content: systemPrompt(pacificDate(args.now)) },
-      { role: "user", content: `${args.text}\n\n(The router read this as ${JSON.stringify(args.route)}.)` },
-    ],
-    // One change per message, and the reply is written from it: once it is recorded, stop.
-    stopWhen: () => state.effects.length > 0,
-  });
+  const state: MaintenanceState = { car: args.car, effects: [], proposals: [] };
+  const prompt = args.route.intent === "event" ? eventPrompt : actionPrompt;
+  const { route, text, newId, pending } = args;
+  try {
+    await runToolLoop({
+      chat: args.chat,
+      tier: "super",
+      tools: maintenanceTools(state, args.now, { route, text, newId, pending }),
+      messages: [
+        { role: "system", content: prompt(pacificDate(args.now)) },
+        { role: "user", content: `${args.text}\n\n(The router read this as ${JSON.stringify(args.route)}.)` },
+      ],
+      // One change per message, and the reply is written from it: once it is recorded, stop.
+      stopWhen: () => state.effects.length > 0,
+    });
+  } catch (error) {
+    // An event may get several proposals over several turns, so there is no point to stop
+    // early at. If a later model call fails, the proposals already made are kept.
+    if (state.proposals.length === 0) throw error;
+    console.error("runMaintenanceAgent: model call failed after proposing", error);
+  }
   return state;
 }

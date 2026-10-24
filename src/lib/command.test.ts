@@ -6,7 +6,7 @@ import { buildDashboard } from "./dashboard";
 import { demoCar } from "./fixtures/demo-car";
 import { logService, updateOdometer } from "./service-log";
 import { inDays, NOW } from "./test-support";
-import type { CarSnapshot } from "./types";
+import type { CarSnapshot, Proposal } from "./types";
 
 const VISITOR = "11111111-2222-4333-8444-555555555555";
 
@@ -17,6 +17,7 @@ async function send(
   now = NOW,
 ) {
   const saved: CarSnapshot[] = [];
+  const proposals: Proposal[] = [];
   const reply = await runCommand({
     text,
     car,
@@ -25,8 +26,11 @@ async function send(
     save: async (next) => {
       saved.push(next);
     },
+    saveProposals: async (next) => {
+      proposals.push(...next);
+    },
   });
-  return { reply, saved, dashboard: saved[0] && buildDashboard(saved[0], NOW) };
+  return { reply, saved, proposals, dashboard: saved[0] && buildDashboard(saved[0], NOW) };
 }
 
 const route = (json: object) => say(JSON.stringify(json));
@@ -254,6 +258,204 @@ describe("runCommand: Super can only record what the router read", () => {
   });
 });
 
+describe("runCommand: life events", () => {
+  const DEMO_EVENT = "camping trip, 300 miles on dirt roads";
+  const OIL_REASON = "300 dusty miles would leave the oil within 100 mi of due: change it before you go.";
+  const FILTER_REASON = "Dirt roads clog the engine air filter. Check it when you get back.";
+
+  it("“camping trip, 300 miles on dirt roads” proposes changes to the demo car, and changes nothing yet", async () => {
+    const car = demoCar(NOW, VISITOR, randomUUID);
+    const chat = scriptedChat({
+      nano: [route({ intent: "event" })],
+      super: [
+        callTools(["getSchedule", {}]),
+        callTools(
+          ["proposeAdjustment", { item: "oil", newDueOdometer: 48_000, reason: OIL_REASON }],
+          ["proposeAdjustment", { item: "engine_filter", newDueOdometer: 48_300, reason: FILTER_REASON }],
+        ),
+        say("Two suggestions for your trip."),
+      ],
+    });
+
+    const { reply, saved, proposals } = await send(DEMO_EVENT, chat, car);
+
+    expect(saved).toEqual([]);
+    const itemId = (kind: string) => car.items.find((i) => i.kind === kind)!.id;
+    expect(proposals).toEqual([
+      {
+        id: expect.any(String),
+        vehicleId: car.vehicle.id,
+        itemId: itemId("oil"),
+        from: { dueAt: inDays(65), dueOdometer: 48_400 },
+        to: { dueAt: inDays(65), dueOdometer: 48_000 },
+        reason: OIL_REASON,
+        model: "super",
+        state: "pending",
+      },
+      {
+        id: expect.any(String),
+        vehicleId: car.vehicle.id,
+        itemId: itemId("engine_filter"),
+        from: { dueOdometer: 49_800 },
+        to: { dueOdometer: 48_300 },
+        reason: FILTER_REASON,
+        model: "super",
+        state: "pending",
+      },
+    ]);
+    expect(reply).toMatchObject({ model: "super", changes: [], proposals: 2 });
+  });
+
+  it.each<[string, [string, unknown]]>([
+    ["log a service", ["logService", { item: "oil" }]],
+    ["set the odometer", ["updateOdometer", { miles: 48_300 }]],
+  ])("cannot %s on an event: it can only propose", async (_label, call) => {
+    const chat = scriptedChat({ nano: [route({ intent: "event" })], super: [callTools(call), say("Done.")] });
+
+    const { reply, saved, proposals } = await send(DEMO_EVENT, chat);
+
+    expect(saved).toEqual([]);
+    expect(proposals).toEqual([]);
+    expect(reply.changes).toEqual([]);
+    const tools = chat.requests.find((r) => r.tier === "super")!.tools!;
+    const offered = tools.map((t) => (t.type === "function" ? t.function.name : t.type));
+    expect(offered).toEqual(["getSchedule", "proposeAdjustment"]);
+  });
+
+  it("is not offered proposeAdjustment for a service log or an odometer reading", async () => {
+    const chat = scriptedChat({
+      nano: [route({ intent: "service_log", item: "wash" })],
+      super: [callTools(["proposeAdjustment", { item: "wash", newDueOdometer: 48_100, reason: "x" }]), say("Done.")],
+    });
+    const { saved, proposals } = await send("just got a car wash", chat);
+    expect(saved).toEqual([]);
+    expect(proposals).toEqual([]);
+  });
+
+  it("proposes one change per item per message", async () => {
+    const chat = scriptedChat({
+      nano: [route({ intent: "event" })],
+      super: [
+        callTools(
+          ["proposeAdjustment", { item: "oil", newDueOdometer: 48_000, reason: OIL_REASON }],
+          ["proposeAdjustment", { item: "oil", newDueOdometer: 48_100, reason: OIL_REASON }],
+        ),
+        say("Done."),
+      ],
+    });
+    const { proposals } = await send(DEMO_EVENT, chat);
+    expect(proposals.map((p) => p.to.dueOdometer)).toEqual([48_000]);
+  });
+
+  it("tells Super why a proposal was refused, so it can fix it", async () => {
+    const chat = scriptedChat({
+      nano: [route({ intent: "event" })],
+      super: [
+        callTools(["proposeAdjustment", { item: "oil", newDueOdometer: 40_000, reason: OIL_REASON }]),
+        callTools(["proposeAdjustment", { item: "oil", newDueOdometer: 48_000, reason: OIL_REASON }]),
+        say("Done."),
+      ],
+    });
+    const { proposals } = await send(DEMO_EVENT, chat);
+    const refused = JSON.parse(chat.requests.filter((r) => r.tier === "super")[1].messages.at(-1)!.content as string);
+    expect(refused.error).toMatch(/48,000/);
+    expect(proposals).toHaveLength(1);
+  });
+
+  it("tells Super that a life event can only bring a due point sooner, and refuses a later one", async () => {
+    const chat = scriptedChat({
+      nano: [route({ intent: "event" })],
+      super: [callTools(["proposeAdjustment", { item: "oil", newDueOdometer: 55_000, reason: OIL_REASON }]), say("Done.")],
+    });
+    const { proposals } = await send(DEMO_EVENT, chat);
+
+    expect(proposals).toEqual([]);
+    const [first, second] = chat.requests.filter((r) => r.tier === "super");
+    const tool = first.tools!.find((t) => t.type === "function" && t.function.name === "proposeAdjustment")!;
+    expect(tool.type === "function" && tool.function.description).toMatch(/sooner, never later/);
+    expect(JSON.parse(second.messages.at(-1)!.content as string).error).toMatch(/sooner, never later/);
+  });
+
+  it("shows Super the suggestions still waiting on the user, so it knows a new one replaces them", async () => {
+    const car = demoCar(NOW, VISITOR, randomUUID);
+    const oil = car.items.find((i) => i.kind === "oil")!;
+    const waiting: Proposal = {
+      id: "earlier",
+      vehicleId: car.vehicle.id,
+      itemId: oil.id,
+      from: { dueAt: oil.dueAt, dueOdometer: 48_400 },
+      to: { dueAt: oil.dueAt, dueOdometer: 48_100 },
+      reason: OIL_REASON,
+      model: "super",
+      state: "pending",
+    };
+    const chat = scriptedChat({
+      nano: [route({ intent: "event" })],
+      super: [callTools(["getSchedule", {}]), say("Nothing new.")],
+    });
+
+    await runCommand({
+      text: DEMO_EVENT,
+      car,
+      pending: [waiting],
+      chat,
+      now: NOW,
+      save: async () => {},
+      saveProposals: async () => {},
+    });
+
+    const schedule = JSON.parse(chat.requests.filter((r) => r.tier === "super")[1].messages.at(-1)!.content as string);
+    const items = schedule.items as { item: string; pendingSuggestion: unknown }[];
+    expect(items.find((i) => i.item === "oil")!.pendingSuggestion).toEqual({
+      dueAt: oil.dueAt,
+      dueOdometer: 48_100,
+      reason: OIL_REASON,
+    });
+    expect(items.find((i) => i.item === "wash")!.pendingSuggestion).toBeNull();
+    const tool = chat.requests[1].tools!.find((t) => t.type === "function" && t.function.name === "proposeAdjustment")!;
+    expect(tool.type === "function" && tool.function.description).toMatch(/replaces/);
+  });
+
+  it("keeps the proposals already made when Super's closing reply fails", async () => {
+    const chat = scriptedChat({
+      nano: [route({ intent: "event" })],
+      super: [callTools(["proposeAdjustment", { item: "oil", newDueOdometer: 48_000, reason: OIL_REASON }])],
+    });
+    const { reply, proposals } = await send(DEMO_EVENT, chat);
+    expect(proposals).toHaveLength(1);
+    expect(reply).toMatchObject({ model: "super", proposals: 1 });
+  });
+
+  it("says so when the proposals cannot be saved", async () => {
+    const chat = scriptedChat({
+      nano: [route({ intent: "event" })],
+      super: [callTools(["proposeAdjustment", { item: "oil", newDueOdometer: 48_000, reason: OIL_REASON }]), say("Done.")],
+    });
+    const reply = await runCommand({
+      text: DEMO_EVENT,
+      car: demoCar(NOW, VISITOR, randomUUID),
+      chat,
+      now: NOW,
+      save: async () => {},
+      saveProposals: async () => {
+        throw new Error("db down");
+      },
+    });
+    expect(reply.proposals).toBe(0);
+    expect(reply.message).toMatch(/could not save/i);
+  });
+
+  it("says so, with nothing to apply, when the event changes nothing", async () => {
+    const chat = scriptedChat({ nano: [route({ intent: "event" })], super: [say("Nothing to change for that.")] });
+
+    const { reply, proposals } = await send("going to the movies tonight", chat);
+
+    expect(proposals).toEqual([]);
+    expect(reply).toMatchObject({ model: "super", changes: [], proposals: 0 });
+    expect(reply.message).toMatch(/nothing/i);
+  });
+});
+
 describe("describeEffects", () => {
   it("describes each change as it was made, not as the car ended up", () => {
     const logged = logService(demoCar(NOW, VISITOR, randomUUID), { kind: "oil", odometer: 47_900 }, NOW);
@@ -276,18 +478,18 @@ describe("runCommand: input it cannot act on", () => {
     expect(saved).toEqual([]);
     expect(reply).toMatchObject({ model: "nano", changes: [] });
     expect(reply.message).toMatch(/car wash/);
+    // Life events are something it can do too.
+    expect(reply.message).toMatch(/coming up, like “camping trip/);
   });
 
-  it.each([["event", /event/i], ["errand", /trip|errand/i]] as const)(
-    "says %s planning is not here yet rather than guessing",
-    async (intent, message) => {
-      const chat = scriptedChat({ nano: [route({ intent })] });
-      const { reply, saved } = await send("camping trip, 300 miles on dirt roads", chat);
-      expect(saved).toEqual([]);
-      expect(reply.model).toBe("nano");
-      expect(reply.message).toMatch(message);
-    },
-  );
+  it("says errand planning is not here yet rather than guessing", async () => {
+    const chat = scriptedChat({ nano: [route({ intent: "errand" })] });
+    const { reply, saved } = await send("gas, car wash and Trader Joe's before Friday", chat);
+    expect(saved).toEqual([]);
+    expect(reply.model).toBe("nano");
+    expect(reply.message).toMatch(/trip|errand/i);
+    expect(reply.message).toMatch(/something coming up/);
+  });
 
   it("explains, without a crash or a badge, when the AI is not set up", async () => {
     const { reply, saved } = await send("just got a car wash", null);
@@ -357,6 +559,7 @@ describe("runCommand: input it cannot act on", () => {
       save: async () => {
         throw new Error("db down");
       },
+      saveProposals: async () => {},
     });
     expect(reply.changes).toEqual([]);
     expect(reply.message).toMatch(/could not save/i);

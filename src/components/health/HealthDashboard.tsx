@@ -1,12 +1,15 @@
 import { CommandBar } from "@/components/command/CommandBar";
 import { LoadDemoCarButton } from "@/components/demo/LoadDemoCarButton";
+import { ProposalCards } from "@/components/proposals/ProposalCards";
 import type { Dashboard } from "@/lib/dashboard";
+import type { Nudge } from "@/lib/types";
 import { ItemTile } from "./ItemTile";
+import { NudgeList } from "./NudgeList";
 import { OdometerHero } from "./OdometerHero";
 
 // "Instrument panel": an estimated-odometer hero with a status count strip, the command
-// bar, then one tile per upkeep item, most urgent first.
-export function HealthDashboard({ dashboard }: { dashboard: Dashboard }) {
+// bar, proposals and weather nudges, followed by upkeep.
+export function HealthDashboard({ dashboard, nudges = [] }: { dashboard: Dashboard; nudges?: Nudge[] }) {
   const { vehicle, odometerEstimate, readingAt, counts, items } = dashboard;
 
   return (
@@ -25,7 +28,11 @@ export function HealthDashboard({ dashboard }: { dashboard: Dashboard }) {
         counts={counts}
       />
 
+      <NudgeList nudges={nudges} />
+
       <CommandBar />
+
+      <ProposalCards cards={dashboard.proposals} />
 
       <h2 className="sr-only">Upkeep, most urgent first</h2>
       <ul className="mt-4 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-4">

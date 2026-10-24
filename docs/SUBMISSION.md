@@ -1,6 +1,6 @@
 # Submission working copy
 
-Status: implementation and preparation only. Public hosting, participant registration, the final video, and Devpost submission still require completion. Live AI is paused at the user’s request until credits are available.
+Status: implementation and preparation only. The feature preview is deployed. Participant registration, final public release, video, and Devpost submission remain to be completed. Live AI is paused at the user’s request until credits are available.
 
 ## Project name
 GloveBox
@@ -26,7 +26,7 @@ Implemented integration: NVIDIA Nemotron through Nebius Token Factory’s compat
 The interface connects a suggestion to an explicit action, a visible source, and a saved result. Deterministic calculations make the gas-detour decision auditable. The core tools remain usable without model access.
 
 ## Limitations
-One car per browser; no accounts or automatic synchronization. Maintenance source notes entered by users are not independently verified. Most vehicle-specific intervals must be entered from the owner’s manual. Gas prices and distances are manually entered; example prices are not live quotes. Electric vehicles and plug-in hybrid cost modeling are not supported. A Google Maps link opens the entered stops, but the app does not automatically optimize routes or retrieve distances. No weather, Tavily, or scheduled background integrations are currently implemented.
+One car per browser; no accounts or automatic synchronization. Maintenance source notes entered by users are not independently verified. Most vehicle-specific intervals must be entered from the owner’s manual. Gas prices and distances are manually entered; example prices are not live quotes. Electric vehicles and plug-in hybrid cost modeling are not supported. A Google Maps link opens the entered stops, but the app does not automatically optimize routes or retrieve distances. Open-Meteo weather and air-quality checks work without AI. Google route/place and EIA regional-price adapters are implemented but await credentials and hosted acceptance. Tavily station-price lookup and scheduled background checks remain unimplemented.
 
 ## Sponsor feedback — use only observed evidence
 - The model-list endpoint made it possible to discover exact accessible model IDs rather than hard-code guessed names.
@@ -36,7 +36,7 @@ One car per browser; no accounts or automatic synchronization. Maintenance sourc
 ## Final checklist
 - [ ] Both teammates registered; eligibility reviewed; one team representative selected.
 - [ ] Track: Best Apps and Agents.
-- [ ] Deployed demo works without a judge login.
+- [x] Feature preview opens without a judge login; recheck the final submission URL.
 - [ ] At least one NVIDIA open-source model is actually used at runtime on Nebius.
 - [ ] Public source repository with MIT license and complete setup instructions.
 - [ ] Public YouTube video under three minutes.

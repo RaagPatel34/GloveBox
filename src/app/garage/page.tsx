@@ -7,6 +7,8 @@ import { SetupForm } from '@/components/setup/SetupForm';
 import { VisitorSync } from '@/components/visitor/VisitorSync';
 import { getCarSnapshot } from '@/lib/car';
 import { buildDashboard } from '@/lib/dashboard';
+import { loadProposals } from '@/lib/db/proposal-store';
+import { listNudges } from '@/lib/db/nudge-store';
 import { VISITOR_COOKIE } from '@/lib/visitor';
 
 export default function CloudGarage() {
@@ -19,5 +21,6 @@ async function Dashboard() {
   let car;
   try { car = await getCarSnapshot(visitorId); }
   catch { return <main className="mx-auto max-w-xl p-6"><h1 className="text-2xl">Cloud garage is temporarily unavailable</h1><p className="mt-4">Your local records are unchanged. Try again later or return to the local garage.</p></main>; }
-  return <><p className="mx-auto max-w-5xl px-4 text-sm">Cloud and local garages are separate. Existing local records are not uploaded or replaced. Live AI is {process.env.ENABLE_LIVE_AI === 'true' ? 'enabled' : 'paused'}.</p><VisitorSync serverVisitorId={visitorId}/>{car ? <HealthDashboard dashboard={buildDashboard(car,new Date())}/> : <SetupForm/>}</>;
+  const [proposals, nudges] = car && visitorId ? await Promise.all([loadProposals(visitorId).catch(() => []),listNudges(visitorId,new Date()).catch(() => [])]) : [[],[]];
+  return <><p className="mx-auto max-w-5xl px-4 text-sm">Cloud and local garages are separate. Existing local records are not uploaded or replaced. Live AI is {process.env.ENABLE_LIVE_AI === 'true' ? 'enabled' : 'paused'}.</p><VisitorSync serverVisitorId={visitorId}/>{car ? <HealthDashboard dashboard={buildDashboard(car,new Date(),proposals)} nudges={nudges}/> : <SetupForm/>}</>;
 }

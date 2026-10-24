@@ -1,7 +1,8 @@
+import { sameDueDay } from "./days";
 import { BASELINE_INTERVALS, estimateCarOdometer, itemStatus, STATUS_RANK } from "./intervals";
 import { tighterLimit, type Limit } from "./limits";
-import { intervalUsed } from "./readout";
-import type { CarSnapshot, ItemStatus, ScheduleItem, ScheduleItemKind, Vehicle } from "./types";
+import { formatReadDate, intervalUsed, numberFormat } from "./readout";
+import type { CarSnapshot, ItemStatus, Proposal, ScheduleItem, ScheduleItemKind, Vehicle } from "./types";
 
 export type DashboardItem = {
   id: string;
@@ -14,12 +15,23 @@ export type DashboardItem = {
   source: ScheduleItem["intervalSource"];
 };
 
+// A proposal card: which item, what moves (a due date, a due mileage, or both), and why.
+export type ProposalCard = {
+  id: string;
+  label: string;
+  moves: { from: string; to: string }[];
+  reason: string;
+  model: Proposal["model"];
+  state: "pending" | "applied";
+};
+
 export type Dashboard = {
   vehicle: Vehicle;
   readingAt: Date;
   odometerEstimate: number;
   items: DashboardItem[];
   counts: Record<ItemStatus, number>;
+  proposals: ProposalCard[];
 };
 
 
@@ -27,7 +39,32 @@ function compareAscending(a: number, b: number): number {
   return a === b ? 0 : a < b ? -1 : 1;
 }
 
-export function buildDashboard(car: CarSnapshot, now: Date): Dashboard {
+// Dismissed cards are gone, and so are hidden ones and cards for an item the car no longer has.
+function proposalCards(car: CarSnapshot, proposals: Proposal[]): ProposalCard[] {
+  const day = (iso: string | undefined) => (iso === undefined ? "—" : formatReadDate(new Date(iso)));
+  const miles = (n: number | undefined) => (n === undefined ? "—" : `${numberFormat.format(n)} mi`);
+  return proposals.flatMap((proposal): ProposalCard[] => {
+    const item = car.items.find((i) => i.id === proposal.itemId);
+    if (!item || proposal.state === "dismissed" || proposal.hiddenAt !== undefined) return [];
+    const { from, to } = proposal;
+    const moves = [
+      ...(!sameDueDay(from.dueAt, to.dueAt) ? [{ from: day(from.dueAt), to: day(to.dueAt) }] : []),
+      ...(from.dueOdometer !== to.dueOdometer ? [{ from: miles(from.dueOdometer), to: miles(to.dueOdometer) }] : []),
+    ];
+    return [
+      {
+        id: proposal.id,
+        label: BASELINE_INTERVALS[item.kind].label,
+        moves,
+        reason: proposal.reason,
+        model: proposal.model,
+        state: proposal.state,
+      },
+    ];
+  });
+}
+
+export function buildDashboard(car: CarSnapshot, now: Date, proposals: Proposal[] = []): Dashboard {
   const { vehicle } = car;
   const readingAt = new Date(car.readingAt);
   const odometerEstimate = estimateCarOdometer(car, now);
@@ -56,7 +93,7 @@ export function buildDashboard(car: CarSnapshot, now: Date): Dashboard {
   const counts: Record<ItemStatus, number> = { overdue: 0, due_soon: 0, ok: 0, unknown: 0 };
   for (const item of items) counts[item.status]++;
 
-  return { vehicle, readingAt, odometerEstimate, items, counts };
+  return { vehicle, readingAt, odometerEstimate, items, counts, proposals: proposalCards(car, proposals) };
 }
 
 // One tile per digit, zero-padded to at least six places like a real odometer.

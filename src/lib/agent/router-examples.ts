@@ -1,6 +1,7 @@
 // The .ts extension lets `npm run eval:router` load this file under plain Node.
 import type { Chat } from "./chat";
-import { checkRoute, pacificDate, routeCommand, type Route } from "./router.ts";
+import { pacificDate } from "../days.ts";
+import { checkRoute, routeCommand, type Route } from "./router.ts";
 
 // The router's fixed check set. Each example is an input, the route it must produce, and
 // a sample of the kind of reply Nano gives for it (bare JSON, fenced, with reasoning first).

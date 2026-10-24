@@ -37,11 +37,17 @@ Recording an older service adds history without rolling a newer schedule backwar
 
 One vehicle per browser. Data does not sync across devices or between localhost and the deployed domain. Export before replacing your garage. The app supports liquid-fuel cost estimates, not EV charging or plug-in hybrid energy modeling.
 
+## Weather and trip providers
+
+The Overview tab includes your teammate’s Open-Meteo forecast and air-quality rules. Search a US city or ZIP code and explicitly check its conditions. This uses no AI or paid key; incomplete or unavailable conditions are labeled. Forecast guidance never changes your records automatically.
+
+Trips & gas now includes place search, ordered driving routes, route fuel costs, and a California weekly EIA price lookup. Google Places/Routes remain off unless both `ENABLE_MAPS=true` and `GOOGLE_MAPS_API_KEY` are set. Set provider quotas and restrictions before opting in. EIA needs `EIA_API_KEY`; its results are regional weekly estimates, never station quotes. These adapters are tested with fixtures; hosted live acceptance awaits those credentials. Manual stops, Maps links, entered prices and detour calculations remain available.
+
 ## Reconciled cloud garage
 
-The feature branch incorporates main through `b5da2e0` (October 23, 2026). The original local garage remains at `/`; `/garage` contains the newer cloud dashboard, setup, visitor identity, and Postgres persistence. These garages are separate: local records are never uploaded or replaced automatically.
+The feature branch incorporates main through `b5da2e0` plus proposal PR #27 (`d16c1ec`) and weather PR #28 (`c74e55e`). The original local garage remains at `/`; `/garage` contains the newer cloud dashboard, setup, visitor identity, and Postgres persistence. These garages are separate: local records are never uploaded or replaced automatically.
 
-Cloud storage is not configured in the preview. To use an existing development database, privately configure `DATABASE_URL` and run `npm run db:migrate` against that database before using `/garage`. No database was provisioned or migrated during reconciliation. End-to-end cloud persistence still requires verification.
+Cloud storage is not configured in the preview. To use an existing development database, privately configure `DATABASE_URL` and run `npm run db:migrate` against that database before using `/garage`. No hosted database was provisioned or migrated. The combined schema and stores are tested against local PGlite Postgres for migration idempotence, visitor isolation, atomic proposal application and weather invalidation. Hosted cloud persistence still requires verification.
 
 Weekly mileage and planned trips now project reminder urgency in the local garage. The recorded odometer and completed-service mileage remain actual readings; planned miles never count as completed driving. Legacy backups remain compatible.
 
@@ -98,7 +104,7 @@ Browser verification covered the complete EPA flow: 2019 Honda → Civic 4Dr →
 
 ## Not implemented
 
-Automatic station-price discovery, route optimization, weather nudges, Tavily, scheduled jobs, accounts, and account authentication. These remain outstanding GitHub issue requirements, not claims about this build. See the [issue acceptance audit](docs/ISSUE-STATUS.md) for implemented work, gaps, and delivery order. The current preview covers own-car upkeep and manually sourced detour comparison.
+Automatic station-price discovery, Tavily, scheduled jobs, and account authentication. These remain outstanding GitHub issue requirements, not claims about this build. See the [issue acceptance audit](docs/ISSUE-STATUS.md) for implemented work, gaps, and delivery order. The current preview covers own-car upkeep and manually sourced detour comparison.
 
 ## License
 

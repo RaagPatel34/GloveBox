@@ -182,3 +182,5 @@ body { margin: 0; background: var(--paper); color: var(--ink); font-family: Aria
  .app-shell .copilot form { display:block; }.app-shell .copilot .mode-row { margin:14px 0; }
  .app-shell .copilot { padding:18px; }
 }
+
+.app-shell .location-search { display:flex; gap:16px; align-items:end; flex-wrap:wrap; }.app-shell .location-search label { flex:1; min-width:180px; margin:0; }.app-shell .location-search button { min-height:42px; }.app-shell .location-results { padding-left:20px; }
