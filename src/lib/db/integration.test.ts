@@ -1,3 +1,9 @@
+import {setWeatherPreference,weatherPreference,claimWeatherChecks} from './weather-check-store';
+import {runDailyWeather} from '../daily-weather';
+import {checkConditions} from '../nudge-check';
+vi.mock('../nudge-check',()=>({checkConditions:vi.fn()}));
+import {prepareTransfer} from '../garage-transfer';
+import {demoGarage} from '../maintenance';
 import {PGlite} from '@electric-sql/pglite';
 import {beforeAll,beforeEach,afterAll,describe,it,expect,vi} from 'vitest';
 import {SCHEMA_STATEMENTS} from './schema';
@@ -23,6 +29,57 @@ beforeAll(async()=>{
 beforeEach(async()=>{await saveCar(owner,demoCar(new Date('2026-10-23'),owner,()=>crypto.randomUUID()));});
 afterAll(async()=>{await db?.close();});
 describe('combined Postgres stores',()=>{
+ it('copies a full local archive atomically and never overwrites an existing cloud car',async()=>{
+ const local=demoGarage(new Date('2026-10-23'));
+ local.items[0].intervalSource={kind:'user',note:'My personal wash interval'};
+ local.services=[{id:'local-record',itemId:local.items[0].id,date:'2026-10-01',odometer:47000,notes:'Receipt retained',createdAt:'2026-10-01T12:00:00Z'}];
+ local.plannedTripMiles=500;
+ const visitor='33333333-3333-4333-8333-333333333333';
+ await db.query('DELETE FROM vehicles WHERE visitor_id = $1',[visitor]);
+ const copy=prepareTransfer(local,visitor);
+ await saveCar(visitor,copy,[],{extra:JSON.stringify(copy)});
+ const stored=await loadCar(visitor);
+ expect(stored?.plannedTripMiles).toBe(500);
+ expect(stored?.items.find(i=>i.kind==='wash')?.intervalSource.note).toBe('My personal wash interval');
+ const archive=await db.query<{garage_extra:typeof copy}>('SELECT garage_extra FROM vehicles WHERE visitor_id = $1',[visitor]);
+ expect(archive.rows[0].garage_extra.services?.[0].notes).toBe('Receipt retained');
+ await expect(saveCar(visitor,prepareTransfer(local,visitor),[],{extra:JSON.stringify(copy)})).rejects.toThrow();
+ expect(await loadCar(visitor)).toEqual(stored);
+ await db.query('DELETE FROM vehicles WHERE visitor_id = $1',[visitor]);
+ });
+ it('requires consent and claims each car only once in 24 hours',async()=>{
+ const now=new Date('2030-01-01');
+ expect(await claimWeatherChecks(now)).toEqual([]);
+ expect(await setWeatherPreference(stranger,true)).toBe(false);
+ expect(await setWeatherPreference(owner,true)).toBe(true);
+ expect((await weatherPreference(owner))?.enabled).toBe(true);
+ expect(await claimWeatherChecks(now)).toHaveLength(1);
+ expect(await claimWeatherChecks(now)).toEqual([]);
+ expect(await claimWeatherChecks(new Date(now.getTime()+86400000))).toHaveLength(1);
+ await setWeatherPreference(owner,false);
+ expect(await claimWeatherChecks(new Date('2030-01-03'))).toEqual([]);
+ });
+ it('refreshes nudges without touching the car and does not retry completed work',async()=>{
+ await setWeatherPreference(owner,true);
+ const before=await loadCar(owner);
+ vi.mocked(checkConditions).mockResolvedValue({complete:true,nudge:{text:'Rain soon',reason:'Forecast'}});
+ expect(await runDailyWeather(new Date('2030-01-01'))).toEqual({checked:1,complete:1,failed:0});
+ expect(await listNudges(owner,new Date('2030-01-01'))).toHaveLength(1);
+ expect(await loadCar(owner)).toEqual(before);
+ expect(await runDailyWeather(new Date('2030-01-01'))).toEqual({checked:0,complete:0,failed:0});
+ });
+ it('respects withdrawal of consent during the forecast request',async()=>{
+ await setWeatherPreference(owner,true);
+ vi.mocked(checkConditions).mockImplementation(async()=>{await setWeatherPreference(owner,false);return {complete:true,nudge:{text:'Do not save',reason:'Test'}};});
+ await runDailyWeather(new Date('2030-01-01'));
+ expect(await listNudges(owner,new Date('2030-01-01'))).toEqual([]);
+ });
+ it('keeps previous guidance on a provider failure and records the failure',async()=>{
+ await setWeatherPreference(owner,true);
+ vi.mocked(checkConditions).mockResolvedValue({complete:false,nudge:null});
+ expect(await runDailyWeather(new Date('2030-01-01'))).toEqual({checked:1,complete:0,failed:1});
+ expect((await weatherPreference(owner))?.outcome).toContain('unavailable');
+ });
  it('migrates twice, saves a car, and scopes records to the visitor',async()=>{const car=demoCar(new Date('2026-10-23'),owner,()=>crypto.randomUUID());await saveCar(owner,car);expect((await loadCar(owner))?.items).toHaveLength(8);expect(await loadCar(stranger)).toBeNull();});
  it('applies a proposal atomically, rejects cross-visitor access and duplicate apply',async()=>{
  const car=(await loadCar(owner))!;const item=car.items.find(i=>i.kind==='oil')!;

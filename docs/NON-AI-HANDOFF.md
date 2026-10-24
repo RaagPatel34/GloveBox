@@ -1,4 +1,4 @@
-# Non-AI integration handoff — October 23, 2026
+# Non-AI integration handoff — October 24, 2026
 
 ## Combined and verified
 
@@ -20,7 +20,10 @@ No DATABASE_URL, GOOGLE_MAPS_API_KEY, EIA_API_KEY or TAVILY_API_KEY was present 
 
 ## Still outside this completed pass
 
-- Local and cloud garages remain separate stores; migrating/connecting an existing garage requires a deliberate data-transfer flow after a database is available. Do not silently overwrite either dataset.
-- Tavily station-price extraction/manufacturer search, embedded maps, daily scheduler, and odometer photo remain optional backlog work. Provider-free manual alternatives are not claimed as those integrations.
+- Records now includes an explicit one-time copy into an empty cloud garage. New database IDs prevent collisions. The full transferred service/proposal history is retained as a downloadable archive; active cloud reminders preserve source notes and mileage forecasts. Copy refuses an existing cloud car. This is not ongoing synchronization: later cloud edits are not in the original archive, and old proposals are not reactivated. Local records remain unchanged. Database acceptance still required.
+- Embedded Google directions map is implemented behind a separate domain-restricted browser key and a user Load map button. Live map acceptance remains blocked on account setup.
+- Tavily source search is implemented behind ENABLE_TAVILY and its key, requesting no generated answer. It returns source links and excerpts, not verified station quotes. Automatic trustworthy price extraction and manufacturer lookup remain unfinished.
+- Daily weather route and Vercel schedule are implemented. Requires migrated database, ENABLE_DAILY_WEATHER=true, a private CRON_SECRET, and per-car user consent. Vercel invokes production only; feature previews do not run automatically. This hackathon implementation claims at most 10 oldest eligible cars per invocation, once per 24 hours; scale/paginate before enabling for more than 10 users. Failures retry on a later daily run, manual checks remain available. No email/push notifications. Unresolved local coordinates (0,0) cannot opt in.
+- Odometer photo remains AI/stretch scope and is excluded.
 - Final public-repo release, YouTube demo, registration/team confirmation, sponsor feedback and Devpost submission remain user-owned release steps. Do not publish the private repository or merge main without explicit authorization.
 - Record the final video only once the real funded AI path is enabled and verified; don't present sample suggestions as live inference.

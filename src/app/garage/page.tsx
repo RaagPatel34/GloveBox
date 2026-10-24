@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { WeatherPreference } from '@/components/weather-preference';
+import { weatherPreference } from '@/lib/db/weather-check-store';
 import { cookies } from 'next/headers';
 import { connection } from 'next/server';
 import { Suspense } from 'react';
@@ -22,5 +24,6 @@ async function Dashboard() {
   try { car = await getCarSnapshot(visitorId); }
   catch { return <main className="mx-auto max-w-xl p-6"><h1 className="text-2xl">Cloud garage is temporarily unavailable</h1><p className="mt-4">Your local records are unchanged. Try again later or return to the local garage.</p></main>; }
   const [proposals, nudges] = car && visitorId ? await Promise.all([loadProposals(visitorId).catch(() => []),listNudges(visitorId,new Date()).catch(() => [])]) : [[],[]];
-  return <><p className="mx-auto max-w-5xl px-4 text-sm">Cloud and local garages are separate. Existing local records are not uploaded or replaced. Live AI is {process.env.ENABLE_LIVE_AI === 'true' ? 'enabled' : 'paused'}.</p><VisitorSync serverVisitorId={visitorId}/>{car ? <HealthDashboard dashboard={buildDashboard(car,new Date(),proposals)} nudges={nudges}/> : <SetupForm/>}</>;
+  const preference = car && visitorId ? await weatherPreference(visitorId).catch(() => null) : null;
+  return <><p className="mx-auto max-w-5xl px-4 text-sm">Cloud and local garages are separate. To copy a local car into an empty cloud garage, use Records → Copy to the cloud garage. Later edits do not sync. Live AI is {process.env.ENABLE_LIVE_AI === 'true' ? 'enabled' : 'paused'}.</p><VisitorSync serverVisitorId={visitorId}/>{car ? <><HealthDashboard dashboard={buildDashboard(car,new Date(),proposals)} nudges={nudges}/><WeatherPreference initialEnabled={Boolean(preference?.enabled)} available={process.env.ENABLE_DAILY_WEATHER === "true" && process.env.VERCEL_ENV === "production"} checkedAt={preference?.checked_at ? new Date(preference.checked_at).toISOString() : undefined} outcome={preference?.outcome ?? undefined}/></> : <SetupForm/>}</>;
 }

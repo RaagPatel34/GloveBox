@@ -1,6 +1,6 @@
 # GitHub issue acceptance audit
 
-Reviewed against issues #4–#19 on October 23, 2026. These issues are the delivery backlog. This branch is a partial implementation, not a replacement for their acceptance criteria. No issue is automatically closed by this PR.
+Reviewed against issues #4–#19 on October 24, 2026. These issues are the delivery backlog. This branch is a partial implementation, not a replacement for their acceptance criteria. No issue is automatically closed by this PR.
 
 | Issue | Implemented on this branch | Still required |
 | --- | --- | --- |
@@ -14,9 +14,9 @@ Reviewed against issues #4–#19 on October 23, 2026. These issues are the deliv
 | [#11](https://github.com/RaagPatel34/GloveBox/issues/11) Manufacturer lookup | Source-link UI and manual source entry | Tavily lookup and validated manufacturer/baseline fallback. Manual links do not complete this ticket. |
 | [#12](https://github.com/RaagPatel34/GloveBox/issues/12) Trip planner | Manual stops/Maps link plus Google Routes adapter with ordering, real distance/duration validation and fuel-cost UI | Configure Google key/quotas and explicitly enable Maps; verify hosted real routes. AI trip loop deferred. |
 | [#13](https://github.com/RaagPatel34/GloveBox/issues/13) Errands | Explicit place search and add-stop UI, Google Places adapter, Buena Park/Santa Ana seed | Live provider acceptance needs Maps setup; natural-language errands remain AI work. |
-| [#14](https://github.com/RaagPatel34/GloveBox/issues/14) Map | External Maps directions link | Embedded route/stop map or static-map fallback; domain-restricted browser key. An external link does not satisfy map acceptance. |
-| [#15](https://github.com/RaagPatel34/GloveBox/issues/15) Gas prices/detour | Detour math and time costs; EIA California weekly adapter with date/source/staleness labeling and route-cost UI | EIA key and live verification; station-specific Tavily lookup not implemented; AI routing deferred. |
-| [#16](https://github.com/RaagPatel34/GloveBox/issues/16) Daily job | Not started | Scheduler, stored cars/nudges, daily deduplication; optional priority. |
+| [#14](https://github.com/RaagPatel34/GloveBox/issues/14) Map | Directions embed component with explicit Load map control and external fallback | Domain-restricted Embed API browser key and live verification. |
+| [#15](https://github.com/RaagPatel34/GloveBox/issues/15) Gas prices/detour | Detour math and time costs; EIA California weekly adapter with date/source/staleness labeling and route-cost UI | EIA key and live verification; Tavily source-search adapter/UI implemented but needs key, quotas and live verification; verified station-price extraction still unfinished; AI routing deferred. |
+| [#16](https://github.com/RaagPatel34/GloveBox/issues/16) Daily job | Authenticated daily route, opt-in cloud control, atomic bounded claims, stale-wash/consent recheck, Vercel daily schedule and Postgres tests | Database/key configuration and production release; preview does not schedule jobs. Ten cars per invocation cap. |
 | [#17](https://github.com/RaagPatel34/GloveBox/issues/17) Odometer photo | Not started | Upload, model extraction, confirmation and unreadable-image handling; stretch priority. |
 | [#18](https://github.com/RaagPatel34/GloveBox/issues/18) Cold walkthrough | Local browser verification, CI checks, user-test worksheet | Full specified live path, independent user walkthrough, code review findings and feature freeze. |
 | [#19](https://github.com/RaagPatel34/GloveBox/issues/19) Submission | README, description draft, feedback notes, demo script | Accurate final routing/provider sections after implementation; public video, public repo and actual Devpost submission. |

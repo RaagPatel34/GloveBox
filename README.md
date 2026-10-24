@@ -109,3 +109,11 @@ Automatic station-price discovery, Tavily, scheduled jobs, and account authentic
 ## License
 
 [MIT](LICENSE)
+
+### October 24 integration follow-up
+
+Records includes an explicit copy into an empty cloud garage and download of the original transferred archive. Existing cloud cars are never overwritten; later edits do not sync. The complete original history is preserved, with old proposals archived rather than reactivated.
+
+Trips includes optional Tavily source search (ENABLE_TAVILY + TAVILY_API_KEY; no generated answer) and Google directions embed (NEXT_PUBLIC_GOOGLE_MAPS_KEY restricted to the Embed API and website domains). Both wait for account setup. Search excerpts must not be represented as verified station quotes.
+
+Daily weather: migrate the schema, configure CRON_SECRET privately and ENABLE_DAILY_WEATHER=true, and obtain per-car consent in /garage. Vercel cron runs production only. The bounded hackathon batch covers at most 10 cars per invocation, prioritizes oldest eligible work, and prevents duplicate checks within 24 hours. No AI, email or push notifications. Keep disabled until hosted verification and release approval. See docs/NON-AI-HANDOFF.md.

@@ -6,6 +6,7 @@
 // vehicle and are removed with it, and proposals with their vehicle and item.
 
 export const SCHEMA_STATEMENTS: string[] = [
+
   `CREATE TABLE IF NOT EXISTS vehicles (
     id            text PRIMARY KEY,
     visitor_id    text NOT NULL UNIQUE,
@@ -22,6 +23,7 @@ export const SCHEMA_STATEMENTS: string[] = [
     reading_at    timestamptz NOT NULL,
     created_at    timestamptz NOT NULL DEFAULT now()
   )`,
+  `ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS garage_extra jsonb`,
   `CREATE TABLE IF NOT EXISTS schedule_items (
     id                   text PRIMARY KEY,
     vehicle_id           text NOT NULL REFERENCES vehicles (id) ON DELETE CASCADE,
@@ -67,4 +69,11 @@ export const SCHEMA_STATEMENTS: string[] = [
     created_at  timestamptz NOT NULL DEFAULT now()
   )`,
   `CREATE INDEX IF NOT EXISTS nudges_vehicle_id_created_at_idx ON nudges (vehicle_id, created_at DESC)`,
+  `CREATE TABLE IF NOT EXISTS weather_checks (
+    vehicle_id text PRIMARY KEY REFERENCES vehicles(id) ON DELETE CASCADE,
+    enabled boolean NOT NULL DEFAULT false,
+    next_check_at timestamptz NOT NULL DEFAULT now(),
+    checked_at timestamptz,
+    outcome text
+  )`,
 ];
