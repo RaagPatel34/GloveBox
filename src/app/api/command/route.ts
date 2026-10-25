@@ -33,7 +33,7 @@ export async function POST(request: Request) {
       chat: missing.length > 0 ? null : nebiusChat(),
       now: new Date(),
       // getCarSnapshot only returns a car for a valid visitor ID.
-      save: (next) => updateCar(visitorId!, next, car ?? undefined),
+      save: (next) => updateCar(visitorId!, next, car!),
     });
     return Response.json(reply);
   } catch (error) {

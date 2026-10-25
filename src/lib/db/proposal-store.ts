@@ -34,8 +34,14 @@ export async function addProposals(visitorId: string, proposals: Proposal[]): Pr
   if (!isVisitorId(visitorId)) throw new Error("Invalid visitor ID");
   if (proposals.length === 0) return;
   const sql = getSql();
-  await sql.transaction(
-    proposals.flatMap((proposal) => {
+  // Lock all affected items before replacement, in a stable order across batches.
+  // A second request waits here and its following UPDATE sees the first request's INSERT.
+  const itemIds = [...new Set(proposals.map(proposal => proposal.itemId))].sort();
+  await sql.transaction([
+    sql`SELECT s.id FROM schedule_items s JOIN vehicles v ON v.id = s.vehicle_id
+      WHERE v.visitor_id = ${visitorId} AND s.id = ANY(${itemIds}::text[])
+      ORDER BY s.id FOR UPDATE OF s`,
+    ...proposals.flatMap((proposal) => {
       const row = proposalToRow(proposal);
       return [
         sql`UPDATE proposals SET state = 'dismissed'
@@ -48,7 +54,7 @@ export async function addProposals(visitorId: string, proposals: Proposal[]): Pr
           WHERE EXISTS (SELECT 1 FROM vehicles WHERE id = ${row.vehicle_id} AND visitor_id = ${visitorId})`,
       ];
     }),
-  );
+  ]);
 }
 
 // Records the user's decision on a card (see decideProposal). Only a still-pending card is
@@ -74,10 +80,15 @@ export async function saveDecision(visitorId: string, decided: Decided): Promise
     const item = decided.car?.items.find((i) => i.id === proposal.itemId);
     if (!item) return false;
     const from = proposalToRow(proposal);
-    rows = await sql`WITH eligible AS (
+    rows = await sql`WITH owned_item AS (
+          SELECT s.id FROM schedule_items s JOIN vehicles v ON v.id = s.vehicle_id
+          WHERE s.id = ${item.id} AND v.visitor_id = ${visitorId}
+          FOR UPDATE OF s
+        ), eligible AS (
           SELECT p.id FROM proposals p JOIN vehicles v ON v.id = p.vehicle_id
           WHERE p.id = ${proposal.id} AND p.item_id = ${item.id}
             AND p.state = 'pending' AND v.visitor_id = ${visitorId}
+            AND EXISTS (SELECT 1 FROM owned_item)
           FOR UPDATE OF p
         ), moved AS (
           UPDATE schedule_items SET due_at = ${item.dueAt ?? null}, due_odometer = ${item.dueOdometer ?? null},

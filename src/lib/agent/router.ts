@@ -1,7 +1,10 @@
 // The .ts extension lets `npm run eval:router` load this file under plain Node.
-import { BASELINE_INTERVALS, DAY_MS, isItemKind, isOdometerReading, isPlainDate, parseMiles } from "../intervals.ts";
+import { pacificDate } from "../days.ts";
+import { BASELINE_INTERVALS, isItemKind, isOdometerReading, isPlainDate, parseMiles } from "../intervals.ts";
 import type { ScheduleItemKind } from "../types";
 import type { Chat } from "./chat";
+
+export { pacificDate } from "../days.ts";
 
 // Nano reads one command-bar input and says what kind it is, pulling out any fields.
 // It never changes anything: the route only decides which agent runs next.
@@ -34,15 +37,6 @@ function systemPrompt(today: string): string {
     `Item ids: ${ITEM_LIST}.`,
     'Example: "just got a car wash" -> {"intent":"service_log","item":"wash"}',
   ].join("\n");
-}
-
-// The calendar day in California, where GloveBox is used, so "yesterday" means the same to the model and the user.
-const pacificDay = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles" });
-
-// YYYY-MM-DD in California, `daysBack` days before `now`.
-export function pacificDate(now: Date, daysBack = 0): string {
-  const today = new Date(`${pacificDay.format(now)}T12:00:00.000Z`);
-  return new Date(today.getTime() - daysBack * DAY_MS).toISOString().slice(0, 10);
 }
 
 export async function routeCommand(text: string, chat: Chat, now: Date): Promise<Route> {

@@ -4,7 +4,9 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { demoCar } from "../fixtures/demo-car";
 import { decideProposal, proposeAdjustment } from "../proposals";
 import { NOW } from "../test-support";
-import { loadCar, saveCar } from "./car-store";
+import { buildDashboard } from "../dashboard";
+import { logService, updateOdometer } from "../service-log";
+import { loadCar, saveCar, updateCar } from "./car-store";
 import { addProposals, loadProposal, loadProposals, saveDecision } from "./proposal-store";
 import { SCHEMA_STATEMENTS } from "./schema";
 
@@ -87,4 +89,51 @@ it("Apply and Dismiss racing for one card leave one consistent decision", async 
   const stored = await loadProposal(visitor, result.proposal.id);
   const savedCar = await loadCar(visitor);
   expect(savedCar!.items.find(i => i.kind === "engine_filter")!.dueOdometer).toBe(stored!.state === "applied" ? 48_300 : result.proposal.from.dueOdometer);
+});
+
+it.each(["service", "odometer"])("an older %s snapshot cannot revert an applied filter adjustment", async (change) => {
+  const car = demoCar(NOW, visitor, randomUUID);
+  await saveCar(visitor, car);
+  const result = proposeAdjustment(car, { kind: "engine_filter", dueOdometer: 48_300, reason: "Dirt roads" }, NOW, randomUUID);
+  if (!result.ok) throw new Error(result.error);
+  const oldCommand = change === "service" ? logService(car, { kind: "wash" }, NOW) : updateOdometer(car, 48_100, NOW);
+  if (!oldCommand.ok) throw new Error(oldCommand.error);
+  await addProposals(visitor, [result.proposal]);
+  const applied = decideProposal(car, result.proposal, "apply", NOW);
+  if (!applied.ok) throw new Error(applied.error);
+  await saveDecision(visitor, applied);
+  await updateCar(visitor, oldCommand.car, car);
+  const loaded = (await loadCar(visitor))!;
+  expect(loaded.items.find(i => i.kind === "engine_filter")!.dueOdometer).toBe(48_300);
+  expect(buildDashboard(loaded, NOW).items.find(i => i.kind === "engine_filter")!.status).toBe("due_soon");
+  expect((await loadProposal(visitor, result.proposal.id))!.state).toBe("applied");
+});
+
+it("intentional service on the adjusted item resets its interval", async () => {
+  const car = demoCar(NOW, visitor, randomUUID);
+  await saveCar(visitor, car);
+  const proposed = proposeAdjustment(car, { kind: "engine_filter", dueOdometer: 48_300, reason: "Dust" }, NOW, randomUUID);
+  if (!proposed.ok) throw new Error(proposed.error);
+  await addProposals(visitor, [proposed.proposal]);
+  const applied = decideProposal(car, proposed.proposal, "apply", NOW);
+  if (!applied.ok) throw new Error(applied.error);
+  await saveDecision(visitor, applied);
+  const serviced = logService(car, { kind: "engine_filter" }, NOW);
+  if (!serviced.ok) throw new Error(serviced.error);
+  await updateCar(visitor, serviced.car, car);
+  expect((await loadCar(visitor))!.items.find(i => i.kind === "engine_filter")!.dueOdometer).toBe(68_000);
+});
+
+it("overlapping event requests leave one pending proposal per item", async () => {
+  const car = demoCar(NOW, visitor, randomUUID);
+  await saveCar(visitor, car);
+  const first = proposeAdjustment(car, { kind: "engine_filter", dueOdometer: 48_300, reason: "First event" }, NOW, randomUUID);
+  const second = proposeAdjustment(car, { kind: "engine_filter", dueOdometer: 48_400, reason: "Second event" }, NOW, randomUUID);
+  if (!first.ok || !second.ok) throw new Error("Proposal failed");
+  // PGlite serializes transactions. This guards the replacement contract, while the
+  // production row lock also serializes separate Postgres connections.
+  await Promise.all([addProposals(visitor, [first.proposal]), addProposals(visitor, [second.proposal])]);
+  expect((await loadProposals(visitor)).filter(p => p.state === "pending")).toHaveLength(1);
+  expect((await loadProposal(visitor, first.proposal.id))!.state).toBe("dismissed");
+  expect((await loadProposal(visitor, second.proposal.id))!.state).toBe("pending");
 });
