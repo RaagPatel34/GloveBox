@@ -47,7 +47,7 @@ Trips & gas now includes place search, ordered driving routes, route fuel costs,
 
 The feature branch incorporates main through `b5da2e0` plus proposal PR #27 (`d16c1ec`) and weather PR #28 (`c74e55e`). The original local garage remains at `/`; `/garage` contains the newer cloud dashboard, setup, visitor identity, and Postgres persistence. These garages are separate: local records are never uploaded or replaced automatically.
 
-Cloud storage is not configured in the preview. To use an existing development database, privately configure `DATABASE_URL` and run `npm run db:migrate` against that database before using `/garage`. No hosted database was provisioned or migrated. The combined schema and stores are tested against local PGlite Postgres for migration idempotence, visitor isolation, atomic proposal application and weather invalidation. Hosted cloud persistence still requires verification.
+Neon Postgres is configured locally and its schema was applied on October 25. `npm run verify:neon` passed against the production-mode local app and real Neon: HTTP save/read, visitor isolation, overwrite protection, dashboard rendering, weather consent persistence, and cleanup. The feature preview has a branch-specific `DATABASE_URL`; redeploy and verify the hosted flow after changing it. App queries use the existing Neon serverless HTTP driver. Migrations prefer `DATABASE_URL_UNPOOLED`. For your own deployment, configure these privately, run `npm run db:migrate`, build and start the app, then run `npm run verify:neon` against localhost. Never commit environment files.
 
 Weekly mileage and planned trips now project reminder urgency in the local garage. The recorded odometer and completed-service mileage remain actual readings; planned miles never count as completed driving. Legacy backups remain compatible.
 
@@ -104,7 +104,7 @@ Browser verification covered the complete EPA flow: 2019 Honda → Civic 4Dr →
 
 ## Not implemented
 
-Automatic station-price discovery, Tavily, scheduled jobs, and account authentication. These remain outstanding GitHub issue requirements, not claims about this build. See the [issue acceptance audit](docs/ISSUE-STATUS.md) for implemented work, gaps, and delivery order. The current preview covers own-car upkeep and manually sourced detour comparison.
+Verified automatic station-price discovery and account authentication are not implemented. Tavily source search and opt-in daily weather job code are implemented, but require provider configuration and hosted acceptance before claiming them live. See the [issue acceptance audit](docs/ISSUE-STATUS.md) for implemented work, gaps, and delivery order. The current preview covers own-car upkeep and manually sourced detour comparison.
 
 ## License
 
@@ -117,3 +117,7 @@ Records includes an explicit copy into an empty cloud garage and download of the
 Trips includes optional Tavily source search (ENABLE_TAVILY + TAVILY_API_KEY; no generated answer) and Google directions embed (NEXT_PUBLIC_GOOGLE_MAPS_KEY restricted to the Embed API and website domains). Both wait for account setup. Search excerpts must not be represented as verified station quotes.
 
 Daily weather: migrate the schema, configure CRON_SECRET privately and ENABLE_DAILY_WEATHER=true, and obtain per-car consent in /garage. Vercel cron runs production only. The bounded hackathon batch covers at most 10 cars per invocation, prioritizes oldest eligible work, and prevents duplicate checks within 24 hours. No AI, email or push notifications. Keep disabled until hosted verification and release approval. See docs/NON-AI-HANDOFF.md.
+
+## Neon setup verification
+
+The Neon CLI requires Node 22.20 or newer; app verification also supports Node 22.13 using explicit TypeScript stripping for scripts. `neon deploy` pulls the database variables into `.env.local`; it does not configure Vercel automatically. Keep `ENABLE_LIVE_AI=false` while AI is paused. See [release readiness](docs/RELEASE-READINESS.md) for official submission gates.

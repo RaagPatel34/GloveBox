@@ -4,17 +4,20 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "db:migrate": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env.local scripts/migrate.mts",
-    "smoke": "node --env-file-if-exists=.env.local scripts/smoke-test.mts",
-    "eval:router": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env.local scripts/eval-router.mts",
+    "db:migrate": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env.local scripts/migrate.mts",
+    "smoke": "node --experimental-strip-types --env-file-if-exists=.env.local scripts/smoke-test.mts",
+    "eval:router": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env.local scripts/eval-router.mts",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run && node --experimental-strip-types --test tests/*.test.mjs",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "verify:neon": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env.local --experimental-strip-types scripts/verify-neon.mts"
   },
   "dependencies": {
+    "@neon/config": "^1.9.3",
+    "@neon/env": "^1.6.4",
     "@neondatabase/serverless": "^1.2.0",
     "next": "16.4.2",
     "openai": "^7.42.0",

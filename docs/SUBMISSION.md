@@ -1,6 +1,6 @@
 # Submission working copy
 
-Status: implementation and preparation only. The feature preview is deployed. Participant registration, final public release, video, and Devpost submission remain to be completed. Live AI is paused at the user’s request until credits are available.
+Status: implementation and preparation only. The feature preview is deployed. Both teammates are registered according to the owner. Eligibility and team representative confirmation, final public release, video, and Devpost submission remain. Live AI is paused at the user’s request until credits are available.
 
 ## Project name
 GloveBox
@@ -17,7 +17,7 @@ GloveBox lets a driver add a liquid-fuel vehicle, enter or look up fuel economy,
 An optional Nebius/Nemotron integration proposes maintenance checks from a driving event. Fixed sample suggestions are labeled separately. Before submission, re-enable and verify the real integration on the hosted build; do not submit a claim of active live inference based only on the offline preview.
 
 ## How we built it
-Next.js and TypeScript provide the interface and server endpoints. Vehicle data can come from FuelEconomy.gov’s public API, with manual entry available when that service fails. Plain functions calculate deadlines and detour savings. Structured Nemotron tool arguments are validated before creating pending suggestions; the model cannot directly edit the schedule. Browser storage holds the garage, and JSON backups provide portability.
+Next.js and TypeScript provide the interface and server endpoints. Vehicle data can come from FuelEconomy.gov’s public API, with manual entry available when that service fails. Plain functions calculate deadlines and detour savings. Structured Nemotron tool arguments are validated before creating pending suggestions; the model cannot directly edit the schedule. Browser storage holds the local garage, JSON backups provide portability, and an explicit one-time copy can save a car and reminders to Neon Postgres. The original records remain available as a cloud archive; subsequent changes do not synchronize.
 
 ## NVIDIA and Nebius usage
 Implemented integration: NVIDIA Nemotron through Nebius Token Factory’s compatible chat API. A prior local test successfully completed a tool-call round trip and produced a maintenance proposal. Current status: inference is deliberately disabled pending credits. Fill in the exact model ID and verified deployed behavior after the final test.
@@ -34,7 +34,8 @@ One car per browser; no accounts or automatic synchronization. Maintenance sourc
 - Keep notes on actual response latency, rejected tool arguments, and any credit or model-availability issues during the final test. Do not invent benchmarks or experiences.
 
 ## Final checklist
-- [ ] Both teammates registered; eligibility reviewed; one team representative selected.
+- [x] Both teammates registered (owner confirmation, October 25).
+- [ ] Eligibility reviewed; one team representative selected.
 - [ ] Track: Best Apps and Agents.
 - [x] Feature preview opens without a judge login; recheck the final submission URL.
 - [ ] At least one NVIDIA open-source model is actually used at runtime on Nebius.

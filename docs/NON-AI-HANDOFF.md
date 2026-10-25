@@ -13,7 +13,7 @@
 
 No DATABASE_URL, GOOGLE_MAPS_API_KEY, EIA_API_KEY or TAVILY_API_KEY was present locally. No paid resources were created or paid API calls made.
 
-1. Configure an existing Neon development database privately as DATABASE_URL, run `npm run db:migrate` against it, and repeat the hosted cloud walkthrough. The local PGlite tests do not prove network connectivity, permissions or configuration of a hosted database.
+1. Neon login, deployment, migration, production build and real-database local HTTP verification passed October 25. DATABASE_URL is saved specifically for the feature preview. Complete hosted acceptance after deployment; the local real-Neon test already proves network connectivity and read/write permissions.
 2. For Google Places/Routes: configure GOOGLE_MAPS_API_KEY with the required APIs, restrictions and usage quotas. Explicitly set ENABLE_MAPS=true only when usage is authorized. Test a known public-landmark route and place results. Until then the UI offers manual Maps links.
 3. Configure EIA_API_KEY for the California weekly regional average. Verify a dated response; never use one regional average to claim a station-to-station saving.
 4. Leave ENABLE_LIVE_AI=false. No Nebius smoke tests or funded inference were run.

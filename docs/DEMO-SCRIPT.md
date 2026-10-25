@@ -19,4 +19,4 @@ Record the deployed build after live Nebius inference is restored. Use only the 
 - Rehearse the exact interaction once before recording.
 - Show actual latency honestly; if editing out waits, keep that clear.
 - Make the YouTube video public and verify it in a signed-out window.
-- Do not claim automatic station-price discovery, automatic route optimization, weather integration, or cross-device sync; those are not implemented.
+- Show the implemented Open-Meteo weather check if time permits. Do not claim verified automatic station-price discovery, automatic route optimization, or ongoing cross-device sync. Optional Google/EIA/Tavily features require configured credentials and acceptance before demonstration.
