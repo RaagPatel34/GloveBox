@@ -2,15 +2,15 @@
 
 Keep AI disabled throughout. Add secrets directly to provider dashboards and Vercel, never to chat, GitHub, screenshots, or NEXT_PUBLIC variables (except the deliberately public, restricted map embed key).
 
-## 1. Neon — start here
+## 1. Neon — connected and verified October 25
 
-Create a free account at https://console.neon.tech/ and a GloveBox project. Stay on Free; no upgrade is needed for this demo. Create a development branch for this preview. Use its connection dialog to copy the Postgres connection string privately.
+The selected Neon project is authenticated and deployed. Its production database branch was explicitly requested by the owner; it is independent of Git main and Vercel production. The schema is applied. Local production-mode verification passed real database save/read, visitor isolation, overwrite protection, dashboard rendering and weather preference persistence.
 
-In Vercel → glovebox2 → glove-box → Settings → Environment Variables, add DATABASE_URL for Preview, restricted to codex/first-working-flow. Paste the connection string as the value. Do not put it in a NEXT_PUBLIC variable. Leave production unchanged.
+DATABASE_URL is privately stored for Vercel Preview, restricted to codex/first-working-flow. The feature deployment passed, and a fictional car copied through the hosted UI reloaded successfully from Neon. DATABASE_URL_UNPOOLED remains local for migrations. Existing AI settings remain disabled.
 
-The schema must be installed before the cloud UI works. Tell the collaborator when the project exists; then use the Neon SQL Editor with the reviewed schema, or privately configure local .env.local for the migration script. Never paste the password into chat. Redeploy the feature preview after adding the variable. Test with the fictional demo car before copying real records.
+For another environment: privately configure its database URLs, run `npm run db:migrate`, build and start, then run `npm run verify:neon` against localhost. Never paste passwords into chat or GitHub. Neon CLI needs Node 22.20 or newer; use npx if global installation is unavailable.
 
-Cloud access currently uses an anonymous browser identity, not user accounts. Clearing that identity loses access. Keep exported backups.
+Cloud access uses an anonymous browser identity, not user accounts. Clearing that identity loses access. Keep exported backups. Local-to-cloud copy is one-time; later edits do not sync.
 
 ## 2. EIA — regional fuel averages
 

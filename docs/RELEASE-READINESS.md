@@ -6,7 +6,7 @@ The non-AI core works. The hackathon entry is not yet submission-ready because t
 
 | Requirement | Status / next action |
 | --- | --- |
-| Working demo | Feature preview deployed; latest Neon setup release undergoing hosted acceptance. |
+| Working demo | Feature preview deployed; hosted cloud copy and reload passed October 25. |
 | NVIDIA open-source model running on Nebius | Paused by owner. Must enable and demonstrate actual runtime inference before submission. |
 | Public source and open-source license | MIT license present. Repository remains private per owner instruction; public release needs owner approval. |
 | English description and setup | README and submission draft prepared. Final NVIDIA model ID and deployed evidence pending. |
@@ -26,6 +26,7 @@ Sources: https://nebiusglobalaihackathon.devpost.com/ and https://nebiusglobalai
 - Neon authentication and deploy successful; pooled app URL and direct migration URL loaded privately.
 - Database schema applied: nudges, proposals, schedule_items, vehicles, weather_checks.
 - Production build passed. Real Neon HTTP test passed save/read, eight reminders, service-note preservation, existing-car protection, visitor isolation, cloud dashboard rendering, weather opt-in/out, and isolated fixture cleanup.
+- Vercel deployment fe4050e5 succeeded. Hosted browser copy saved the fictional car and eight reminders; the cloud dashboard survived reload.
 - AI stays disabled. No inference or paid provider calls made.
 
 ## Optional backlog, not official submission gates
