@@ -22,6 +22,7 @@ async function send(
     car,
     chat,
     now,
+    saveProposals: async () => {},
     save: async (next) => {
       saved.push(next);
     },
@@ -278,7 +279,7 @@ describe("runCommand: input it cannot act on", () => {
     expect(reply.message).toMatch(/car wash/);
   });
 
-  it.each([["event", /event/i], ["errand", /trip|errand/i]] as const)(
+  it.each([["errand", /trip|errand/i]] as const)(
     "says %s planning is not here yet rather than guessing",
     async (intent, message) => {
       const chat = scriptedChat({ nano: [route({ intent })] });
@@ -354,7 +355,8 @@ describe("runCommand: input it cannot act on", () => {
       car: demoCar(NOW, VISITOR, randomUUID),
       chat,
       now: NOW,
-      save: async () => {
+      saveProposals: async () => {},
+    save: async () => {
         throw new Error("db down");
       },
     });

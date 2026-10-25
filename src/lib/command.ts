@@ -1,31 +1,37 @@
+import { randomUUID } from "node:crypto";
 import type { Chat } from "./agent/chat";
-import { runMaintenanceAgent, type ActionRoute, type MaintenanceEffect } from "./agent/maintenance";
+import { runMaintenanceAgent, type ActionRoute, type AgentRoute, type MaintenanceEffect } from "./agent/maintenance";
 import { routeCommand } from "./agent/router";
 import { MAX_COMMAND_LENGTH } from "./command-limits";
 import { formatReadDate, numberFormat, STATUS_LABEL } from "./readout";
-import type { CarSnapshot, CommandReply } from "./types";
+import type { CarSnapshot, CommandReply, Proposal } from "./types";
 
 // One command-bar input, end to end: Nano routes it, Super records service logs and
-// odometer readings, and the reply is written here from what the tools changed.
+// odometer readings or proposes schedule changes for a life event, and the reply is
+// written here from what the tools did.
 // Every failure becomes a reply the user can act on; nothing here throws.
 
-const EXAMPLES = "Try something you did, like “just got a car wash”, or your odometer, like “odometer is 48,210”.";
+const EXAMPLES =
+  "Try something you did, like “just got a car wash”, your odometer, like “odometer is 48,210”, " +
+  "or something coming up, like “camping trip, 300 miles on dirt roads”.";
 
-const reply = (model: CommandReply["model"], message: string, changes: string[] = []): CommandReply => ({
-  model,
-  message,
-  changes,
-});
+const reply = (
+  model: CommandReply["model"], message: string, changes: string[] = [], proposalsAdded = 0,
+): CommandReply => ({ model, message, changes, proposalsAdded });
 
 export async function runCommand(args: {
   text: unknown;
   car: CarSnapshot | null;
+  // The visitor's cards still waiting on Apply or Dismiss. A new suggestion for one of their items replaces it.
+  pending?: Proposal[];
   // Null when the AI is not configured (see missingNebiusConfig).
   chat: Chat | null;
   now: Date;
   save: (car: CarSnapshot) => Promise<void>;
+  saveProposals: (proposals: Proposal[]) => Promise<void>;
+  newId?: () => string;
 }): Promise<CommandReply> {
-  const { car, chat, now } = args;
+  const { car, chat, now, pending = [], newId = randomUUID } = args;
   const text = typeof args.text === "string" ? args.text.trim() : "";
   if (text === "" || text.length > MAX_COMMAND_LENGTH) {
     return reply(null, `Type what happened, in ${MAX_COMMAND_LENGTH} characters or fewer. ${EXAMPLES}`);
@@ -43,23 +49,38 @@ export async function runCommand(args: {
     return response;
   };
 
-  let route: ActionRoute;
+  let route: AgentRoute;
   let state;
   try {
     const routed = await routeCommand(text, tracked, now);
     switch (routed.intent) {
       case "unknown":
         return reply("nano", `I couldn't tell what to do with that. ${EXAMPLES}`);
-      case "event":
-        return reply("nano", "That sounds like a life event. Schedule suggestions for events are coming soon; for now I can log a service or an odometer reading.");
       case "errand":
-        return reply("nano", "That sounds like an errand. Trip planning is coming soon; for now I can log a service or an odometer reading.");
+        return reply(
+          "nano",
+          "That sounds like an errand. Trip planning is coming soon; for now I can log a service or an odometer " +
+            "reading, or suggest schedule changes for something coming up, like a camping trip.",
+        );
     }
     route = routed;
-    state = await runMaintenanceAgent({ chat: tracked, car, now, text, route });
+    state = await runMaintenanceAgent({ chat: tracked, car, now, text, route, newId, pending });
   } catch (error) {
     console.error("runCommand: model call failed", error);
     return reply(answered, "Could not reach the AI just now. Please try again in a moment.");
+  }
+
+  if (route.intent === "event") {
+    if (state.proposals.length === 0) {
+      return reply("super", "Nothing on your schedule needs to change for that. Your dashboard is up to date.");
+    }
+    try {
+      await args.saveProposals(state.proposals);
+    } catch (error) {
+      console.error("runCommand: saving proposals failed", error);
+      return reply("super", "Could not save those suggestions. Please try again.");
+    }
+    return reply("super", "Here is what I would change. Apply the ones you want.", [], state.proposals.length);
   }
 
   if (state.effects.length === 0) return reply("super", nothingRecorded(route));

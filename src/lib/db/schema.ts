@@ -48,4 +48,18 @@ export const SCHEMA_STATEMENTS: string[] = [
     created_at  timestamptz NOT NULL DEFAULT now()
   )`,
   `CREATE INDEX IF NOT EXISTS nudges_vehicle_id_created_at_idx ON nudges (vehicle_id, created_at DESC)`,
+  `CREATE TABLE IF NOT EXISTS proposals (
+    id text PRIMARY KEY,
+    vehicle_id text NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+    item_id text NOT NULL REFERENCES schedule_items(id) ON DELETE CASCADE,
+    from_due_at timestamptz,
+    from_due_odometer integer,
+    to_due_at timestamptz,
+    to_due_odometer integer,
+    reason text NOT NULL,
+    model text NOT NULL CHECK (model IN ('nano', 'super', 'ultra')),
+    state text NOT NULL CHECK (state IN ('pending', 'applied', 'dismissed')),
+    created_at timestamptz NOT NULL DEFAULT now()
+  )`,
+  `CREATE INDEX IF NOT EXISTS proposals_vehicle_id_idx ON proposals(vehicle_id, created_at)`,
 ];

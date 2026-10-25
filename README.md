@@ -79,3 +79,16 @@ _TBD: required for submission._
 ## License
 
 [MIT](LICENSE)
+
+### Life-event suggestions
+
+After running `npm run db:migrate` (including on an existing database), load the demo car
+and submit “camping trip, 300 miles on dirt roads”. Nano classifies the command; Super can
+read the schedule and propose earlier due points, but cannot log service or change the
+odometer for an event. Each card shows its old/new due point, reason, and Super badge.
+Apply saves the new schedule and refreshes the dashboard; Dismiss removes the card.
+Pending, applied, and dismissed states survive reloads. If another action has changed the
+item since the suggestion was created, Apply asks you to dismiss the stale suggestion.
+
+This flow requires configured Nano and Super models. Tests use scripted model tool calls
+and local Postgres via PGlite; they do not establish live model reasoning quality.

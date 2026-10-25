@@ -16,7 +16,7 @@ async function sendCommand(text: string): Promise<CommandReply> {
       body: JSON.stringify({ text }),
     });
     const body = (await res.json()) as Partial<CommandReply>;
-    return typeof body.message === "string" ? { model: body.model ?? null, message: body.message, changes: body.changes ?? [] } : UNREACHABLE;
+    return typeof body.message === "string" ? { model: body.model ?? null, message: body.message, changes: body.changes ?? [], proposalsAdded: body.proposalsAdded ?? 0 } : UNREACHABLE;
   } catch {
     return UNREACHABLE;
   }
@@ -37,7 +37,7 @@ export function CommandBar() {
     const next = await sendCommand(text);
     setReply(next);
     setPending(false);
-    if (next.changes.length > 0) {
+    if (next.changes.length > 0 || (next.proposalsAdded ?? 0) > 0) {
       setText("");
       router.refresh();
     }
@@ -55,7 +55,7 @@ export function CommandBar() {
           onChange={(e) => setText(e.target.value)}
           maxLength={MAX_COMMAND_LENGTH}
           autoComplete="off"
-          placeholder="“Just got a car wash” or “odometer is 48,210”"
+          placeholder="“Camping trip, 300 miles on dirt roads”"
           className="min-w-0 flex-1 rounded-xl bg-panel px-4 py-3 text-base text-foreground ring-1 ring-white/10 placeholder:text-muted/70 focus:outline-none focus:ring-2 focus:ring-ok"
         />
         <button
