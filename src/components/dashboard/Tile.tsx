@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { useRef, type CSSProperties } from "react";
 import { TONE } from "@/components/health/tone";
 import { isRollable, RollingNumber } from "@/components/motion/RollingNumber";
 import type { DashboardItem } from "@/lib/dashboard";
@@ -7,7 +7,10 @@ import { formatLimit, STATUS_LABEL } from "@/lib/readout";
 
 // One upkeep item: what it is, how it stands, how far through its interval it is,
 // and where the interval came from. Status is always written out, never colour alone.
-// A tile you just changed reads "Changed" and holds a foreground ring until you notice it.
+// A tile you just changed reads "Changed" and holds a foreground ring until you notice it:
+// the pointer rests on it for a moment, so a tile sliding under a resting cursor isn't cleared at once.
+const NOTICED_MS = 1200;
+
 export function Tile({
   item,
   changed = false,
@@ -22,10 +25,23 @@ export function Tile({
   const tone = TONE[item.status];
   const { value, unit } = formatLimit(item.limit);
   const used = item.usedPercent;
+  const noticing = useRef<number | null>(null);
+  function startNoticing() {
+    if (!changed || !onSeen || noticing.current !== null) return;
+    noticing.current = window.setTimeout(() => {
+      noticing.current = null;
+      onSeen();
+    }, NOTICED_MS);
+  }
+  function stopNoticing() {
+    if (noticing.current !== null) window.clearTimeout(noticing.current);
+    noticing.current = null;
+  }
   return (
     <li
       ref={flipRef}
-      onPointerEnter={changed ? onSeen : undefined}
+      onPointerEnter={startNoticing}
+      onPointerLeave={stopNoticing}
       className={`flex flex-col rounded-2xl bg-panel p-4 ring-1 ${tone.ring} ${changed ? "lit" : ""}`}
     >
       <div className="flex items-start justify-between gap-2">

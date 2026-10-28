@@ -101,11 +101,14 @@ body { margin: 0; background: var(--background); color: var(--foreground); font-
     border-radius: 10px; padding: 10px 16px; font-size: 14px; font-weight: 600; border: 0; text-decoration: none;
   }
   .app-shell .primary { margin-top: 16px; background: var(--foreground); color: var(--background); }
-  .app-shell .primary:hover:not(:disabled) { background: #fff; }
   .app-shell .secondary { background: transparent; color: var(--foreground); font-weight: 500; box-shadow: 0 0 0 1px rgb(255 255 255 / .15); }
-  .app-shell .secondary:hover:not(:disabled) { background: rgb(255 255 255 / .05); box-shadow: 0 0 0 1px rgb(255 255 255 / .3); }
   .app-shell .text-button { border: 0; background: transparent; padding: 10px 0; min-height: 44px; font-size: 14px; color: var(--muted); text-decoration: underline; text-underline-offset: 4px; }
-  .app-shell .text-button:hover:not(:disabled) { color: var(--foreground); }
+  @media (hover: hover) and (pointer: fine) {
+    .app-shell .primary:hover:not(:disabled) { background: #fff; }
+    .app-shell .secondary:hover:not(:disabled) { background: rgb(255 255 255 / .05); box-shadow: 0 0 0 1px rgb(255 255 255 / .3); }
+    .app-shell .text-button:hover:not(:disabled) { color: var(--foreground); }
+    .app-shell .source-link:hover { color: var(--foreground); }
+  }
   .app-shell button:disabled { opacity: .4; }
   .app-shell .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 
@@ -117,7 +120,6 @@ body { margin: 0; background: var(--background); color: var(--foreground); font-
   .app-shell .pill { display: inline-block; border-radius: 6px; padding: 3px 7px; font-family: var(--font-mono); font-size: 11px; letter-spacing: .1em; color: var(--muted); background: rgb(255 255 255 / .06); box-shadow: 0 0 0 1px rgb(255 255 255 / .1); }
   .app-shell .source-link, .app-shell .source-library a, .app-shell .trip-result a { text-decoration: underline; text-underline-offset: 3px; }
   .app-shell .source-link { display: inline-block; font-size: 14px; color: var(--muted); }
-  .app-shell .source-link:hover { color: var(--foreground); }
 
   /* Service history: a real table that scrolls sideways inside its panel on a phone. */
   .app-shell .history-table { overflow-x: auto; margin-inline: -4px; }

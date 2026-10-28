@@ -32,7 +32,7 @@ export function NextUp({ item }: { item: DashboardItem }) {
             {isRollable(limit.value) ? (
               <>
                 <span className="sr-only">{limit.value}</span>
-                <RollingNumber value={limit.value} />
+                <RollingNumber key={item.id} value={limit.value} />
               </>
             ) : (
               limit.value
