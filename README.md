@@ -12,7 +12,7 @@ Built for the **Nebius x NVIDIA Global AI Hackathon — Best Apps and Agents**. 
 - Review clearly labeled sample suggestions; Apply/Dismiss never marks a service complete.
 - Compare gas-detour savings, extra fuel use, and optional time cost using deterministic math.
 - Open manually entered stops in Google Maps. Distances and prices are entered by the user, not fetched or claimed to be live.
-- Save locally, export a JSON backup, and validate it before restoring. Reset/restore explicitly warns before replacement.
+- Save locally, export a JSON backup, and validate it before restoring. Restoring asks before it replaces your garage; resetting the demo car offers Undo.
 - View NHTSA tire-care guidance and an applicable Honda sedan reference. User-entered sources are labeled as user records, not independently verified.
 
 ## Run
@@ -25,7 +25,16 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open http://localhost:3000. Choose **Add my car** or **Load demo car**. Core features work without credentials; optional EPA lookup requires network access. Sample suggestions run locally in the browser.
+Open http://localhost:3000. Choose **Add my car** or **Load demo car**. The app has four pages:
+
+| Route | Page | What lives there |
+| --- | --- | --- |
+| `/` | Dashboard | The next thing your car needs, the drive review and its suggestions, everything else coming up, the weather check |
+| `/log` | Service log | Service history, record a service, update the odometer, mileage forecast |
+| `/trips` | Trips | Route planner and the gas-detour calculator |
+| `/car` | Car & settings | Add or replace your car, intervals and sources, backup and restore, copy to the cloud garage, AI status |
+
+On a desktop the car, its odometer and its status counts stay in a rail on the left; on a phone they fold into a top strip with a tab bar at the bottom. Core features work without credentials; optional EPA lookup requires network access. Sample suggestions run locally in the browser.
 
 For a fast walkthrough, load the demo, try the dirt-road command, apply a reminder, then use the gas-detour example. Example prices are illustrative. Try a $20/hour time value and see the detour verdict change.
 
@@ -39,13 +48,13 @@ One vehicle per browser. Data does not sync across devices or between localhost 
 
 ## Weather and trip providers
 
-The Overview tab includes your teammate’s Open-Meteo forecast and air-quality rules. Search a US city or ZIP code and explicitly check its conditions. This uses no AI or paid key; incomplete or unavailable conditions are labeled. Forecast guidance never changes your records automatically.
+The Dashboard includes your teammate’s Open-Meteo forecast and air-quality rules. Search a US city or ZIP code and explicitly check its conditions. This uses no AI or paid key; incomplete or unavailable conditions are labeled. Forecast guidance never changes your records automatically.
 
-Trips & gas now includes place search, ordered driving routes, route fuel costs, and a California weekly EIA price lookup. Google Places/Routes remain off unless both `ENABLE_MAPS=true` and `GOOGLE_MAPS_API_KEY` are set. Set provider quotas and restrictions before opting in. EIA needs `EIA_API_KEY`; its results are regional weekly estimates, never station quotes. These adapters are tested with fixtures; hosted live acceptance awaits those credentials. Manual stops, Maps links, entered prices and detour calculations remain available.
+The Trips page includes place search, ordered driving routes, route fuel costs, and a California weekly EIA price lookup. Google Places/Routes remain off unless both `ENABLE_MAPS=true` and `GOOGLE_MAPS_API_KEY` are set. Set provider quotas and restrictions before opting in. EIA needs `EIA_API_KEY`; its results are regional weekly estimates, never station quotes. These adapters are tested with fixtures; hosted live acceptance awaits those credentials. Manual stops, Maps links, entered prices and detour calculations remain available.
 
 ## Reconciled cloud garage
 
-The feature branch incorporates main through `b5da2e0` plus proposal PR #27 (`d16c1ec`) and weather PR #28 (`c74e55e`). The original local garage remains at `/`; `/garage` contains the newer cloud dashboard, setup, visitor identity, and Postgres persistence. These garages are separate: local records are never uploaded or replaced automatically.
+Every page reads one garage: the one saved in your browser. `/garage` is the optional cloud garage (dashboard, setup, visitor identity, Postgres persistence), reached from Car & settings. The two are separate: local records are never uploaded or replaced automatically; **Copy to the cloud garage** on Car & settings is the explicit path.
 
 Neon Postgres is configured locally and its schema was applied on October 25. `npm run verify:neon` passed against the production-mode local app and real Neon: HTTP save/read, visitor isolation, overwrite protection, dashboard rendering, weather consent persistence, and cleanup. The feature preview has a branch-specific `DATABASE_URL`; redeploy and verify the hosted flow after changing it. App queries use the existing Neon serverless HTTP driver. Migrations prefer `DATABASE_URL_UNPOOLED`. For your own deployment, configure these privately, run `npm run db:migrate`, build and start the app, then run `npm run verify:neon` against localhost. Never commit environment files.
 
@@ -69,10 +78,14 @@ The smoke script is an explicit integration test and makes calls when invoked wi
 
 ## Architecture
 
-- `src/components/local-garage.tsx`: local dashboard, browser persistence, proposal review.
-- `/garage`: upstream cloud dashboard and setup with anonymous visitor identity and Postgres storage.
+- `src/app/(garage)/`: the four pages and their shared layout (rail, phone strip, tab bar, page transitions).
+- `src/components/garage/GarageProvider.tsx`: the browser garage every page reads through `useGarage()`: load, validate, save, demo reset with Undo.
+- `src/components/dashboard/`: Next up hero, drive review with suggestion cards, Coming up tiles.
+- `src/components/motion/`: rolling odometer readouts, tile reordering, the once-per-visit ignition sweep (CSS, gated by reduced motion).
+- `src/lib/garage-view.ts`: maps the browser garage onto the dashboard model and words the "Why this date?" basis.
+- `/garage`: optional cloud dashboard and setup with anonymous visitor identity and Postgres storage.
 - `/api/cloud-command`: upstream Nano/Super command router, guarded by the same live-AI switch.
-- `src/components/garage-tools.tsx`: vehicle setup, service records, intervals, backup/restore.
+- `src/components/garage-tools.tsx`: car setup, service history, record a service, odometer, mileage forecast, intervals, backup/restore (one export per tool).
 - `src/components/trip-planner.tsx`: local trip-cost and detour comparison.
 - `src/lib/garage.ts`, `maintenance.ts`, `trip.ts`: validated state transitions and deterministic calculations.
 - `/api/vehicle`: bounded, fixed-host EPA lookup with timeout and manual fallback.
