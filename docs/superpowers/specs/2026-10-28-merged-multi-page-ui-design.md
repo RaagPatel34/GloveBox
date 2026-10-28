@@ -66,7 +66,7 @@ Approved 2026-10-28 after a throwaway prototype of four variants (see *Prototype
 
 One orchestrated moment, plus motion that answers the user. Everything is gated by `prefers-reduced-motion: no-preference`; under `reduce`, values land at once.
 
-- **Ignition (once per visit):** odometer drums roll up from zero (the ones wheel spins two extra turns, tens one), the counts and tile numbers roll in, and every interval meter sweeps from empty, 1100ms, `cubic-bezier(0.22, 1, 0.36, 1)`. It does not replay when returning to the dashboard. **Build it with CSS `@starting-style`** so server-rendered HTML carries the real values; the prototype's JS version shows zeros until hydration.
+- **Ignition (once per visit):** odometer drums roll up from zero (the ones wheel spins two extra turns, tens one), the counts and tile numbers roll in, and every interval meter sweeps from empty, 1100ms, `cubic-bezier(0.22, 1, 0.36, 1)`. It does not replay when returning to the dashboard. **Build it with CSS `@starting-style`**, so rendered values are always the real ones and only the transition starts from zero; the prototype's JS phase state is not carried over.
 - **Changes roll:** later value changes (slider, Apply, logging) roll drums and meters in 520ms.
 - **Apply / Dismiss:** the card exits first (150ms: opacity, `scale 0.98`, `translateY -12px`, `blur 4px`), then the schedule changes; the affected tile slides to its new rank (FLIP, 560ms) and shows "Changed" with a foreground ring until hovered or until the next drive review.
 - **Page change:** a view transition. The root holds still; the content area fades out (120ms) and in (260ms, 12px rise, blur); the rail's current-page plate and the tab bar's mark slide as shared elements (320ms).
@@ -110,4 +110,4 @@ The cloud command bar (service/odometer logging through Postgres), issues #25 an
 - Playwright screenshots of all four pages at 1280px, 390px and 320px (no horizontal scroll), with and without `prefers-reduced-motion: reduce`.
 - Walkthrough: load demo → review a drive (sample) → Apply → tile changes → Log this service (item preselected) → compare a detour → export a backup → reset demo → Undo → reload, and everything persists.
 - Keyboard walk of every page: every control reachable, visible focus ring, nothing hidden behind the sticky strip or tab bar.
-- The server-rendered HTML (no JS) shows the real odometer and due values.
+- With reduced motion (no transitions), the first paint after the garage loads already shows the real odometer and due values.
