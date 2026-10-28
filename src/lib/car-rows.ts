@@ -36,7 +36,7 @@ export type ItemRow = {
 };
 
 // Needed: the neon driver returns timestamptz as Date, not string (checked live); the string widening for numbers is defensive.
-type Loose<T, Times extends keyof T, Nums extends keyof T> = {
+export type Loose<T, Times extends keyof T, Nums extends keyof T> = {
   [K in keyof T]: K extends Times ? T[K] | Date : K extends Nums ? T[K] | string : T[K];
 };
 type DriverVehicleRow = Loose<VehicleRow, "reading_at", "year" | "epa_mpg" | "mpg_override" | "odometer" | "weekly_miles" | "home_lat" | "home_lng">;

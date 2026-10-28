@@ -1,3 +1,4 @@
+import { ProposalCards } from "@/components/proposals/ProposalCards";
 import { CommandBar } from "@/components/command/CommandBar";
 import { LoadDemoCarButton } from "@/components/demo/LoadDemoCarButton";
 import type { Dashboard } from "@/lib/dashboard";
@@ -31,6 +32,7 @@ export function HealthDashboard({ dashboard, nudges }: { dashboard: Dashboard; n
       <NudgeList nudges={nudges} />
 
       <CommandBar />
+      <ProposalCards cards={dashboard.proposals} />
 
       <h2 className="sr-only">Upkeep, most urgent first</h2>
       <ul className="mt-4 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-4">

@@ -1,3 +1,4 @@
+import { loadProposals } from "@/lib/db/proposal-store";
 import { cookies } from "next/headers";
 import { connection } from "next/server";
 import { Suspense } from "react";
@@ -26,10 +27,14 @@ async function LiveDashboard() {
   // The nudges need only the visitor ID, not the car, so both load at once. listNudges
   // returns none for an invalid ID. Nudges are a bonus: if their table is missing (migration
   // not run) or the database hiccups, the car still shows, as GET /api/nudges would answer 500.
-  const [car, nudges] = await Promise.all([
+  const [car, nudges, proposals] = await Promise.all([
     getCarSnapshot(visitorId),
     listNudges(visitorId ?? "", now).catch((error) => {
       console.error("Could not load nudges for the dashboard", error);
+      return [];
+    }),
+    loadProposals(visitorId ?? "").catch((error) => {
+      console.error("Could not load schedule suggestions", error);
       return [];
     }),
   ]);
@@ -37,7 +42,7 @@ async function LiveDashboard() {
   return (
     <>
       <VisitorSync serverVisitorId={visitorId} />
-      {car ? <HealthDashboard dashboard={buildDashboard(car, now)} nudges={nudges} /> : <SetupForm />}
+      {car ? <HealthDashboard dashboard={buildDashboard(car, now, proposals)} nudges={nudges} /> : <SetupForm />}
     </>
   );
 }

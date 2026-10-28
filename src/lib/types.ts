@@ -94,6 +94,7 @@ export type Nudge = {
 
 // What POST /api/command answers with.
 export type CommandReply = {
+  proposalsAdded?: number;
   // Which model produced this reply, for its badge. Null when no model answered
   // (empty input, the AI not set up or not reachable).
   model: ModelTier | null;
