@@ -9,6 +9,8 @@ import { logService, updateOdometer } from "../service-log";
 import { loadCar, saveCar, updateCar } from "./car-store";
 import { addProposals, loadProposal, loadProposals, saveDecision } from "./proposal-store";
 import { SCHEMA_STATEMENTS } from "./schema";
+import { runCommand } from "../command";
+import { callTools, say, scriptedChat } from "../agent/scripted-chat";
 
 // Replace the external HTTPS driver with real Postgres running locally in WASM.
 // Lazy statements preserve Neon's transaction API; no application modules are mocked.
@@ -33,6 +35,44 @@ beforeEach(async () => {
   for (const statement of SCHEMA_STATEMENTS) await driver.db.exec(statement);
 });
 afterEach(async () => { await driver.db?.close(); vi.unstubAllEnvs(); });
+
+it("an event finishing after a demo reset reports a recoverable failure without changing the new car", async () => {
+  const car = demoCar(NOW, visitor, randomUUID);
+  await saveCar(visitor, car);
+  const replacement = demoCar(NOW, visitor, randomUUID);
+  const chat = scriptedChat({
+    nano: [say(JSON.stringify({ intent: "event" }))],
+    super: [callTools(["proposeAdjustment", {
+      item: "engine_filter", newDueOdometer: 48_300, reason: "Dirt-road dust",
+    }]), say("Done.")],
+  });
+  const result = await runCommand({
+    text: "camping trip, 300 miles on dirt roads", car, chat, now: NOW,
+    save: async () => { throw new Error("Events must not save the car"); },
+    saveProposals: async proposals => {
+      await saveCar(visitor, replacement);
+      await addProposals(visitor, proposals);
+    },
+  });
+  expect(result).toMatchObject({ proposalsAdded: 0, message: "Could not save those suggestions. Please try again." });
+  expect(await loadProposals(visitor)).toEqual([]);
+  expect(await loadCar(visitor)).toEqual(replacement);
+});
+
+it("a batch containing a stale car proposal rolls back every new card and pending-card replacement", async () => {
+  const staleCar = demoCar(NOW, visitor, randomUUID);
+  const stale = proposeAdjustment(staleCar, { kind: "engine_filter", dueOdometer: 48_300, reason: "Old event" }, NOW, randomUUID);
+  const car = demoCar(NOW, visitor, randomUUID);
+  await saveCar(visitor, car);
+  const waiting = proposeAdjustment(car, { kind: "engine_filter", dueOdometer: 48_400, reason: "Waiting event" }, NOW, randomUUID);
+  const fresh = proposeAdjustment(car, { kind: "engine_filter", dueOdometer: 48_300, reason: "New event" }, NOW, randomUUID);
+  if (!stale.ok || !waiting.ok || !fresh.ok) throw new Error("Proposal failed");
+  await addProposals(visitor, [waiting.proposal]);
+  await expect(addProposals(visitor, [fresh.proposal, stale.proposal])).rejects.toThrow();
+  expect(await loadProposals(visitor)).toEqual([waiting.proposal]);
+  expect(await loadProposal(visitor, fresh.proposal.id)).toBeNull();
+  expect(await loadCar(visitor)).toEqual(car);
+});
 
 it("persists pending, applied and dismissed states and reloads the changed schedule", async () => {
   const car = demoCar(NOW, visitor, randomUUID);
