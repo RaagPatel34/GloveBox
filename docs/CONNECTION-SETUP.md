@@ -1,4 +1,6 @@
-# Connect the remaining services
+# Service connections
+
+**October 28 status:** Neon, EIA and Tavily are connected and verified on the feature preview. Google Maps and AI remain disabled under the zero-dollar policy. See [current connection status and secret handling](API-CONNECTION-STATUS.md). The provider setup steps below also apply to new environments.
 
 Keep AI disabled throughout. Add secrets directly to provider dashboards and Vercel, never to chat, GitHub, screenshots, or NEXT_PUBLIC variables (except the deliberately public, restricted map embed key).
 
@@ -14,11 +16,11 @@ Cloud access uses an anonymous browser identity, not user accounts. Clearing tha
 
 ## 2. EIA — regional fuel averages
 
-Request an API key at https://www.eia.gov/opendata/register.php. Enter EIA_API_KEY privately in the same Vercel Preview environment and redeploy. Test the California weekly average and its reporting date. This does not provide station-level prices.
+The feature preview is connected; the hosted lookup returned $5.888/gal for the week of 2026-10-26. For a new environment, request an API key at https://www.eia.gov/opendata/register.php. Enter EIA_API_KEY privately in the same Vercel Preview environment and redeploy. Test the California weekly average and its reporting date. This does not provide station-level prices.
 
 ## 3. Google — discuss billing before enabling
 
-Create a Google Cloud project and review Maps billing/quotas before enabling anything. Routes and Places can incur usage charges. Budget alerts are not hard spending caps. Do not enable live calls until the owner approves the usage plan.
+The GloveBox Google Cloud project has no linked billing account and Maps stays disabled. For any future setup, review Maps billing/quotas before enabling anything. Routes and Places can incur usage charges. Budget alerts are not hard spending caps. Do not enable live calls until the owner approves the usage plan.
 
 Use a server-only key for Routes and Places (and Geocoding if used), restricted to only needed APIs. Put it in GOOGLE_MAPS_API_KEY. Keep ENABLE_MAPS=false until restrictions and quotas are set.
 
@@ -26,7 +28,7 @@ For the embedded map, use a separate browser key restricted to Maps Embed API an
 
 ## 4. Tavily — source search
 
-Create an account at https://app.tavily.com/. Review the available credits and disable any automatic spending before testing. Add TAVILY_API_KEY privately and set ENABLE_TAVILY=true only once usage is approved. The app requests basic search with no generated answer. Search excerpts require station/grade/date/conditions verification; they are not certified pump prices.
+The feature preview is connected and returned five source links in the hosted acceptance test. Its Free plan stops at the credit limit with pay-as-you-go off. For a new environment, create an account at https://app.tavily.com/. Review the available credits and disable any automatic spending before testing. Add TAVILY_API_KEY privately and set ENABLE_TAVILY=true only once usage is approved. The app requests basic search with no generated answer. Search excerpts require station/grade/date/conditions verification; they are not certified pump prices.
 
 ## 5. Daily weather — after database and release acceptance
 
