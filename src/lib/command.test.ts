@@ -53,7 +53,7 @@ describe("runCommand: service logs", () => {
 
     expect(reply.model).toBe("super");
     // A due date, not "14 days left": the dashboard reloads a moment later and must agree.
-    expect(reply.changes).toEqual(["Exterior wash logged Oct 22 at 48,000 mi. OK, next due Nov 5."]);
+    expect(reply.changes).toEqual(["Exterior wash logged Oct 22 at 48,000 mi. On track, next due Nov 5."]);
   });
 
   it("“odometer is 48,450” updates the car and every status that depends on it", async () => {
@@ -85,7 +85,7 @@ describe("runCommand: service logs", () => {
 
     expect(saved).toHaveLength(1);
     expect(chat.requests.filter((r) => r.tier === "super")).toHaveLength(1);
-    expect(reply.changes).toEqual(["Exterior wash logged Oct 22 at 48,000 mi. OK, next due Nov 5."]);
+    expect(reply.changes).toEqual(["Exterior wash logged Oct 22 at 48,000 mi. On track, next due Nov 5."]);
   });
 
   it("shows only numbers the tools computed, never the model's own", async () => {
@@ -101,7 +101,7 @@ describe("runCommand: service logs", () => {
     const shown = [reply.message, ...reply.changes].join("\n");
 
     expect(shown).not.toMatch(/99,999|12,345|Jan 1/);
-    expect(reply.changes).toEqual(["Oil change (synthetic) logged Oct 22 at 47,900 mi. OK, next due at 55,400 mi."]);
+    expect(reply.changes).toEqual(["Oil change (synthetic) logged Oct 22 at 47,900 mi. On track, next due at 55,400 mi."]);
   });
 
   it("gives Super the current schedule, the user's words and the router's reading", async () => {
@@ -465,8 +465,8 @@ describe("describeEffects", () => {
     if (!read.ok) throw new Error(read.error);
 
     const lines = describeEffects([logged.effect, read.effect]);
-    expect(lines[0]).toBe("Oil change (synthetic) logged Oct 22 at 47,900 mi. OK, next due at 55,400 mi.");
-    expect(lines).toContain("Oil change (synthetic): OK → Due soon.");
+    expect(lines[0]).toBe("Oil change (synthetic) logged Oct 22 at 47,900 mi. On track, next due at 55,400 mi.");
+    expect(lines).toContain("Oil change (synthetic): On track → Due soon.");
   });
 });
 

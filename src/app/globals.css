@@ -4,6 +4,7 @@
   --color-foreground: var(--foreground);
   --color-panel: var(--panel);
   --color-muted: var(--muted);
+  --color-rail: var(--rail);
   --color-overdue: var(--status-overdue);
   --color-overdue-text: var(--status-overdue-text);
   --color-due-soon: var(--status-due-soon);
@@ -15,9 +16,25 @@
 }
 
 
-:root { --ink: #22392f; --muted: #69786e; --paper: #f5f6f1; --line: #dce1d7; --green: #254c39; --lime: #d3ed9b; }
+/* One dark "instrument cluster" look, regardless of the system theme. */
+:root {
+  color-scheme: dark;
+  --background: #0d0e0f;
+  --foreground: #e9e7e2;
+  --panel: #151719;
+  --rail: #111315;
+  --muted: #8b8a86;
+  --status-overdue: #ff6a3d;
+  --status-overdue-text: #ff8a63;
+  --status-due-soon: #f2a815;
+  --status-due-soon-text: #f5bd4a;
+  --status-ok: #5fd0a0;
+  --status-ok-text: #7fdcb3;
+  /* PR #2's names, pointed at the tokens until its .app-shell rules are rewritten. */
+  --ink: var(--foreground); --paper: var(--background); --line: rgb(255 255 255 / .1); --green: var(--foreground); --lime: var(--foreground);
+}
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--paper); color: var(--ink); font-family: Arial, Helvetica, sans-serif; font-size: 14px; }
+body { margin: 0; background: var(--background); color: var(--foreground); font-family: var(--font-sans); font-size: 14px; }
 .app-shell button, .app-shell textarea, .app-shell select { font: inherit; }
 .app-shell button, .app-shell a, .app-shell select { -webkit-tap-highlight-color: transparent; }
 .app-shell button { cursor: pointer; }
@@ -132,23 +149,6 @@ body { margin: 0; background: var(--paper); color: var(--ink); font-family: Aria
 .app-shell .link-button { display:inline-block; }
 @media (max-width:760px) { .app-shell .tool-panel { padding:19px; }.app-shell .form-grid, .app-shell .trip-inputs { grid-template-columns:1fr 1fr; }.app-shell .tools-grid { grid-template-columns:1fr; }.app-shell .trip-panel h2 { font-size:20px; }.app-shell .trip-panel .section-heading { align-items:start; }.app-shell .trip-panel .text-button { white-space:nowrap; }.app-shell .calculation-grid { grid-template-columns:1fr 1fr; }.app-shell .trip-result { padding:18px; }.app-shell .trip-result h3 { font-size:22px; } }
 @media (max-width:420px) { .app-shell .form-grid,.app-shell .trip-panel .form-grid:not(.trip-inputs) { grid-template-columns:1fr; }.app-shell .trip-inputs { grid-template-columns:1fr 1fr; }.app-shell .toolbar { gap:10px; }.app-shell .section-heading h2 { font-size:17px; } }
-
-.cloud-garage {
-  color-scheme: dark;
-  --background: #0d0e0f;
-  --foreground: #e9e7e2;
-  --panel: #151719;
-  --muted: #8b8a86;
-  --status-overdue: #ff6a3d;
-  --status-overdue-text: #ff8a63;
-  --status-due-soon: #f2a815;
-  --status-due-soon-text: #f5bd4a;
-  --status-ok: #5fd0a0;
-  --status-ok-text: #7fdcb3;
-}
-
-
-.cloud-garage { min-height:100vh; background:var(--background); color:var(--foreground); --font-body:Arial; --font-numeric:monospace; }
 
 /* Focused dashboard with supporting tools in their own sections. */
 .app-shell [hidden] { display: none !important; }

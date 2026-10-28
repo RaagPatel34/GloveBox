@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatLimit, formatReadDate, intervalUsed, numberFormat } from "./readout";
+import { formatLimit, formatReadDate, intervalUsed, numberFormat, STATUS_LABEL } from "./readout";
 import { inDays, NOW } from "./test-support";
 
 describe("intervalUsed", () => {
@@ -113,5 +113,11 @@ describe("formatReadDate", () => {
 describe("numberFormat", () => {
   it("groups thousands", () => {
     expect(numberFormat.format(48_250)).toBe("48,250");
+  });
+});
+
+describe("STATUS_LABEL", () => {
+  it("calls the OK state On track", () => {
+    expect(STATUS_LABEL.ok).toBe("On track");
   });
 });
