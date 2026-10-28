@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildDashboard, odometerDigits } from "./dashboard";
 import { inDays, NOW } from "./test-support";
-import type { CarSnapshot, ScheduleItem, Vehicle } from "./types";
+import type { CarSnapshot, Proposal, ScheduleItem, Vehicle } from "./types";
 
 const vehicle: Vehicle = {
   id: "v1",
@@ -81,7 +81,7 @@ describe("buildDashboard", () => {
       ]),
       NOW,
     );
-    expect(dash.counts).toEqual({ overdue: 1, due_soon: 1, ok: 2 });
+    expect(dash.counts).toEqual({ overdue: 1, due_soon: 1, ok: 2, unknown: 0 });
   });
 
   it("gives each item its tighter limit, label, used share and interval source", () => {
@@ -129,6 +129,74 @@ describe("buildDashboard", () => {
   it("leaves used share empty when the interval is unknown", () => {
     const dash = buildDashboard(snapshot([item({ kind: "wipers", dueAt: inDays(10) })]), NOW);
     expect(dash.items[0].usedPercent).toBeNull();
+  });
+});
+
+describe("buildDashboard: proposal cards", () => {
+  const oil = item({ kind: "oil", dueAt: "2026-12-26T12:00:00.000Z", dueOdometer: 48_400 });
+  const proposal = (over: Partial<Proposal>): Proposal => ({
+    id: "p1",
+    vehicleId: "v1",
+    itemId: "oil",
+    from: { dueAt: oil.dueAt, dueOdometer: 48_400 },
+    to: { dueAt: oil.dueAt, dueOdometer: 48_000 },
+    reason: "Change the oil before 300 dusty miles.",
+    model: "super",
+    state: "pending",
+    ...over,
+  });
+
+  it("shows each card's item, what moves from and to, its reason, model and state", () => {
+    const dash = buildDashboard(snapshot([oil]), NOW, [proposal({})]);
+    expect(dash.proposals).toEqual([
+      {
+        id: "p1",
+        label: "Oil change (synthetic)",
+        moves: [{ from: "48,400 mi", to: "48,000 mi" }],
+        reason: "Change the oil before 300 dusty miles.",
+        model: "super",
+        state: "pending",
+      },
+    ]);
+  });
+
+  it("shows a due date as a day, and both moves when date and mileage change", () => {
+    const both = proposal({ to: { dueAt: "2026-10-25T12:00:00.000Z", dueOdometer: 48_000 } });
+    expect(buildDashboard(snapshot([oil]), NOW, [both]).proposals[0].moves).toEqual([
+      { from: "Dec 26", to: "Oct 25" },
+      { from: "48,400 mi", to: "48,000 mi" },
+    ]);
+  });
+
+  it("shows no date move when the due date stays on the same day", () => {
+    const sameDay = proposal({
+      from: { dueAt: "2026-12-26T18:34:00.000Z", dueOdometer: 48_400 },
+      to: { dueAt: "2026-12-26T12:00:00.000Z", dueOdometer: 48_000 },
+    });
+    expect(buildDashboard(snapshot([oil]), NOW, [sameDay]).proposals[0].moves).toEqual([
+      { from: "48,400 mi", to: "48,000 mi" },
+    ]);
+  });
+
+  it("keeps applied cards, and leaves out dismissed ones and ones whose item is gone", () => {
+    const dash = buildDashboard(snapshot([oil]), NOW, [
+      proposal({ id: "applied", state: "applied" }),
+      proposal({ id: "dismissed", state: "dismissed" }),
+      proposal({ id: "orphan", itemId: "gone" }),
+    ]);
+    expect(dash.proposals.map((p) => [p.id, p.state])).toEqual([["applied", "applied"]]);
+  });
+
+  it("leaves out applied cards the user has hidden", () => {
+    const dash = buildDashboard(snapshot([oil]), NOW, [
+      proposal({ id: "shown", state: "applied" }),
+      proposal({ id: "hidden", state: "applied", hiddenAt: "2026-10-22T13:00:00.000Z" }),
+    ]);
+    expect(dash.proposals.map((p) => p.id)).toEqual(["shown"]);
+  });
+
+  it("has no cards when there are no proposals", () => {
+    expect(buildDashboard(snapshot([oil]), NOW).proposals).toEqual([]);
   });
 });
 

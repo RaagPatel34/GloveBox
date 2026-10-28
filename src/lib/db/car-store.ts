@@ -13,7 +13,19 @@ export async function loadCar(visitorId: string): Promise<CarSnapshot | null> {
   const vehicles = (await sql`SELECT * FROM vehicles WHERE visitor_id = ${visitorId}`) as VehicleRow[];
   if (vehicles.length === 0) return null;
   const items = (await sql`SELECT * FROM schedule_items WHERE vehicle_id = ${vehicles[0].id}`) as ItemRow[];
-  return fromRows(vehicles[0], items);
+  const snapshot = fromRows(vehicles[0], items);
+  const extra = (vehicles[0] as VehicleRow & {garage_extra?: import('../maintenance').Garage}).garage_extra;
+  if (extra) {
+    snapshot.plannedTripMiles = extra.plannedTripMiles;
+    snapshot.vehicle.isDemo = extra.vehicle.isDemo;
+    snapshot.vehicle.mpgSource = extra.vehicle.mpgSource;
+    snapshot.items = snapshot.items.map(item => {
+      const original = extra.items.find(i => i.id === item.id);
+      return {...item, intervalSource: original?.intervalSource ?? item.intervalSource,
+        reminderOrigin: original?.reminderOrigin};
+    });
+  }
+  return snapshot;
 }
 
 // Writes back what the agents can change on an existing car: the odometer reading and each
@@ -50,18 +62,18 @@ export async function updateCar(visitorId: string, snapshot: CarSnapshot, previo
 
 // Replaces whatever car the visitor had with this one, atomically: the vehicle, all of its
 // schedule items and any nudges to start it with (the demo car's) land together or not at all.
-export async function saveCar(visitorId: string, snapshot: CarSnapshot, nudges: Nudge[] = []): Promise<void> {
+export async function saveCar(visitorId: string, snapshot: CarSnapshot, nudges: Nudge[] = [], transfer?: { extra: string }): Promise<void> {
   if (!isVisitorId(visitorId)) throw new Error("Invalid visitor ID");
   const sql = getSql();
   const { vehicle, items } = toRows(visitorId, snapshot);
 
   await sql.transaction([
-    sql`DELETE FROM vehicles WHERE visitor_id = ${visitorId}`,
+    ...(transfer ? [] : [sql`DELETE FROM vehicles WHERE visitor_id = ${visitorId}`]),
     sql`INSERT INTO vehicles (id, visitor_id, year, make, model, epa_mpg, mpg_override, odometer,
-          weekly_miles, home_label, home_lat, home_lng, reading_at)
+          weekly_miles, home_label, home_lat, home_lng, reading_at, garage_extra)
         VALUES (${vehicle.id}, ${vehicle.visitor_id}, ${vehicle.year}, ${vehicle.make}, ${vehicle.model},
           ${vehicle.epa_mpg}, ${vehicle.mpg_override}, ${vehicle.odometer}, ${vehicle.weekly_miles},
-          ${vehicle.home_label}, ${vehicle.home_lat}, ${vehicle.home_lng}, ${vehicle.reading_at})`,
+          ${vehicle.home_label}, ${vehicle.home_lat}, ${vehicle.home_lng}, ${vehicle.reading_at}, ${transfer?.extra ?? null}::jsonb)`,
     ...items.map(
       (item) =>
         sql`INSERT INTO schedule_items (id, vehicle_id, kind, interval_days, interval_miles, last_done_at,

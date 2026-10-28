@@ -73,8 +73,8 @@ describe("itemStatus", () => {
     expect(itemStatus({ dueAt: inDays(60), dueOdometer: 51_000 }, NOW, 48_000)).toBe("ok");
   });
 
-  it("is ok when the item has no due target at all", () => {
-    expect(itemStatus({}, NOW, 48_000)).toBe("ok");
+  it("needs history when the item has no due target at all", () => {
+    expect(itemStatus({}, NOW, 48_000)).toBe("unknown");
   });
 });
 

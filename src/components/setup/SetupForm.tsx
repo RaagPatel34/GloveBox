@@ -10,7 +10,7 @@ type Selection = { year: string; make: string; model: string; optionId: string }
 const EMPTY: Selection = { year: "", make: "", model: "", optionId: "" };
 
 async function getJson<T>(query: string): Promise<T> {
-  const res = await fetch(`/api/vehicle${query}`);
+  const res = await fetch(`/api/epa${query}`);
   if (!res.ok) throw new Error("lookup failed");
   return (await res.json()) as T;
 }

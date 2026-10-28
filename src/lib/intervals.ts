@@ -67,6 +67,7 @@ export function itemStatus(
   now: Date,
   currentOdometer: number,
 ): ItemStatus {
+  if (item.dueAt === undefined && item.dueOdometer === undefined) return "unknown";
   const daysLeft =
     item.dueAt === undefined ? Infinity : (new Date(item.dueAt).getTime() - now.getTime()) / DAY_MS;
   const milesLeft =
@@ -78,4 +79,4 @@ export function itemStatus(
 }
 
 // Most urgent first, for sorting and for picking the limit that explains a status.
-export const STATUS_RANK: Record<ItemStatus, number> = { overdue: 0, due_soon: 1, ok: 2 };
+export const STATUS_RANK: Record<ItemStatus, number> = { overdue: 0, due_soon: 1, ok: 2, unknown: 3 };

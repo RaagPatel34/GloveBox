@@ -40,7 +40,7 @@ describe("demoCar", () => {
   it("stays the same however late in the day it is loaded", () => {
     const later = new Date(NOW.getTime() + 5 * 60 * 60 * 1000);
     const counts = buildDashboard(demoCar(later, VISITOR, randomUUID), later).counts;
-    expect(counts).toEqual({ overdue: 1, due_soon: 1, ok: 6 });
+    expect(counts).toEqual({ overdue: 1, due_soon: 1, ok: 6, unknown: 0 });
   });
 
   it("includes one manufacturer-sourced interval", () => {

@@ -14,19 +14,25 @@ const mono = Martian_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GloveBox",
-  description: "Your car's co-pilot for upkeep and trip costs.",
+  title: "GloveBox — A little care. A longer road.",
+  description: "Your car’s co-pilot for upkeep and trip costs.",
 };
 
+// The app is dark in every scheme, so one theme colour (the rail's) is enough. The page
+// runs under the notch and resizes with the on-screen keyboard; content pads with safe areas.
 export const viewport: Viewport = {
-  themeColor: "#0d0e0f",
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#111315",
   colorScheme: "dark",
+  viewportFit: "cover",
+  interactiveWidget: "resizes-content",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${body.variable} ${mono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full">{children}</body>
     </html>
   );
 }

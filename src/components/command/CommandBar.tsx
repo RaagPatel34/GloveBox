@@ -3,27 +3,30 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { MAX_COMMAND_LENGTH } from "@/lib/command-limits";
+import { commandReply } from "@/lib/command-reply";
 import type { CommandReply } from "@/lib/types";
 import { ModelBadge } from "./ModelBadge";
 
-const UNREACHABLE: CommandReply = { model: null, message: "Could not reach GloveBox. Check your connection and try again.", changes: [] };
+const UNREACHABLE = commandReply(null, "Could not reach GloveBox. Check your connection and try again.");
 
 async function sendCommand(text: string): Promise<CommandReply> {
   try {
-    const res = await fetch("/api/command", {
+    const res = await fetch("/api/cloud-command", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text }),
     });
     const body = (await res.json()) as Partial<CommandReply>;
-    return typeof body.message === "string" ? { model: body.model ?? null, message: body.message, changes: body.changes ?? [] } : UNREACHABLE;
+    return typeof body.message === "string"
+      ? commandReply(body.model ?? null, body.message, body.changes, body.proposals)
+      : UNREACHABLE;
   } catch {
     return UNREACHABLE;
   }
 }
 
-// One line to tell GloveBox what happened. A reply that changed the car reloads the
-// dashboard (a server component), so the tiles show the new statuses.
+// One line to tell GloveBox what happened. A reply that changed the car or added proposal
+// cards reloads the dashboard (a server component), so the tiles and cards are current.
 export function CommandBar() {
   const router = useRouter();
   const [text, setText] = useState("");
@@ -37,7 +40,7 @@ export function CommandBar() {
     const next = await sendCommand(text);
     setReply(next);
     setPending(false);
-    if (next.changes.length > 0) {
+    if (next.changes.length > 0 || next.proposals > 0) {
       setText("");
       router.refresh();
     }
@@ -55,7 +58,7 @@ export function CommandBar() {
           onChange={(e) => setText(e.target.value)}
           maxLength={MAX_COMMAND_LENGTH}
           autoComplete="off"
-          placeholder="“Just got a car wash” or “odometer is 48,210”"
+          placeholder="“Just got a car wash” or “camping trip, 300 miles on dirt roads”"
           className="min-w-0 flex-1 rounded-xl bg-panel px-4 py-3 text-base text-foreground ring-1 ring-white/10 placeholder:text-muted/70 focus:outline-none focus:ring-2 focus:ring-ok"
         />
         <button

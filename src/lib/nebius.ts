@@ -7,9 +7,12 @@ let client: OpenAI | undefined;
 // Server-only: never import this from a client component.
 // Created lazily so a missing key fails the request, not `next build`.
 export function nebius(): OpenAI {
+  if (process.env.ENABLE_LIVE_AI !== "true") throw new Error("Live AI is paused.");
   client ??= new OpenAI({
     baseURL: process.env.NEBIUS_BASE_URL ?? "https://api.tokenfactory.nebius.com/v1/",
     apiKey: process.env.NEBIUS_API_KEY,
+    timeout: 25000,
+    maxRetries: 0,
   });
   return client;
 }

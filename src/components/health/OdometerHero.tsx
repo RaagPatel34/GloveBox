@@ -3,7 +3,7 @@ import { formatReadDate, numberFormat, STATUS_LABEL } from "@/lib/readout";
 import type { ItemStatus, Vehicle } from "@/lib/types";
 import { TONE } from "./tone";
 
-const STATUS_ORDER: ItemStatus[] = ["overdue", "due_soon", "ok"];
+const STATUS_ORDER: ItemStatus[] = ["overdue", "due_soon", "ok", "unknown"];
 
 export function OdometerHero({
   vehicle,
@@ -46,7 +46,7 @@ export function OdometerHero({
         </p>
       </div>
 
-      <dl aria-label="Items by status" className="grid grid-cols-3 gap-2 text-center">
+      <dl aria-label="Items by status" className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
         {STATUS_ORDER.map((status) => (
           // Term first in the markup (valid <dl>); the count is shown above its label.
           <div

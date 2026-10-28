@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-28T00:00:00Z",
+  "title": "Design System: GloveBox",
+  "extensions": {
+    "colorMeta": {
+      "cluster-white": { "role": "primary", "displayName": "Cluster White", "canonical": "#e9e7e2", "tonalRamp": ["oklch(15% 0.004 90)", "oklch(27% 0.005 90)", "oklch(39% 0.006 90)", "oklch(51% 0.007 90)", "oklch(63% 0.007 90)", "oklch(75% 0.007 90)", "oklch(87% 0.006 90)", "oklch(93.5% 0.006 90)"] },
+      "plate-white-hover": { "role": "primary", "displayName": "Plate White", "canonical": "#ffffff", "tonalRamp": ["oklch(15% 0 0)", "oklch(27% 0 0)", "oklch(39% 0 0)", "oklch(51% 0 0)", "oklch(63% 0 0)", "oklch(75% 0 0)", "oklch(87% 0 0)", "oklch(100% 0 0)"] },
+      "telltale-overdue": { "role": "secondary", "displayName": "Overdue Amber-Red", "canonical": "#ff6a3d", "tonalRamp": ["oklch(18% 0.05 38)", "oklch(30% 0.09 38)", "oklch(42% 0.13 38)", "oklch(54% 0.17 38)", "oklch(68% 0.19 38)", "oklch(76% 0.15 38)", "oklch(86% 0.08 38)", "oklch(95% 0.03 38)"] },
+      "telltale-overdue-text": { "role": "secondary", "displayName": "Overdue Text", "canonical": "#ff8a63", "tonalRamp": ["oklch(18% 0.05 40)", "oklch(30% 0.08 40)", "oklch(42% 0.12 40)", "oklch(54% 0.15 40)", "oklch(66% 0.16 40)", "oklch(74% 0.15 40)", "oklch(86% 0.08 40)", "oklch(95% 0.03 40)"] },
+      "telltale-due-soon": { "role": "secondary", "displayName": "Due-Soon Amber", "canonical": "#f2a815", "tonalRamp": ["oklch(18% 0.04 75)", "oklch(30% 0.07 75)", "oklch(42% 0.10 75)", "oklch(54% 0.13 75)", "oklch(66% 0.15 75)", "oklch(77% 0.16 75)", "oklch(87% 0.10 75)", "oklch(95% 0.04 75)"] },
+      "telltale-due-soon-text": { "role": "secondary", "displayName": "Due-Soon Text", "canonical": "#f5bd4a", "tonalRamp": ["oklch(18% 0.04 80)", "oklch(30% 0.07 80)", "oklch(42% 0.10 80)", "oklch(54% 0.12 80)", "oklch(66% 0.14 80)", "oklch(82% 0.14 80)", "oklch(89% 0.09 80)", "oklch(96% 0.04 80)"] },
+      "telltale-ok": { "role": "secondary", "displayName": "On-Track Green", "canonical": "#5fd0a0", "tonalRamp": ["oklch(18% 0.03 162)", "oklch(30% 0.06 162)", "oklch(42% 0.08 162)", "oklch(54% 0.10 162)", "oklch(66% 0.12 162)", "oklch(78% 0.12 162)", "oklch(88% 0.08 162)", "oklch(96% 0.03 162)"] },
+      "telltale-ok-text": { "role": "secondary", "displayName": "On-Track Text", "canonical": "#7fdcb3", "tonalRamp": ["oklch(18% 0.03 165)", "oklch(30% 0.05 165)", "oklch(42% 0.07 165)", "oklch(54% 0.09 165)", "oklch(66% 0.10 165)", "oklch(83% 0.10 165)", "oklch(90% 0.07 165)", "oklch(96% 0.03 165)"] },
+      "night-dash": { "role": "neutral", "displayName": "Night Dash", "canonical": "#0d0e0f", "tonalRamp": ["oklch(15% 0.002 250)", "oklch(19% 0.003 250)", "oklch(22% 0.004 250)", "oklch(30% 0.004 250)", "oklch(45% 0.004 250)", "oklch(62% 0.004 250)", "oklch(80% 0.003 250)", "oklch(95% 0.002 250)"] },
+      "panel-graphite": { "role": "neutral", "displayName": "Panel Graphite", "canonical": "#151719", "tonalRamp": ["oklch(15% 0.004 250)", "oklch(20% 0.005 250)", "oklch(25% 0.006 250)", "oklch(33% 0.006 250)", "oklch(48% 0.006 250)", "oklch(64% 0.005 250)", "oklch(81% 0.004 250)", "oklch(95% 0.002 250)"] },
+      "rail-shadow": { "role": "neutral", "displayName": "Rail Shadow", "canonical": "#111315", "tonalRamp": ["oklch(15% 0.004 250)", "oklch(19% 0.005 250)", "oklch(24% 0.006 250)", "oklch(32% 0.006 250)", "oklch(47% 0.006 250)", "oklch(63% 0.005 250)", "oklch(80% 0.004 250)", "oklch(95% 0.002 250)"] },
+      "dimmed-legend": { "role": "neutral", "displayName": "Dimmed Legend", "canonical": "#8b8a86", "tonalRamp": ["oklch(15% 0.004 90)", "oklch(27% 0.005 90)", "oklch(39% 0.006 90)", "oklch(51% 0.006 90)", "oklch(62.5% 0.006 90)", "oklch(74% 0.005 90)", "oklch(86% 0.004 90)", "oklch(95% 0.002 90)"] }
+    },
+    "typographyMeta": {
+      "readout": { "displayName": "Readout", "purpose": "The hero limit beside the Next up h1, a rolling drum-wheel number tinted with its status text tone." },
+      "display": { "displayName": "Display", "purpose": "The Next up item name, the dashboard's h1." },
+      "headline": { "displayName": "Headline", "purpose": "Page h1s on Service log, Trips and Car & settings." },
+      "title": { "displayName": "Title", "purpose": "Section h2s such as Coming up." },
+      "body": { "displayName": "Body", "purpose": "All prose, 14px base, helper text capped at 70ch." },
+      "number": { "displayName": "Number", "purpose": "Tile values, calculation values and table figures; always tabular." },
+      "label": { "displayName": "Legend", "purpose": "Uppercase tracked mono legends attached to values, statuses, badges and the wordmark. Never above a heading." }
+    },
+    "shadows": [
+      { "name": "panel-hairline", "value": "0 0 0 1px rgb(255 255 255 / .05)", "purpose": "Every panel and tool card at rest." },
+      { "name": "inset-ring", "value": "0 0 0 1px rgb(255 255 255 / .10)", "purpose": "Inset cards, notices, on-track and unknown tiles." },
+      { "name": "quiet-ring", "value": "0 0 0 1px rgb(255 255 255 / .15)", "purpose": "Quiet buttons, badges, file picker." },
+      { "name": "field-edge", "value": "0 0 0 1px rgb(255 255 255 / .35)", "purpose": "Field edges, 3:1 against the panel." },
+      { "name": "field-edge-focus", "value": "0 0 0 1px rgb(255 255 255 / .6)", "purpose": "Focused field edge." },
+      { "name": "error-ring", "value": "0 0 0 1px rgb(255 106 61 / .35)", "purpose": "Error message edge over an 8% overdue wash." },
+      { "name": "changed-ring", "value": "0 0 0 1px var(--foreground)", "purpose": "A tile an applied proposal just moved; pulses twice from a 6px 16% halo." },
+      { "name": "focus-outline", "value": "outline: 2px solid var(--foreground); outline-offset: 3px", "purpose": "Global keyboard focus." }
+    ],
+    "motion": [
+      { "name": "ease-gauge", "value": "cubic-bezier(0.22, 1, 0.36, 1)", "purpose": "Wheels, meters and the sliding nav plate." },
+      { "name": "roll", "value": "520ms var(--ease-gauge)", "purpose": "Wheel and meter changes after ignition." },
+      { "name": "ignition", "value": "1100ms var(--ease-gauge)", "purpose": "First garage render of a visit sweeps up from zero; once only." },
+      { "name": "press", "value": "scale 0.96, 150ms ease-out", "purpose": "Any enabled button on press." },
+      { "name": "reply-in", "value": "opacity 200ms ease-out", "purpose": "A new status reply fades in." },
+      { "name": "lit-pulse", "value": "1.6s cubic-bezier(0.16, 1, 0.3, 1) x2", "purpose": "Changed tile halo." },
+      { "name": "page-swap", "value": "out 120ms ease-out; in 260ms cubic-bezier(0.2, 0, 0, 1) after 60ms, 12px rise and 4px blur", "purpose": "Content area on page change; the shell holds still." },
+      { "name": "plate-slide", "value": "320ms var(--ease-gauge)", "purpose": "Current-page plate and tab mark slide between items." }
+    ],
+    "breakpoints": [
+      { "name": "tiles-2up", "value": "420px" },
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg-rail", "value": "1024px" },
+      { "name": "xl-tiles-3up", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The lit foreground plate; one per decision.",
+      "html": "<button class=\"ds-btn-primary\">Log this service <svg width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4 10h12M11 5l5 5-5 5\"/></svg></button>",
+      "css": ".ds-btn-primary { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 8px; padding: 10px 16px; background: var(--foreground, #e9e7e2); color: var(--background, #0d0e0f); font: 600 14px var(--font-body, 'Instrument Sans'), system-ui, sans-serif; cursor: pointer; transition: scale 150ms ease-out, background-color 150ms ease-out; } .ds-btn-primary:hover { background: #fff; } .ds-btn-primary:focus-visible { outline: 2px solid #e9e7e2; outline-offset: 3px; } .ds-btn-primary:active { scale: 0.96; } .ds-btn-primary:disabled { opacity: .4; cursor: not-allowed; }"
+    },
+    {
+      "name": "Quiet Button",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "Secondary actions: a transparent plate with a hairline ring.",
+      "html": "<button class=\"ds-btn-quiet\">Why this date?</button>",
+      "css": ".ds-btn-quiet { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 8px; padding: 10px 16px; background: transparent; color: #e9e7e2; font: 500 14px 'Instrument Sans', system-ui, sans-serif; box-shadow: 0 0 0 1px rgb(255 255 255 / .15); cursor: pointer; transition: scale 150ms ease-out, background-color 150ms ease-out, box-shadow 150ms ease-out; } .ds-btn-quiet:hover { background: rgb(255 255 255 / .05); box-shadow: 0 0 0 1px rgb(255 255 255 / .3); } .ds-btn-quiet:focus-visible { outline: 2px solid #e9e7e2; outline-offset: 3px; } .ds-btn-quiet:active { scale: 0.96; }"
+    },
+    {
+      "name": "Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "A dark well with a 35% ring; never below 16px text.",
+      "html": "<label class=\"ds-field-label\">Odometer<input class=\"ds-field\" placeholder=\"e.g. 48,200\"></label>",
+      "css": ".ds-field-label { display: block; font: 14px 'Instrument Sans', system-ui, sans-serif; color: #8b8a86; } .ds-field { display: block; width: 100%; margin-top: 6px; border: 0; border-radius: 8px; padding: 10px 12px; background: rgb(0 0 0 / .4); color: #e9e7e2; caret-color: #e9e7e2; font: 16px 'Instrument Sans', system-ui, sans-serif; box-shadow: 0 0 0 1px rgb(255 255 255 / .35); } .ds-field::placeholder { color: #8b8a86; opacity: 1; } .ds-field:focus-visible { box-shadow: 0 0 0 1px rgb(255 255 255 / .6); outline: 2px solid #e9e7e2; outline-offset: 3px; }"
+    },
+    {
+      "name": "Rail Navigation",
+      "kind": "nav",
+      "refersTo": "nav-item",
+      "description": "Desktop rail items; the current item carries a sliding 7% plate.",
+      "html": "<nav class=\"ds-rail\"><a class=\"ds-nav-item\" aria-current=\"page\" href=\"#\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3.5 14a7 7 0 1 1 13 0\"/><path d=\"m10 11 3-4\"/><circle cx=\"10\" cy=\"11.5\" r=\"1\"/></svg>Dashboard</a><a class=\"ds-nav-item\" href=\"#\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"4\" y=\"3\" width=\"12\" height=\"14\" rx=\"2\"/><path d=\"M7 7h6M7 10h6M7 13h3\"/></svg>Service log</a></nav>",
+      "css": ".ds-rail { display: flex; flex-direction: column; gap: 4px; width: 240px; padding: 24px; background: #111315; } .ds-nav-item { display: flex; min-height: 44px; align-items: center; gap: 12px; border-radius: 8px; padding: 10px 12px; color: #8b8a86; font: 14px 'Instrument Sans', system-ui, sans-serif; text-decoration: none; transition: color 150ms, background-color 150ms; } .ds-nav-item:hover { background: rgb(255 255 255 / .04); color: #e9e7e2; } .ds-nav-item[aria-current=page] { background: rgb(255 255 255 / .07); color: #e9e7e2; } .ds-nav-item:focus-visible { outline: 2px solid #e9e7e2; outline-offset: 3px; }"
+    },
+    {
+      "name": "Model Badge",
+      "kind": "chip",
+      "refersTo": "model-badge",
+      "description": "Which Nemotron tier answered; on every AI answer.",
+      "html": "<span class=\"ds-badge\">Nemotron <b>Super</b></span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 9999px; padding: 2px 8px; font: 10px 'Martian Mono', ui-monospace, monospace; letter-spacing: .12em; text-transform: uppercase; color: #8b8a86; box-shadow: 0 0 0 1px rgb(255 255 255 / .15); } .ds-badge b { font-weight: 400; color: #e9e7e2; }"
+    },
+    {
+      "name": "Item Tile",
+      "kind": "card",
+      "refersTo": "tile",
+      "description": "One upkeep item: status written out, remaining limit, interval meter, source.",
+      "html": "<div class=\"ds-tile\"><div class=\"ds-tile-head\"><h3>Tire rotation</h3><span class=\"ds-tile-status\">Due soon</span></div><p class=\"ds-tile-value\">640<span>MI</span></p><div class=\"ds-meter\"><div style=\"width:82%\"></div></div><p class=\"ds-tile-foot\"><span>82% of interval</span><span>Owner's manual</span></p></div>",
+      "css": ".ds-tile { width: 260px; border-radius: 16px; background: #151719; padding: 16px; box-shadow: 0 0 0 1px rgb(242 168 21 / .3); color: #e9e7e2; font: 14px 'Instrument Sans', system-ui, sans-serif; } .ds-tile-head { display: flex; justify-content: space-between; gap: 8px; } .ds-tile-head h3 { margin: 0; font-size: 14px; font-weight: 500; } .ds-tile-status { font: 11px 'Martian Mono', monospace; letter-spacing: .1em; text-transform: uppercase; color: #f5bd4a; } .ds-tile-value { margin: 20px 0 0; font: 24px 'Martian Mono', monospace; font-variant-numeric: tabular-nums; } .ds-tile-value span { margin-left: 6px; font-size: 12px; letter-spacing: .12em; color: #8b8a86; } .ds-meter { margin-top: 12px; height: 6px; border-radius: 9999px; background: rgb(255 255 255 / .1); overflow: hidden; } .ds-meter div { height: 100%; border-radius: 9999px; background: #f2a815; } .ds-tile-foot { display: flex; justify-content: space-between; margin: 8px 0 0; font-size: 12px; color: #8b8a86; }"
+    },
+    {
+      "name": "Odometer",
+      "kind": "custom",
+      "refersTo": "rail",
+      "description": "Signature drum-wheel digit tiles in the rail.",
+      "html": "<p class=\"ds-odo\"><span>0</span><span>4</span><span>8</span><span>2</span><span>1</span><span>7</span><small>mi</small></p>",
+      "css": ".ds-odo { display: flex; gap: 2px; margin: 0; font: 24px 'Martian Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; color: #e9e7e2; } .ds-odo span { border-radius: 4px; background: rgb(0 0 0 / .6); padding: .12em .28em; box-shadow: 0 0 0 1px rgb(255 255 255 / .05); } .ds-odo small { align-self: flex-end; padding-left: 4px; font-size: 12px; color: #8b8a86; }"
+    },
+    {
+      "name": "Panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "The graphite surface for every page section.",
+      "html": "<section class=\"ds-panel\"><h2>Drive review</h2><p>Tell GloveBox about a drive. Nothing changes until you apply.</p></section>",
+      "css": ".ds-panel { border-radius: 16px; background: #151719; padding: 20px; box-shadow: 0 0 0 1px rgb(255 255 255 / .05); color: #e9e7e2; font: 14px/1.6 'Instrument Sans', system-ui, sans-serif; } .ds-panel h2 { margin: 0; font-size: 17px; font-weight: 500; letter-spacing: -.01em; } .ds-panel p { margin: 14px 0 0; color: #8b8a86; max-width: 70ch; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Instrument Cluster",
+    "overview": "GloveBox is read the way a driver reads a dashboard: a glance, one urgent thing, and the numbers that back it. The whole app is a single dark cluster, dark in every system theme, with a rail one step darker than the panels so the car's identity, odometer and status counts sit behind the glass like a fixed bezel while the content area changes.\n\nNumbers are the instrument. Every figure is set in a monospaced face with tabular digits; the odometer and the headline limits are drum-wheel readouts that roll to their value, and interval progress is a thin gauge meter. Prose is quiet and plain beside them. Colour is almost absent: a warm off-white foreground on near-black graphite, with three telltale hues that light up only to report status, exactly as warning lamps do in a car.\n\nDensity is moderate and phone-first. Surfaces are flat, separated by tone and hairline rings rather than shadows. Motion has one orchestrated moment (the ignition sweep, once per visit) and otherwise only answers the user.",
+    "keyCharacteristics": [
+      "Dark-only cluster: near-black base, graphite panels, a darker rail.",
+      "Martian Mono for every number, tabular, often as a rolling drum wheel.",
+      "Telltale colours (overdue, due soon, on track) carry status and nothing else.",
+      "Foreground-white is the only action colour and the only \"changed\" and focus colour.",
+      "Flat tonal layers with 1px translucent rings; no drop shadows.",
+      "The single most urgent item is the page's h1, its limit the largest number on screen."
+    ],
+    "rules": [
+      { "name": "The Telltale Rule", "body": "Status hues mean status only. Focus, selection, \"changed\", links and actions use Cluster White, never an overdue, due-soon or on-track hue.", "section": "colors" },
+      { "name": "The Written Status Rule", "body": "A status colour never stands alone: every tinted dot, ring or number sits beside the status written out in words.", "section": "colors" },
+      { "name": "The Darker Rail Rule", "body": "The rail is one step darker than the panels (#111315 against #151719), never lighter and never the same.", "section": "colors" },
+      { "name": "The Mono Numbers Rule", "body": "Every number (miles, dates as readouts, counts, costs, percentages in data) is Martian Mono with tabular figures. Prose numbers inside sentences may stay in the body face.", "section": "typography" },
+      { "name": "The Legend-Not-Kicker Rule", "body": "Uppercase tracked mono is only a legend attached to a value, status or badge. It never sits above a heading as a section label.", "section": "typography" },
+      { "name": "The No-Drop-Shadow Rule", "body": "Nothing floats. Surfaces separate by tone and a 1px ring; the rail and tab bar earn their separation from tone and a hairline border, plus backdrop blur when content scrolls beneath them on phones.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep the app dark in every system theme: Night Dash base, Panel Graphite surfaces, the rail one step darker (#111315).",
+      "Do set every data number in Martian Mono with tabular figures, and make headline values roll as drum wheels.",
+      "Do write status in words beside every status colour, and use the telltale text tones (#ff8a63, #f5bd4a, #7fdcb3) for tinted text.",
+      "Do use Cluster White for focus (2px outline, 3px offset), selection, \"changed\" and the primary action.",
+      "Do separate surfaces with tone and 1px translucent white rings; fields hold a 35% ring for 3:1 against the panel.",
+      "Do keep controls at least 44px tall and inputs at least 16px text.",
+      "Do gate hover styles to `(hover: hover) and (pointer: fine)` and keep all motion behind `prefers-reduced-motion: no-preference`, with values correct at first paint."
+    ],
+    "donts": [
+      "Don't use an overdue, due-soon or on-track hue for focus, links, selection, decoration or \"changed\"; telltales report status only.",
+      "Don't add drop shadows or offset shadows; depth is tonal.",
+      "Don't put uppercase tracked labels (eyebrows, kickers) above headings; mono legends belong to values, statuses and badges.",
+      "Don't mark notices or messages with a coloured side stripe; a notice is a neutral 4% wash with a 10% ring.",
+      "Don't use Unicode glyphs as icons; use the authored 20px SVG set.",
+      "Don't add a second orchestrated animation; ignition happens once per visit, and everything else answers the user."
+    ]
+  }
+}
