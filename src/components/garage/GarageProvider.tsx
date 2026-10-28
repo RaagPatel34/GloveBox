@@ -44,7 +44,9 @@ function write(next: Garage): boolean {
 export function GarageProvider({ children }: { children: ReactNode }) {
   const [garage, setGarage] = useState<Garage | null>(null);
   const [ready, setReady] = useState(false);
-  const [now, setNow] = useState(() => new Date());
+  // A fixed placeholder until the load effect reads the clock: reading it during render
+  // would bake the prerender's time into the page. Nothing shows `now` before `ready`.
+  const [now, setNow] = useState(() => new Date(0));
   const [message, setMessage] = useState("");
   const [storageError, setStorageError] = useState("");
   // The garage a reset replaced, kept until the next reset so it can be restored.
