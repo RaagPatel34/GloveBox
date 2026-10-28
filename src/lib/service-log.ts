@@ -9,6 +9,7 @@ import {
   MAX_ODOMETER,
 } from "./intervals";
 import { tighterLimit } from "./limits";
+import { parsePlainDate } from "./days";
 import type { CarSnapshot, ItemStatus, ScheduleItem, ScheduleItemKind } from "./types";
 
 // What the maintenance agent's write tools do to a car: log a service, correct the odometer.
@@ -46,8 +47,8 @@ const ODOMETER_ERROR = `The odometer must be a whole number of miles up to ${MAX
 // same calendar day in California. Returns an error string for anything else.
 function parseServiceDate(raw: string | undefined, now: Date): Date | string {
   if (raw === undefined) return now;
-  const date = isPlainDate(raw) ? new Date(`${raw}T12:00:00.000Z`) : new Date(raw);
-  if (!/^\d{4}-\d{2}-\d{2}/.test(raw) || Number.isNaN(date.getTime())) {
+  const date = isPlainDate(raw) ? parsePlainDate(raw) : new Date(raw);
+  if (!date || !/^\d{4}-\d{2}-\d{2}/.test(raw) || Number.isNaN(date.getTime())) {
     return `"${raw}" is not a date. Use YYYY-MM-DD.`;
   }
   // A bare date for today is pinned to noon, which may still be ahead of `now`: use now.

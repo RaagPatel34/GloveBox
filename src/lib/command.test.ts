@@ -33,6 +33,16 @@ async function send(
 const route = (json: object) => say(JSON.stringify(json));
 
 describe("runCommand: service logs", () => {
+  it("refuses an impossible calendar date instead of logging service on the next month", async () => {
+    const chat = scriptedChat({
+      nano: [route({ intent: "service_log", item: "wash", date: "2026-09-31" })],
+      super: [callTools(["logService", { item: "wash" }]), say("Done.")],
+    });
+    const { reply, saved } = await send("washed the car on September 31", chat);
+    expect(saved).toEqual([]);
+    expect(reply.message).toContain("I couldn't log that");
+  });
+
   it("“just got a car wash” resets the wash and its status, and saves the car", async () => {
     const chat = scriptedChat({
       nano: [route({ intent: "service_log", item: "wash" })],

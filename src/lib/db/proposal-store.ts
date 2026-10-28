@@ -27,7 +27,7 @@ export async function loadProposal(visitorId: string, proposalId: string): Promi
   return rows.length === 0 ? null : proposalFromRow(rows[0]);
 }
 
-// Adds new proposals, all or none. A proposal for a vehicle the visitor does not own is skipped.
+// Adds new proposals, all or none. A missing or unowned vehicle/item rejects the whole batch.
 // A new proposal replaces any card still pending for the same item: that one is dismissed in
 // the same transaction, so there is never more than one card waiting per item.
 export async function addProposals(visitorId: string, proposals: Proposal[]): Promise<void> {
@@ -49,9 +49,11 @@ export async function addProposals(visitorId: string, proposals: Proposal[]): Pr
             AND vehicle_id = (SELECT id FROM vehicles WHERE id = ${row.vehicle_id} AND visitor_id = ${visitorId})`,
         sql`INSERT INTO proposals (id, vehicle_id, item_id, from_due_at, from_due_odometer, to_due_at,
             to_due_odometer, reason, model, state)
-          SELECT ${row.id}, ${row.vehicle_id}, ${row.item_id}, ${row.from_due_at}, ${row.from_due_odometer},
-            ${row.to_due_at}, ${row.to_due_odometer}, ${row.reason}, ${row.model}, ${row.state}
-          WHERE EXISTS (SELECT 1 FROM vehicles WHERE id = ${row.vehicle_id} AND visitor_id = ${visitorId})`,
+          VALUES (${row.id},
+            (SELECT v.id FROM vehicles v JOIN schedule_items s ON s.vehicle_id = v.id
+              WHERE v.id = ${row.vehicle_id} AND v.visitor_id = ${visitorId} AND s.id = ${row.item_id}),
+            ${row.item_id}, ${row.from_due_at}, ${row.from_due_odometer},
+            ${row.to_due_at}, ${row.to_due_odometer}, ${row.reason}, ${row.model}, ${row.state})`,
       ];
     }),
   ]);
