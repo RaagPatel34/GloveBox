@@ -2,10 +2,17 @@
 
 import { useGarage } from "@/components/garage/GarageProvider";
 import { EmptyGarage } from "@/components/shell/EmptyGarage";
+import { TripPlanner } from "@/components/trip-planner";
 
-// Placeholder until the page is built (plan Task 5).
-export default function Page() {
+// What will this drive cost? The route planner and the gas-detour calculator.
+export default function TripsPage() {
   const { garage } = useGarage();
   if (!garage) return <EmptyGarage />;
-  return <h1 className="text-2xl font-medium tracking-tight">trips</h1>;
+  const mpg = garage.vehicle.mpgOverride || garage.vehicle.epaMpg;
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-medium tracking-tight">Trips</h1>
+      <TripPlanner key={`${garage.vehicle.id}-${mpg}`} mpg={mpg} />
+    </div>
+  );
 }
