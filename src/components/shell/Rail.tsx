@@ -34,6 +34,7 @@ export function Rail({ current }: { current: PageHref | null }) {
           {dashboard && (
             <span className="truncate text-sm text-muted lg:hidden">
               {dashboard.vehicle.year} {dashboard.vehicle.make} {dashboard.vehicle.model}
+              {dashboard.vehicle.isDemo && " · Demo car"}
             </span>
           )}
         </div>
@@ -45,6 +46,7 @@ export function Rail({ current }: { current: PageHref | null }) {
                 {dashboard.vehicle.year} {dashboard.vehicle.make}
               </p>
               <p className="text-2xl font-medium tracking-tight">{dashboard.vehicle.model}</p>
+              {dashboard.vehicle.isDemo && <p className="mt-1 text-xs text-muted">Demo car · illustrative records</p>}
             </div>
 
             <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2 max-lg:-mt-3 lg:block">

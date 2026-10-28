@@ -70,7 +70,6 @@ body { margin: 0; background: var(--background); color: var(--foreground); font-
   .app-shell .tool-panel h3 { font-size: 14px; font-weight: 500; margin: 20px 0 0; }
   .app-shell .section-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; }
   .app-shell .section-heading > * { margin: 0; }
-  .app-shell .eyebrow { margin: 0 0 6px; font-family: var(--font-mono); font-size: 11px; letter-spacing: .12em; color: var(--muted); }
   .app-shell .helper, .app-shell .tiny, .app-shell .field-note { color: var(--muted); line-height: 1.6; }
   .app-shell .helper { font-size: 14px; max-width: 70ch; }
   .app-shell .tiny { font-size: 12px; }
@@ -114,7 +113,7 @@ body { margin: 0; background: var(--background); color: var(--foreground); font-
 
   /* Messages: a notice is neutral; an error carries the overdue hue because it is a problem. */
   .app-shell .notice, .app-shell .error { border-radius: 10px; padding: 12px 14px; font-size: 14px; line-height: 1.6; }
-  .app-shell .notice { background: rgb(255 255 255 / .04); box-shadow: inset 2px 0 0 var(--foreground); }
+  .app-shell .notice { background: rgb(255 255 255 / .04); box-shadow: 0 0 0 1px rgb(255 255 255 / .1); }
   .app-shell .notice > * + * { margin-top: 10px; }
   .app-shell .error { background: rgb(255 106 61 / .08); color: var(--status-overdue-text); box-shadow: 0 0 0 1px rgb(255 106 61 / .35); }
   .app-shell .pill { display: inline-block; border-radius: 6px; padding: 3px 7px; font-family: var(--font-mono); font-size: 11px; letter-spacing: .1em; color: var(--muted); background: rgb(255 255 255 / .06); box-shadow: 0 0 0 1px rgb(255 255 255 / .1); }

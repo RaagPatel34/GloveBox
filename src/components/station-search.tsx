@@ -1,6 +1,7 @@
 'use client';
 import { useState, type FormEvent } from 'react';
 import type { StationSource } from '@/lib/station-sources';
+import { ExternalIcon } from '@/components/shell/icons';
 
 export function StationSearch() {
   const [query, setQuery] = useState('');
@@ -20,6 +21,6 @@ export function StationSearch() {
     <p className="helper">Search sends the station and city you enter to Tavily. Results are web excerpts, not verified pump prices. Open a source and check the exact station, fuel grade, cash/member conditions and price update date before entering a number below. No AI-generated answer is requested.</p>
     <form className="location-search" onSubmit={search}><label>Station and city<input required minLength={3} maxLength={160} value={query} onChange={e => setQuery(e.target.value)} placeholder="Station name, Buena Park, CA"/></label><button className="secondary" disabled={busy}>{busy ? 'Searching…' : 'Find price sources'}</button></form>
     {message && <p role="status" className="helper">{message}</p>}
-    {sources.map(source => <article className="notice" key={source.url}><a className="source-link" href={source.url} target="_blank" rel="noreferrer">{source.title} ↗</a><p>{source.excerpt}</p><span className="tiny">Unverified search excerpt</span></article>)}
+    {sources.map(source => <article className="notice" key={source.url}><a className="source-link" href={source.url} target="_blank" rel="noreferrer">{source.title} <ExternalIcon /></a><p>{source.excerpt}</p><span className="tiny">Unverified search excerpt</span></article>)}
   </details>;
 }

@@ -63,3 +63,12 @@ export function ArrowIcon(props: IconProps) {
     </svg>
   );
 }
+
+// Marks a link that opens another site.
+export function ExternalIcon(props: IconProps) {
+  return (
+    <svg {...base({ width: 14, height: 14, className: "inline-block align-[-2px]", ...props })}>
+      <path d="M8 4H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-3M11 4h5v5M16 4l-7 7" />
+    </svg>
+  );
+}

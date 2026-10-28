@@ -69,7 +69,9 @@ export function Tile({
         </span>
         {unit && <span className="ml-1.5 text-xs tracking-[0.12em] text-muted uppercase">{unit}</span>}
       </p>
-      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10" aria-hidden>
+      {/* No interval, no scale: an empty track would read as "0% used". The row keeps its
+          height so tiles stay aligned and FLIP stays steady. */}
+      <div className={`mt-3 h-1.5 overflow-hidden rounded-full ${used === null ? "" : "bg-white/10"}`} aria-hidden>
         {used !== null && (
           <div
             className={`meter-fill h-full origin-left rounded-full ${tone.fill}`}

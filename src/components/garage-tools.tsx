@@ -2,6 +2,7 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { createGarage, logService, setSchedule, updateOdometer, setMileagePlan, HONDA_SOURCE, TIRE_SOURCE } from '@/lib/garage';
 import { isGarage, LABELS, type Garage } from '@/lib/maintenance';
+import { ExternalIcon } from '@/components/shell/icons';
 const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0,10);
 const field = (data: FormData, name: string) => String(data.get(name) || '').trim();
 
@@ -38,7 +39,7 @@ export function CarSetup({ existing, onSave, onCancel }: { existing:boolean; onS
     {options.length>0 && <label className="spaced">Choose your engine / transmission<select value={epaId} disabled={busy} onChange={e=>{if(e.target.value) void lookup(e.target.value);}}><option value="">Select the matching configuration</option>{options.map(o=><option key={o.id} value={o.id}>{o.label}</option>)}</select></label>}
     <div className="form-grid spaced"><label>Fuel economy (MPG)<input required type="number" min="1" max="150" step="0.1" value={values.mpg} onChange={e=>change('mpg',e.target.value)} disabled={busy}/><span className="field-note">{epaId ? 'EPA combined estimate' : 'Your measured or manually entered estimate'}</span></label><label>Current odometer (mi)<input required type="number" inputMode="numeric" min="0" max="2000000" step="1" value={values.odometer} onChange={e=>change('odometer',e.target.value)} disabled={busy}/></label><label>Miles per week<input required type="number" inputMode="numeric" min="0" max="2000" value={values.weeklyMiles} onChange={e=>change('weeklyMiles',e.target.value)} disabled={busy}/><span className="field-note">Used only to estimate upcoming upkeep</span></label><label>City (optional)<input maxLength={100} placeholder="Buena Park, CA" value={values.location} onChange={e=>change('location',e.target.value)} disabled={busy}/></label></div>
     {existing && <label className="check-label"><input type="checkbox" required/> Replace this browser’s current garage. I’ve exported any history I want to keep.</label>}
-    {notice && <p className="notice" role="status">{notice}</p>}{error && <p className="error" role="alert">{error}</p>}<button className="primary" disabled={busy}>Save my car ↗</button>
+    {notice && <p className="notice" role="status">{notice}</p>}{error && <p className="error" role="alert">{error}</p>}<button className="primary" disabled={busy}>Save my car</button>
   </form></section>;
 }
 
@@ -109,5 +110,5 @@ export function BackupRestore({garage,onSave}:{garage:Garage;onSave:OnSave}) {
 }
 
 export function SourceLibrary({garage}:{garage:Garage}) {
-  return <details className="source-library"><summary>Where the guidance comes from</summary><p><a href={TIRE_SOURCE} target="_blank" rel="noreferrer">NHTSA: tire care ↗</a> recommends monthly pressure checks. We use a 30-day reminder after you log a check; use the pressure on your vehicle’s placard.</p>{garage.vehicle.year===2019 && garage.vehicle.make.toLowerCase()==='honda' && garage.vehicle.model.toLowerCase().includes('civic') && <p><a href={HONDA_SOURCE} target="_blank" rel="noreferrer">2019 Honda Civic Sedan: Maintenance Minder ↗</a> explains condition-dependent maintenance. This reference applies to the sedan; confirm your body style and manual. GloveBox does not turn it into a universal oil or filter interval.</p>}<p>Most items start without an assumed schedule. Add the interval and page or conditions from your own manual. Sample dates are illustrative; AI reminders are suggestions. Neither is a manufacturer-prescribed replacement date.</p></details>;
+  return <details className="source-library"><summary>Where the guidance comes from</summary><p><a href={TIRE_SOURCE} target="_blank" rel="noreferrer">NHTSA: tire care <ExternalIcon /></a> recommends monthly pressure checks. We use a 30-day reminder after you log a check; use the pressure on your vehicle’s placard.</p>{garage.vehicle.year===2019 && garage.vehicle.make.toLowerCase()==='honda' && garage.vehicle.model.toLowerCase().includes('civic') && <p><a href={HONDA_SOURCE} target="_blank" rel="noreferrer">2019 Honda Civic Sedan: Maintenance Minder <ExternalIcon /></a> explains condition-dependent maintenance. This reference applies to the sedan; confirm your body style and manual. GloveBox does not turn it into a universal oil or filter interval.</p>}<p>Most items start without an assumed schedule. Add the interval and page or conditions from your own manual. Sample dates are illustrative; AI reminders are suggestions. Neither is a manufacturer-prescribed replacement date.</p></details>;
 }

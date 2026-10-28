@@ -13,7 +13,8 @@ export function ComingUp({ items, changed, onSeen }: { items: DashboardItem[]; c
       <h2 id="coming-up-h" className="text-lg font-medium">
         Coming up <span className="text-sm font-normal text-muted">· soonest first</span>
       </h2>
-      <ul className="mt-3 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 xl:grid-cols-3">
+      {/* Positioned, so FLIP measures each tile within the grid and only a re-ranked tile slides. */}
+      <ul className="relative mt-3 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 xl:grid-cols-3">
         {items.map((item) => (
           <Tile key={item.id} item={item} changed={changed.includes(item.id)} onSeen={() => onSeen(item.id)} flipRef={flip(item.id)} />
         ))}

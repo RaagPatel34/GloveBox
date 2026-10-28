@@ -108,7 +108,7 @@ export default function CarPage() {
         />
       )}
 
-      <IntervalEditor key={vehicle.id} garage={garage} onSave={save} />
+      <IntervalEditor key={vehicle.id} garage={garage} onSave={(next) => save(next)} />
       <SourceLibrary garage={garage} />
       <BackupRestore garage={garage} onSave={save} />
       <div className={panelClass}>

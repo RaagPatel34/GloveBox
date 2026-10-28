@@ -40,7 +40,7 @@ export function GarageTransfer({ garage }: { garage: Garage }) {
       <button className="text-button" disabled={busy} onClick={() => setReview(false)}>Cancel</button>
     </div>}
     <button className="text-button" disabled={!visitor || busy} onClick={download}>Download original transferred archive</button>
-    <a className="source-link" href="/garage">Open cloud garage ↗</a>
+    <a className="source-link" href="/garage">Open cloud garage</a>
     {message && <p role="status">{message}</p>}
   </details>;
 }

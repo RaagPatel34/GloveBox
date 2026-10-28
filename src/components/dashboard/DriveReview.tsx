@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { ModelBadge } from "@/components/command/ModelBadge";
 import { useGarage } from "@/components/garage/GarageProvider";
 import { fieldClass, primaryButton, quietButton } from "@/components/shell/ui";
@@ -26,7 +26,7 @@ export function DriveReview({
   onReview: () => void;
   onApplied: (itemId: string) => void;
 }) {
-  const { garage, save, message } = useGarage();
+  const { garage, update, message } = useGarage();
   const [command, setCommand] = useState("");
   const [mode, setMode] = useState<"sample" | "live">("sample");
   const [liveAvailable, setLiveAvailable] = useState(false);
@@ -34,12 +34,6 @@ export function DriveReview({
   const [reply, setReply] = useState<Reply | null>(null);
   const [error, setError] = useState("");
   const [leaving, setLeaving] = useState<string[]>([]);
-  // A card resolves after its exit, so it must act on the garage as it is then, not as it
-  // was at the click: two quick decisions would otherwise overwrite each other.
-  const latest = useRef(garage);
-  useLayoutEffect(() => {
-    latest.current = garage;
-  }, [garage]);
   const pending = proposals.filter((card) => card.state === "pending");
 
   useEffect(() => {
@@ -72,9 +66,13 @@ export function DriveReview({
         if (!response.ok) throw new Error(result.error || "The request failed. Please try again.");
         data = result as CommandResult;
       }
-      const next = addProposals(garage, data.proposals);
-      if (!isGarage(next)) throw new Error("The response was invalid. Your schedule is unchanged.");
-      save(next);
+      // Added to the garage as it is now: a live review can take seconds, and anything saved
+      // meanwhile (a service, the planned-miles slider) must survive it.
+      update((current) => {
+        const next = addProposals(current, data.proposals);
+        if (!isGarage(next)) throw new Error("The response was invalid. Your schedule is unchanged.");
+        return next;
+      });
       setReply({ text: data.message, model: data.source === "sample" ? "sample" : "super" });
     } catch (err) {
       setError(
@@ -96,12 +94,15 @@ export function DriveReview({
     }, CARD_EXIT_MS);
   }
 
+  // A card resolves after its exit, so it acts on the garage as it is then, not as it was
+  // at the click: two quick decisions would otherwise overwrite each other.
   function resolve(id: string, action: "applied" | "dismissed") {
-    const current = latest.current;
-    if (!current) return;
     try {
-      const itemId = current.proposals.find((proposal) => proposal.id === id)?.itemId;
-      save(resolveProposal(current, id, action));
+      let itemId: string | undefined;
+      update((current) => {
+        itemId = current.proposals.find((proposal) => proposal.id === id)?.itemId;
+        return resolveProposal(current, id, action);
+      });
       if (action === "applied" && itemId) onApplied(itemId);
       setReply({
         text:
@@ -133,7 +134,7 @@ export function DriveReview({
             value={command}
             disabled={busy}
             onChange={(event) => setCommand(event.target.value)}
-            placeholder="300 miles on dirt roads, a beach weekend…"
+            placeholder="A dusty 300-mile weekend…"
             className={`min-w-0 flex-1 ${fieldClass}`}
           />
           <button type="submit" disabled={busy || !command.trim()} className={quietButton}>
@@ -162,7 +163,8 @@ export function DriveReview({
       </form>
 
       {/* The status region stays mounted and empty, so each new reply is announced. */}
-      <div className="mt-3 flex min-h-6 flex-wrap items-center gap-2 text-sm">
+      {/* Collapses while empty; the status region itself stays mounted. */}
+      <div className={`flex flex-wrap items-center gap-2 text-sm ${statusText ? "mt-3" : ""}`}>
         <p role="status">
           {statusText && (
             <span key={statusText} className="reply-in">
