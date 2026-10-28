@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { ModelBadge } from "@/components/command/ModelBadge";
 import { useGarage } from "@/components/garage/GarageProvider";
 import { fieldClass, primaryButton, quietButton } from "@/components/shell/ui";
@@ -12,8 +12,20 @@ const EXAMPLE = "I drove 300 miles on dirt roads";
 
 type Reply = { text: string; model: Proposal["model"] | null };
 
+// A decided card leaves first, then the schedule changes: cause, then effect.
+const CARD_EXIT_MS = 150;
+
 // Tell GloveBox about a drive; it suggests schedule changes, and nothing changes until you apply one.
-export function DriveReview({ proposals }: { proposals: ProposalCard[] }) {
+export function DriveReview({
+  proposals,
+  onReview,
+  onApplied,
+}: {
+  proposals: ProposalCard[];
+  // A new review is the next thing you act on, so earlier "Changed" marks have been seen.
+  onReview: () => void;
+  onApplied: (itemId: string) => void;
+}) {
   const { garage, save, message } = useGarage();
   const [command, setCommand] = useState("");
   const [mode, setMode] = useState<"sample" | "live">("sample");
@@ -21,6 +33,13 @@ export function DriveReview({ proposals }: { proposals: ProposalCard[] }) {
   const [busy, setBusy] = useState(false);
   const [reply, setReply] = useState<Reply | null>(null);
   const [error, setError] = useState("");
+  const [leaving, setLeaving] = useState<string[]>([]);
+  // A card resolves after its exit, so it must act on the garage as it is then, not as it
+  // was at the click: two quick decisions would otherwise overwrite each other.
+  const latest = useRef(garage);
+  useLayoutEffect(() => {
+    latest.current = garage;
+  }, [garage]);
   const pending = proposals.filter((card) => card.state === "pending");
 
   useEffect(() => {
@@ -38,6 +57,7 @@ export function DriveReview({ proposals }: { proposals: ProposalCard[] }) {
     setBusy(true);
     setError("");
     setReply(null);
+    onReview();
     try {
       let data: CommandResult;
       if (mode === "sample") data = sampleCommand(command, garage);
@@ -67,10 +87,22 @@ export function DriveReview({ proposals }: { proposals: ProposalCard[] }) {
     }
   }
 
+  function decide(id: string, action: "applied" | "dismissed") {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return resolve(id, action);
+    setLeaving((ids) => [...ids, id]);
+    window.setTimeout(() => {
+      resolve(id, action);
+      setLeaving((ids) => ids.filter((other) => other !== id));
+    }, CARD_EXIT_MS);
+  }
+
   function resolve(id: string, action: "applied" | "dismissed") {
-    if (!garage) return;
+    const current = latest.current;
+    if (!current) return;
     try {
-      save(resolveProposal(garage, id, action));
+      const itemId = current.proposals.find((proposal) => proposal.id === id)?.itemId;
+      save(resolveProposal(current, id, action));
+      if (action === "applied" && itemId) onApplied(itemId);
       setReply({
         text:
           action === "applied"
@@ -131,8 +163,12 @@ export function DriveReview({ proposals }: { proposals: ProposalCard[] }) {
 
       {/* The status region stays mounted and empty, so each new reply is announced. */}
       <div className="mt-3 flex min-h-6 flex-wrap items-center gap-2 text-sm">
-        <p role="status" className="reply-line">
-          {statusText}
+        <p role="status">
+          {statusText && (
+            <span key={statusText} className="reply-in">
+              {statusText}
+            </span>
+          )}
         </p>
         {!busy && reply?.model && <ModelBadge model={reply.model} />}
       </div>
@@ -150,7 +186,12 @@ export function DriveReview({ proposals }: { proposals: ProposalCard[] }) {
           </h2>
           <div className="mt-3 grid gap-3 md:grid-cols-2">
             {pending.map((card) => (
-              <article key={card.id} className="rounded-xl bg-black/30 p-4 ring-1 ring-white/10">
+              <article
+                key={card.id}
+                className={`rounded-xl bg-black/30 p-4 ring-1 ring-white/10 transition-[opacity,scale,translate,filter] duration-150 ease-out ${
+                  leaving.includes(card.id) ? "-translate-y-3 scale-[0.98] opacity-0 blur-[4px]" : ""
+                }`}
+              >
                 <div className="flex items-center justify-between gap-3">
                   <h3 className="font-medium">{card.label}</h3>
                   <ModelBadge model={card.model} />
@@ -164,10 +205,10 @@ export function DriveReview({ proposals }: { proposals: ProposalCard[] }) {
                 ))}
                 <p className="mt-2 text-sm text-muted">{card.reason}</p>
                 <div className="mt-3 flex gap-2">
-                  <button type="button" disabled={busy} onClick={() => resolve(card.id, "applied")} className={primaryButton}>
+                  <button type="button" disabled={busy || leaving.includes(card.id)} onClick={() => decide(card.id, "applied")} className={primaryButton}>
                     Apply
                   </button>
-                  <button type="button" disabled={busy} onClick={() => resolve(card.id, "dismissed")} className={quietButton}>
+                  <button type="button" disabled={busy || leaving.includes(card.id)} onClick={() => decide(card.id, "dismissed")} className={quietButton}>
                     Dismiss
                   </button>
                 </div>

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useGarage } from "@/components/garage/GarageProvider";
 import { TONE } from "@/components/health/tone";
+import { isRollable, RollingNumber } from "@/components/motion/RollingNumber";
 import { ArrowIcon } from "@/components/shell/icons";
 import { primaryButton, quietButton } from "@/components/shell/ui";
 import type { DashboardItem } from "@/lib/dashboard";
@@ -27,7 +28,16 @@ export function NextUp({ item }: { item: DashboardItem }) {
           {item.label}
         </h1>
         <p className="w-full font-mono tabular-nums sm:w-auto sm:text-right">
-          <span className={`text-[clamp(2.5rem,6vw,3.75rem)] leading-none ${tone.text}`}>{limit.value}</span>
+          <span className={`text-[clamp(2.5rem,6vw,3.75rem)] leading-none ${tone.text}`}>
+            {isRollable(limit.value) ? (
+              <>
+                <span className="sr-only">{limit.value}</span>
+                <RollingNumber value={limit.value} />
+              </>
+            ) : (
+              limit.value
+            )}
+          </span>
           <span className="block text-xs tracking-[0.12em] text-muted uppercase">
             {limit.unit ? `${limit.unit} · ` : ""}
             {STATUS_LABEL[item.status]}

@@ -5,7 +5,10 @@ import { ViewTransition } from "react";
 import { useGarage } from "@/components/garage/GarageProvider";
 import { useDashboard } from "@/components/garage/useDashboard";
 import { TONE } from "@/components/health/tone";
+import { RollingNumber, Wheel } from "@/components/motion/RollingNumber";
+import { useIgnitedOnce } from "@/components/motion/useIgnitedOnce";
 import { odometerDigits } from "@/lib/dashboard";
+import { wheelPlan } from "@/lib/garage-view";
 import { numberFormat, STATUS_LABEL } from "@/lib/readout";
 import type { ItemStatus } from "@/lib/types";
 import { NAV, type PageHref } from "./nav";
@@ -17,6 +20,7 @@ const COUNT_ORDER: ItemStatus[] = ["overdue", "due_soon", "ok", "unknown"];
 export function Rail({ current }: { current: PageHref | null }) {
   const dashboard = useDashboard();
   const planned = useGarage().garage?.plannedTripMiles ?? 0;
+  useIgnitedOnce(dashboard !== null);
   return (
     <aside
       aria-label="Your car"
@@ -52,7 +56,10 @@ export function Rail({ current }: { current: PageHref | null }) {
                       <span aria-hidden className={`size-2 rounded-full ${TONE[status].fill}`} />
                       <span className="max-lg:text-xs">{STATUS_LABEL[status]}</span>
                     </dt>
-                    <dd className={`font-mono tabular-nums ${TONE[status].text}`}>{dashboard.counts[status]}</dd>
+                    <dd className={`font-mono tabular-nums ${TONE[status].text}`}>
+                      <span className="sr-only">{dashboard.counts[status]}</span>
+                      <RollingNumber value={String(dashboard.counts[status])} />
+                    </dd>
                   </div>
                 ))}
               </dl>
@@ -92,11 +99,13 @@ function Odometer({ miles, planned }: { miles: number; planned: number }) {
     <div>
       <p className="sr-only lg:not-sr-only lg:mb-2 lg:text-sm lg:text-muted">Odometer, estimated</p>
       <p role="img" aria-label={`${numberFormat.format(miles)} miles, estimated`} className="flex gap-0.5 font-mono text-lg tabular-nums lg:text-2xl">
-        {odometerDigits(miles).map((digit, index) => (
-          <span key={index} aria-hidden className="rounded bg-black/60 px-[0.28em] py-[0.12em] ring-1 ring-white/5">
-            {digit}
-          </span>
-        ))}
+        {wheelPlan(odometerDigits(miles).join("")).map((entry, index) =>
+          entry.kind === "digit" ? (
+            <span key={index} aria-hidden className="rounded bg-black/60 px-[0.28em] py-[0.12em] ring-1 ring-white/5">
+              <Wheel digit={entry.digit} turns={entry.turns} />
+            </span>
+          ) : null,
+        )}
         <span aria-hidden className="self-end pl-1 text-xs text-muted">
           mi
         </span>
