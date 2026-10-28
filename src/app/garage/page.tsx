@@ -14,7 +14,7 @@ import { listNudges } from '@/lib/db/nudge-store';
 import { VISITOR_COOKIE } from '@/lib/visitor';
 
 export default function CloudGarage() {
-  return <div className="cloud-garage"><nav className="mx-auto max-w-5xl p-4"><Link href="/">← Local garage, records and gas calculator</Link></nav><Suspense fallback={<HealthDashboardSkeleton/>}><Dashboard/></Suspense></div>;
+  return <div className="cloud-garage app-shell"><nav className="mx-auto max-w-5xl p-4"><Link href="/">← Local garage, records and gas calculator</Link></nav><Suspense fallback={<HealthDashboardSkeleton/>}><Dashboard/></Suspense></div>;
 }
 async function Dashboard() {
   await connection();

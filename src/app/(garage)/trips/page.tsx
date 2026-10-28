@@ -12,7 +12,10 @@ export default function TripsPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-medium tracking-tight">Trips</h1>
-      <TripPlanner key={`${garage.vehicle.id}-${mpg}`} mpg={mpg} />
+      {/* Route planner and detour calculator side by side on wide screens, stacked on phones. */}
+      <div className="grid gap-6 xl:grid-cols-2 xl:items-start">
+        <TripPlanner key={`${garage.vehicle.id}-${mpg}`} mpg={mpg} />
+      </div>
     </div>
   );
 }

@@ -30,159 +30,122 @@
   --status-due-soon-text: #f5bd4a;
   --status-ok: #5fd0a0;
   --status-ok-text: #7fdcb3;
-  /* PR #2's names, pointed at the tokens until its .app-shell rules are rewritten. */
-  --ink: var(--foreground); --paper: var(--background); --line: rgb(255 255 255 / .1); --green: var(--foreground); --lime: var(--foreground);
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--background); color: var(--foreground); font-family: var(--font-sans); font-size: 14px; }
-.app-shell button, .app-shell textarea, .app-shell select { font: inherit; }
-.app-shell button, .app-shell a, .app-shell select { -webkit-tap-highlight-color: transparent; }
-.app-shell button { cursor: pointer; }
-.app-shell button:disabled { opacity: .5; cursor: not-allowed; }
-.app-shell button, .app-shell select, .app-shell textarea, .app-shell a { outline-offset: 5px; }
-.app-shell :focus-visible { outline: 2px solid #45723b; }
-.app-shell a { color: inherit; text-decoration: none; }
-.app-shell .topbar { height: 100px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 20px; }
-.app-shell .brand { display: flex; align-items: center; font-size: 26px; font-weight: 700; letter-spacing: -1.3px; gap: 10px; }
-.app-shell .brand-mark { display: grid; place-items: center; width: 36px; height: 36px; background: var(--ink); color: var(--lime); border-radius: 10px; font-size: 28px; }
-.app-shell .brand-dot { font-size: 10px; align-self: flex-start; padding-top: 4px; margin-left: -8px; }
-.app-shell .top-note, .app-shell .tiny { color: var(--muted); font-size: 11px; line-height: 1.6; }
-.app-shell .preview-tag { font-size: 10px; letter-spacing: 1px; border: 1px solid var(--line); padding: 8px 11px; border-radius: 4px; }
-.app-shell .intro { padding: 57px 0 45px; display: flex; justify-content: space-between; align-items: center; }
-.app-shell .eyebrow, .app-shell .small-label { font-size: 10px; letter-spacing: 1.5px; font-weight: 600; }
-.app-shell .eyebrow { margin: 0 0 19px; color: #60775c; }
-.app-shell h1 { font-size: clamp(42px, 5vw, 64px); line-height: 1.04; letter-spacing: -3px; font-weight: 500; margin: 0; }
-.app-shell .intro-copy { color: var(--muted); line-height: 1.7; margin: 20px 0 0; }
-.app-shell .intro-aside { border-left: 1px solid var(--line); padding-left: 30px; margin-right: 36px; }
-.app-shell .intro-aside p { font-size: 23px; line-height: 1.35; margin: 17px 0; letter-spacing: -.5px; }
-.app-shell .section-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 19px; gap: 12px; }
-.app-shell h2 { font-weight: 500; font-size: 19px; letter-spacing: -.5px; margin: 0; }
-.app-shell .count { font-family: monospace; font-size: 11px; color: var(--muted); margin-left: 8px; vertical-align: middle; }
-.app-shell .text-button { border: 0; background: transparent; font-size: 12px; color: var(--green); padding: 8px 0 8px 8px; }
-.app-shell .vehicle-card { display: grid; grid-template-columns: 1fr 1.4fr 1fr; align-items: center; background: #e5ecdf; border: 1px solid #d5decd; border-radius: 14px; padding: 30px 36px; min-height: 240px; overflow: hidden; }
-.app-shell .pill { display: inline-block; font-size: 9px; letter-spacing: .8px; padding: 6px 9px; border-radius: 4px; background: #edf1e7; font-weight: 600; }
-.app-shell .pill.light { background: #f6f8f0; }
-.app-shell .vehicle-info h2 { font-size: 21px; line-height: 1.5; margin-top: 15px; }
-.app-shell .vehicle-info h2 strong { font-size: 33px; font-weight: 500; }
-.app-shell .vehicle-info p { font-size: 11px; color: var(--muted); margin: 12px 0 0; }
-.app-shell .car-art { width: 100%; padding: 0 10px; }
-.app-shell .car-art svg { width: 100%; }
-.app-shell .vehicle-stats { border-left: 1px solid #cbd6c4; padding-left: 36px; margin-left: 28px; }
-.app-shell .vehicle-stats .small-label { font-size: 8px; letter-spacing: 1px; color: #52654e; }
-.app-shell .vehicle-stats p { margin: 8px 0 18px; font-size: 30px; letter-spacing: -1px; }
-.app-shell .vehicle-stats small { font-size: 12px; letter-spacing: 0; color: #63735c; }
-.app-shell .vehicle-stats .tiny { font-size: 9px; }
-.app-shell .workspace { display: grid; grid-template-columns: 1.7fr 1fr; gap: 32px; margin-top: 36px; align-items: start; }
-.app-shell .health-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 13px; }
-.app-shell .health-card { background: #fffefa; padding: 21px; border-radius: 9px; border: 1px solid var(--line); }
-.app-shell .card-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.app-shell .item-symbol { font-size: 22px; color: #66795d; }
-.app-shell .status { font-size: 9px; display: inline-flex; align-items: center; gap: 5px; color: #586e4f; }
-.app-shell .status i { width: 5px; height: 5px; background: currentColor; border-radius: 50%; }
-.app-shell .status.overdue { color: #a44d32; }.app-shell .status.due_soon { color: #94702b; }.app-shell .status.unknown { color: #6f756e; }
-.app-shell h3 { font-size: 15px; font-weight: 500; margin: 18px 0 8px; }
-.app-shell .health-card p { font-size: 12px; margin: 0 0 14px; color: #55634f; }
-.app-shell .health-card .tiny { font-size: 9px; }
-.app-shell .copilot { background: #eaeedc; border: 1px solid #dae2c8; border-radius: 12px; padding: 25px; }
-.app-shell .copilot-heading { display: flex; align-items: start; gap: 12px; }
-.app-shell .spark { font-size: 28px; color: #4c6b35; line-height: 1; }
-.app-shell .copilot h2 { font-size: 20px; line-height: 1.3; max-width: 230px; }
-.app-shell .copilot > p { font-size: 12px; line-height: 1.7; color: #61704f; margin: 16px 0 24px; }
-.app-shell form label { display: block; font-size: 11px; font-weight: 600; margin-bottom: 9px; }
-.app-shell textarea { width: 100%; resize: vertical; background: #fafbf5; border: 1px solid #cbd5bc; border-radius: 7px; padding: 14px; color: var(--ink); font-size: 13px; line-height: 1.6; min-height: 110px; }
-.app-shell textarea::placeholder { color: #7e8872; }
-.app-shell .example-button { font-size: 10px; text-align: left; background: none; border: 0; padding: 12px 0 16px; color: #526b3d; }
-.app-shell .mode-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 0 0 14px; }
-.app-shell .mode-row label { font-size: 10px; margin: 0; font-weight: 400; }
-.app-shell select { background: #f6f8ed; color: var(--ink); border: 1px solid #cad4b8; border-radius: 4px; font-size: 10px; padding: 7px; max-width: 180px; }
-.app-shell .primary { background: var(--green); color: #f4f7e9; border: 1px solid var(--green); padding: 13px 18px; border-radius: 6px; font-size: 12px; display: inline-flex; justify-content: space-between; align-items: center; gap: 25px; }
-.app-shell .primary:hover:not(:disabled) { background: #193e2b; }
-.app-shell .primary.full { width: 100%; }
-.app-shell .copilot .mode-note { font-size: 10px; line-height: 1.6; margin: 15px 0 0; }
-.app-shell .feedback:empty { display: none; }.app-shell .feedback { margin-top: 24px; font-size: 13px; line-height: 1.6; }
-.app-shell .notice { border-left: 3px solid #8ca86b; padding: 12px 16px; background: #eef1e5; }
-.app-shell .suggestions { margin-top: 32px; }
-.app-shell .quiet-state { border: 1px dashed #cfd8c6; padding: 25px; text-align: center; color: #76816f; border-radius: 8px; font-size: 12px; }
-.app-shell .proposal-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
-.app-shell .proposal { padding: 24px; background: #fffefa; border: 1px solid var(--line); border-radius: 10px; }
-.app-shell .proposal h3 { font-size: 18px; }.app-shell .proposal p { color: var(--muted); line-height: 1.7; font-size: 12px; }
-.app-shell .date-change { display: flex; gap: 16px; font-size: 12px; margin: 18px 0; align-items: center; flex-wrap: wrap; }.app-shell .date-change > span { color: var(--muted); text-decoration: line-through; }.app-shell .date-change strong { font-weight: 500; }
-.app-shell .actions { display: flex; gap: 10px; margin-top: 20px; }.app-shell .secondary { background: none; border: 1px solid var(--line); border-radius: 6px; padding: 10px 16px; color: var(--muted); font-size: 12px; }
-.app-shell .activity { margin-top: 28px; }.app-shell .activity h2 { font-size: 15px; margin-bottom: 14px; }.app-shell .activity > div { display: flex; justify-content: space-between; font-size: 12px; padding: 13px 0; border-top: 1px solid var(--line); color: var(--muted); }
-.app-shell .error { background: #f8e9df; border: 1px solid #e8bba0; border-radius: 7px; padding: 16px; font-size: 13px; line-height: 1.6; margin-top: 20px; }
-.app-shell .empty-state { background: #e8eddf; padding: 25px 30px 45px; border-radius: 12px; text-align: center; }.app-shell .empty-state h2 { font-size: 28px; }.app-shell .empty-state p { color: var(--muted); line-height: 1.7; margin: 15px 0 22px; }.app-shell .empty-car { width: 280px; max-width: 100%; margin: auto; }
-.app-shell footer { margin-top: 58px; padding: 28px 0 32px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 20px; color: var(--muted); font-size: 10px; }.app-shell .footer-brand { font-size: 20px; color: var(--ink); }
-@media (min-width: 1450px) { .app-shell .intro { padding-top: 70px; } }
-@media (max-width: 1000px) {.app-shell .intro-aside { margin-right: 0; }.app-shell .workspace { gap: 20px; grid-template-columns: 1.4fr 1fr; }.app-shell .health-card { padding: 16px; }.app-shell .vehicle-card { padding: 26px; }.app-shell .vehicle-stats { padding-left: 22px; margin-left: 10px; }.app-shell .vehicle-stats p { font-size: 25px; }.app-shell .copilot { padding: 20px; } }
-@media (max-width: 760px) {.app-shell .topbar { height: 76px; }.app-shell .top-note, .app-shell .intro-aside { display: none; }.app-shell .brand { font-size: 23px; }.app-shell .intro { padding: 36px 0; }.app-shell h1 { letter-spacing: -2px; }.app-shell .vehicle-card { grid-template-columns: 1fr 1fr; padding: 24px; }.app-shell .vehicle-info h2 { font-size: 17px; }.app-shell .vehicle-info h2 strong { font-size: 28px; }.app-shell .vehicle-stats { grid-column: 1 / -1; margin: 22px 0 0; padding: 20px 0 0; border-left: 0; border-top: 1px solid #cbd6c4; display: flex; justify-content: space-between; gap: 20px; }.app-shell .vehicle-stats .tiny { display: none; }.app-shell .vehicle-stats p { margin-bottom: 0; }.app-shell .car-art { padding: 0; }.app-shell .workspace { grid-template-columns: 1fr; }.app-shell .copilot { grid-row: 1; }.app-shell .copilot h2 { max-width: none; }.app-shell .proposal-grid { grid-template-columns: 1fr; }.app-shell .section-heading > .tiny { font-size: 9px; }.app-shell .health-grid { gap: 10px; }.app-shell .health-card { padding: 15px; }.app-shell .health-card h3 { font-size: 14px; }.app-shell .status { font-size: 8px; }.app-shell .card-top { gap: 4px; }.app-shell footer { flex-wrap: wrap; margin-top: 35px; }.app-shell footer > :last-child { width: 100%; }.app-shell .actions { flex-wrap: wrap; } }
-@media (prefers-reduced-motion: no-preference) { .app-shell button { transition: background .15s ease; } }
-/* Car records and trip tools */
-.app-shell .toolbar { display:flex; gap:18px; flex-wrap:wrap; }
-.app-shell .unframed { margin:0; padding:0; border:0; min-width:0; }
-.app-shell .tool-panel { margin:28px 0; padding:26px; border:1px solid var(--line); background:#fffefa; border-radius:12px; }
-.app-shell .tool-panel .helper, .app-shell .helper { font-size:12px; line-height:1.7; color:var(--muted); }
-.app-shell .form-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
-.app-shell .form-grid label { min-width:0; }
-.app-shell input:not([type='checkbox']):not([type='file']) { display:block; width:100%; border:1px solid #cbd5bc; border-radius:6px; background:#fafbf5; color:var(--ink); padding:11px 12px; font:inherit; font-size:13px; margin-top:8px; }
-.app-shell .tool-panel label, .app-shell .route-builder label { display:block; margin:14px 0; font-size:12px; }
-.app-shell .tool-panel select { display:block; width:100%; max-width:none; padding:10px; font-size:12px; margin-top:8px; }
-.app-shell .tool-panel textarea { margin-top:8px; }
-.app-shell .check-label { display:flex!important; align-items:start; gap:10px; font-size:12px; line-height:1.6; }
-.app-shell .check-label input { margin-top:4px; }
-.app-shell .field-note { display:block; font-size:10px; color:var(--muted); line-height:1.5; margin-top:7px; }
-.app-shell .spaced { margin-top:18px; }
-.app-shell .tools-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:start; }
-.app-shell details summary { cursor:pointer; font-size:13px; line-height:1.5; }
-.app-shell .tools-grid > details { padding:17px; border:1px solid var(--line); border-radius:8px; }
-.app-shell details[open] > summary { margin-bottom:16px; }
-.app-shell .tools-grid .form-grid { grid-template-columns:1fr 1fr; }
-.app-shell .history { margin-top:18px; border-top:1px solid var(--line); padding-top:18px; }
-.app-shell .history-list article { padding:14px 0; border-top:1px solid var(--line); display:flex; flex-wrap:wrap; justify-content:space-between; gap:10px; font-size:12px; }
-.app-shell .history-list article strong { font-weight:500; }.app-shell .history-list article span { color:var(--muted); }.app-shell .history-list article p { width:100%; margin:0; line-height:1.6; overflow-wrap:anywhere; }
-.app-shell .file-label { border:1px solid var(--line); border-radius:6px; padding:10px; margin:0!important; max-width:100%; }.app-shell .file-label input { display:block; margin-top:8px; max-width:100%; font-size:10px; }
-.app-shell .source-library { margin-top:24px; border:1px solid var(--line); border-radius:8px; padding:18px 22px; background:#edf1e7; }
-.app-shell .source-library p { font-size:12px; line-height:1.7; color:var(--muted); }.app-shell .source-library a,.app-shell .source-link,.app-shell .trip-result a { text-decoration:underline; text-underline-offset:3px; }
-.app-shell .source-link { display:block; font-size:10px; margin-top:8px; }.app-shell .source-note { margin-top:10px; }.app-shell .source-note summary { font-size:10px; }.app-shell .source-note p { line-height:1.6; overflow-wrap:anywhere; }
-.app-shell .trip-panel { margin-top:36px; background:#edf1e7; }.app-shell .trip-panel .eyebrow { margin-bottom:10px; }.app-shell .trip-panel h2 { font-size:24px; }.app-shell .trip-inputs { grid-template-columns:repeat(4,minmax(0,1fr)); }.app-shell .trip-panel .form-grid:not(.trip-inputs) { grid-template-columns:1fr 1fr; }.app-shell .trip-panel .route-builder { border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:14px 0; margin-top:20px; }
-.app-shell .trip-result { margin-top:24px; background:#fffefa; padding:24px; border-radius:9px; }.app-shell .trip-result h3 { font-size:26px; margin:16px 0; }.app-shell .trip-result p { font-size:12px; line-height:1.7; }.app-shell .calculation-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; margin:24px 0; }.app-shell .calculation-grid span { display:block; color:var(--muted); font-size:11px; line-height:1.5; }.app-shell .calculation-grid strong { display:block; font-size:23px; margin-top:9px; font-weight:500; }
-.app-shell .link-button { display:inline-block; }
-@media (max-width:760px) { .app-shell .tool-panel { padding:19px; }.app-shell .form-grid, .app-shell .trip-inputs { grid-template-columns:1fr 1fr; }.app-shell .tools-grid { grid-template-columns:1fr; }.app-shell .trip-panel h2 { font-size:20px; }.app-shell .trip-panel .section-heading { align-items:start; }.app-shell .trip-panel .text-button { white-space:nowrap; }.app-shell .calculation-grid { grid-template-columns:1fr 1fr; }.app-shell .trip-result { padding:18px; }.app-shell .trip-result h3 { font-size:22px; } }
-@media (max-width:420px) { .app-shell .form-grid,.app-shell .trip-panel .form-grid:not(.trip-inputs) { grid-template-columns:1fr; }.app-shell .trip-inputs { grid-template-columns:1fr 1fr; }.app-shell .toolbar { gap:10px; }.app-shell .section-heading h2 { font-size:17px; } }
-
-/* Focused dashboard with supporting tools in their own sections. */
-.app-shell [hidden] { display: none !important; }
-.app-shell .garage-nav { display:flex; gap:8px; overflow-x:auto; padding:18px 0; border-bottom:1px solid var(--line); }
-.app-shell .garage-nav a { white-space:nowrap; padding:11px 18px; border-radius:8px; color:var(--muted); font-size:13px; }
-.app-shell .garage-nav a[aria-current="page"] { background:var(--ink); color:var(--paper); }
-.app-shell .garage-nav a:hover { background:#e5ecdf; color:var(--ink); }
-.app-shell .dashboard-heading { display:flex; align-items:center; justify-content:space-between; gap:24px; padding:28px 0 24px; }
-.app-shell .dashboard-heading h1 { font-size:32px; letter-spacing:-1px; }
-.app-shell .dashboard-heading .eyebrow { margin-bottom:10px; }
-.app-shell .dashboard-heading .helper { margin-top:10px; }
-.app-shell .vehicle-card { min-height:180px; padding:22px 28px; }
-.app-shell .car-art { max-width:280px; justify-self:center; }
-.app-shell .workspace { display:flex; flex-direction:column; gap:24px; margin-top:24px; }
-.app-shell .workspace .maintenance { order:2; width:100%; }
-.app-shell .workspace .copilot { order:1; width:100%; padding:20px 24px; }
-.app-shell .copilot h2 { max-width:none; font-size:18px; }
-.app-shell .copilot > p { margin:8px 0 14px; }
-.app-shell .copilot form { display:grid; grid-template-columns:minmax(0,1fr) 230px; column-gap:20px; }
-.app-shell .copilot form > label { grid-column:1; }
-.app-shell .copilot textarea { grid-column:1; grid-row:2 / 4; min-height:80px; }
-.app-shell .copilot .example-button { grid-column:1; grid-row:4; padding-bottom:0; }
-.app-shell .copilot .mode-row { grid-column:2; grid-row:2; }
-.app-shell .copilot .primary { grid-column:2; grid-row:3; }
-.app-shell .health-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
-@media (max-width:760px) {
- .app-shell .dashboard-heading { align-items:start; flex-direction:column; gap:10px; }
- .app-shell .dashboard-heading h1 { font-size:28px; }
- .app-shell .garage-nav { gap:2px; }.app-shell .garage-nav a { padding:10px 12px; font-size:12px; }
- .app-shell .health-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
- .app-shell .copilot form { display:block; }.app-shell .copilot .mode-row { margin:14px 0; }
- .app-shell .copilot { padding:18px; }
+/* ---------- Platform layer ----------
+   Feels installed on a phone: no tap flash, no double-tap wait, no 16px-zoom on inputs,
+   and focus and selection in the foreground (status hues mean status only). */
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  /* Focus and in-page jumps stop clear of the phone strip and tab bar. */
+  html { scroll-padding-block: 9rem 5.5rem; }
+  @media (min-width: 64rem) { html { scroll-padding-block: 1.5rem; } }
+  * { scrollbar-color: #2a2d31 transparent; }
+  a, button, select, summary, [role="button"], input, textarea { -webkit-tap-highlight-color: transparent; }
+  /* Controls only: text you read stays selectable. */
+  button, a, summary, [role="button"], select, label:has(> input[type="checkbox"]) {
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  :focus-visible { outline: 2px solid var(--foreground); outline-offset: 3px; border-radius: 6px; }
+  ::selection { background: rgb(233 231 226 / .22); color: var(--foreground); }
+  input, select, textarea, button { font: inherit; color: inherit; }
+  input, select, textarea { font-size: max(16px, 1em); caret-color: var(--foreground); }
+  input[type="range"] { accent-color: var(--foreground); }
+  button { cursor: pointer; }
+  button:disabled { cursor: not-allowed; }
 }
 
-.app-shell .location-search { display:flex; gap:16px; align-items:end; flex-wrap:wrap; }.app-shell .location-search label { flex:1; min-width:180px; margin:0; }.app-shell .location-search button { min-height:42px; }.app-shell .location-results { padding-left:20px; }
+/* ---------- Garage tools ----------
+   PR #2's feature components keep their class names; these rules give them the instrument
+   look. In the components layer, so a Tailwind utility on the same element always wins. */
+@layer components {
+  .app-shell a { color: inherit; }
+  .app-shell .tool-panel { border-radius: 16px; background: var(--panel); padding: 20px; box-shadow: 0 0 0 1px rgb(255 255 255 / .05); }
+  .app-shell .tool-panel > * + * { margin-top: 14px; }
+  .app-shell .tool-panel h2 { font-size: 17px; font-weight: 500; letter-spacing: -.01em; margin: 0; }
+  .app-shell .tool-panel h3 { font-size: 14px; font-weight: 500; margin: 20px 0 0; }
+  .app-shell .section-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; }
+  .app-shell .section-heading > * { margin: 0; }
+  .app-shell .eyebrow { margin: 0 0 6px; font-family: var(--font-mono); font-size: 11px; letter-spacing: .12em; color: var(--muted); }
+  .app-shell .helper, .app-shell .tiny, .app-shell .field-note { color: var(--muted); line-height: 1.6; }
+  .app-shell .helper { font-size: 14px; max-width: 70ch; }
+  .app-shell .tiny { font-size: 12px; }
+  .app-shell .field-note { display: block; margin-top: 6px; font-size: 12px; font-weight: 400; }
+  .app-shell .spaced { margin-top: 16px; }
+
+  /* Fields: edges hold 3:1 against the panel (white/35), placeholders the full muted token. */
+  .app-shell .tool-panel label { display: block; margin: 14px 0 0; font-size: 14px; color: var(--muted); }
+  .app-shell .tool-panel input:not([type="checkbox"]):not([type="file"]):not([type="range"]),
+  .app-shell .tool-panel select, .app-shell .tool-panel textarea {
+    display: block; width: 100%; margin-top: 6px; border-radius: 10px; background: rgb(0 0 0 / .4); color: var(--foreground);
+    padding: 10px 12px; border: 0; box-shadow: 0 0 0 1px rgb(255 255 255 / .35);
+  }
+  .app-shell .tool-panel input:focus-visible, .app-shell .tool-panel select:focus-visible, .app-shell .tool-panel textarea:focus-visible { box-shadow: 0 0 0 1px rgb(255 255 255 / .6); }
+  .app-shell .tool-panel input:disabled, .app-shell .tool-panel select:disabled { opacity: .5; }
+  .app-shell .tool-panel textarea { resize: vertical; }
+  .app-shell ::placeholder { color: var(--muted); opacity: 1; }
+  .app-shell .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: 0 16px; }
+  .app-shell .form-grid label { min-width: 0; }
+  .app-shell .check-label { display: flex !important; align-items: start; gap: 10px; line-height: 1.5; }
+  .app-shell .check-label input { margin-top: 4px; accent-color: var(--foreground); }
+  .app-shell .file-label { display: inline-block !important; margin: 0 !important; padding: 10px 14px; border-radius: 10px; box-shadow: 0 0 0 1px rgb(255 255 255 / .15); max-width: 100%; }
+  .app-shell .file-label input { display: block; margin-top: 8px; max-width: 100%; font-size: 14px; }
+
+  /* Buttons: primary is the foreground plate; secondary and text buttons stay quiet. */
+  .app-shell .primary, .app-shell .secondary, .app-shell .link-button {
+    display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 8px;
+    border-radius: 10px; padding: 10px 16px; font-size: 14px; font-weight: 600; border: 0; text-decoration: none;
+  }
+  .app-shell .primary { margin-top: 16px; background: var(--foreground); color: var(--background); }
+  .app-shell .primary:hover:not(:disabled) { background: #fff; }
+  .app-shell .secondary { background: transparent; color: var(--foreground); font-weight: 500; box-shadow: 0 0 0 1px rgb(255 255 255 / .15); }
+  .app-shell .secondary:hover:not(:disabled) { background: rgb(255 255 255 / .05); box-shadow: 0 0 0 1px rgb(255 255 255 / .3); }
+  .app-shell .text-button { border: 0; background: transparent; padding: 10px 0; min-height: 44px; font-size: 14px; color: var(--muted); text-decoration: underline; text-underline-offset: 4px; }
+  .app-shell .text-button:hover:not(:disabled) { color: var(--foreground); }
+  .app-shell button:disabled { opacity: .4; }
+  .app-shell .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+
+  /* Messages: a notice is neutral; an error carries the overdue hue because it is a problem. */
+  .app-shell .notice, .app-shell .error { border-radius: 10px; padding: 12px 14px; font-size: 14px; line-height: 1.6; }
+  .app-shell .notice { background: rgb(255 255 255 / .04); box-shadow: inset 2px 0 0 var(--foreground); }
+  .app-shell .notice > * + * { margin-top: 10px; }
+  .app-shell .error { background: rgb(255 106 61 / .08); color: var(--status-overdue-text); box-shadow: 0 0 0 1px rgb(255 106 61 / .35); }
+  .app-shell .pill { display: inline-block; border-radius: 6px; padding: 3px 7px; font-family: var(--font-mono); font-size: 11px; letter-spacing: .1em; color: var(--muted); background: rgb(255 255 255 / .06); box-shadow: 0 0 0 1px rgb(255 255 255 / .1); }
+  .app-shell .source-link, .app-shell .source-library a, .app-shell .trip-result a { text-decoration: underline; text-underline-offset: 3px; }
+  .app-shell .source-link { display: inline-block; font-size: 14px; color: var(--muted); }
+  .app-shell .source-link:hover { color: var(--foreground); }
+
+  /* Service history: a real table that scrolls sideways inside its panel on a phone. */
+  .app-shell .history-table { overflow-x: auto; margin-inline: -4px; }
+  .app-shell .history-table table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .app-shell .history-table th, .app-shell .history-table td { padding: 10px 4px; text-align: left; vertical-align: top; border-top: 1px solid rgb(255 255 255 / .06); }
+  .app-shell .history-table thead th { border-top: 0; font-weight: 400; font-size: 12px; color: var(--muted); }
+  .app-shell .history-table tbody th { font-weight: 500; }
+  .app-shell .history-table td:last-child { color: var(--muted); min-width: 12ch; overflow-wrap: anywhere; }
+  .app-shell .history-table .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  .app-shell .source-library { border-radius: 16px; background: var(--panel); padding: 16px 20px; box-shadow: 0 0 0 1px rgb(255 255 255 / .05); }
+  .app-shell .source-library summary { cursor: pointer; font-weight: 500; }
+  .app-shell .source-library p { margin-top: 12px; font-size: 14px; line-height: 1.6; color: var(--muted); }
+
+  /* Trips: the verdict is the largest text on the page. */
+  .app-shell .trip-result { margin-top: 20px; border-radius: 12px; background: rgb(0 0 0 / .3); padding: 18px; box-shadow: 0 0 0 1px rgb(255 255 255 / .08); }
+  .app-shell .trip-result h3 { margin: 12px 0; font-size: clamp(22px, 3vw, 30px); line-height: 1.2; font-weight: 500; letter-spacing: -.01em; }
+  .app-shell .trip-result p { font-size: 14px; line-height: 1.6; }
+  .app-shell .trip-result p + p { margin-top: 6px; }
+  .app-shell .calculation-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: 16px; margin: 16px 0; }
+  .app-shell .calculation-grid span, .app-shell .calculation-grid dt { display: block; font-size: 12px; color: var(--muted); }
+  .app-shell .calculation-grid strong, .app-shell .calculation-grid dd { display: block; margin: 4px 0 0; font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 18px; font-weight: 400; }
+  .app-shell .location-search { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; }
+  .app-shell .location-search label { flex: 1; min-width: min(100%, 12rem); margin: 0; }
+  .app-shell .location-results { margin-top: 10px; padding-left: 20px; list-style: disc; }
+  .app-shell .location-results li + li { margin-top: 6px; }
+  .app-shell [hidden] { display: none !important; }
+}
 
 /* ---------- Motion ----------
    One orchestrated moment (ignition, once per visit) and motion that answers the user.

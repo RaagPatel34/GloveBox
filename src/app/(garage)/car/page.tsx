@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { BackupRestore, CarSetup, IntervalEditor, SourceLibrary } from "@/components/garage-tools";
 import { GarageTransfer } from "@/components/garage-transfer";
 import { useGarage } from "@/components/garage/GarageProvider";
-import { primaryButton, quietButton } from "@/components/shell/ui";
+import { panelClass, primaryButton, quietButton } from "@/components/shell/ui";
 import { numberFormat } from "@/lib/readout";
 
 const READY_NOTICE = "Your car is ready. Add your service history in the Service log.";
@@ -67,7 +67,7 @@ export default function CarPage() {
           <div>
             <dt>Fuel economy</dt>
             <dd>
-              {vehicle.mpgOverride || vehicle.epaMpg} MPG <span className="tiny">· {mpgSource}</span>
+              {vehicle.mpgOverride || vehicle.epaMpg} MPG <span className="tiny font-sans">· {mpgSource}</span>
             </dd>
           </div>
           <div>
@@ -76,7 +76,7 @@ export default function CarPage() {
           </div>
           <div>
             <dt>Home</dt>
-            <dd className="text-sm">{vehicle.home.label}</dd>
+            <dd className="font-sans text-sm">{vehicle.home.label}</dd>
           </div>
         </dl>
         <div className="flex flex-wrap gap-2">
@@ -111,7 +111,9 @@ export default function CarPage() {
       <IntervalEditor key={vehicle.id} garage={garage} onSave={save} />
       <SourceLibrary garage={garage} />
       <BackupRestore garage={garage} onSave={save} />
-      <GarageTransfer garage={garage} />
+      <div className={panelClass}>
+        <GarageTransfer garage={garage} />
+      </div>
 
       <section aria-labelledby="about-h" className="tool-panel">
         <h2 id="about-h">About this garage</h2>
