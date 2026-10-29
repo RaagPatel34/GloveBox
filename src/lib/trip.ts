@@ -13,3 +13,14 @@ export function calculateTrip(input: TripInput) {
   const netAfterTime = netFuelSavings - timeCost;
   return { baselineFuelCost: input.miles / input.mpg * input.usualPrice, totalMiles: input.miles + input.extraMiles, purchaseSavings, detourFuelCost, netFuelSavings, timeCost, netAfterTime, breakEvenExtraMiles: Math.max(0, (purchaseSavings - timeCost) * input.mpg / input.usualPrice), worthIt: netAfterTime > 0.005 };
 }
+// The most stops the trip agent plans in one drive.
+export const MAX_TRIP_STOPS = 8;
+
+// The fuel a drive burns, in dollars: miles ÷ MPG × price per gallon. Plain math, so the
+// trip agent's cost is never the model's arithmetic.
+export function tripCost(miles: number, mpg: number, pricePerGal: number): number {
+  if (!Number.isFinite(miles) || miles < 0 || miles > 10000) throw new Error('Check miles: expected 0–10000.');
+  if (!Number.isFinite(mpg) || mpg < 1 || mpg > 150) throw new Error('Check mpg: expected 1–150.');
+  if (!Number.isFinite(pricePerGal) || pricePerGal < 0.01 || pricePerGal > 30) throw new Error('Check price: expected $0.01–$30 per gallon.');
+  return miles / mpg * pricePerGal;
+}

@@ -50,7 +50,7 @@ One vehicle per browser. Data does not sync across devices or between localhost 
 
 The Dashboard includes your teammate’s Open-Meteo forecast and air-quality rules. Search a US city or ZIP code and explicitly check its conditions. This uses no AI or paid key; incomplete or unavailable conditions are labeled. Forecast guidance never changes your records automatically.
 
-The Trips page includes place search, ordered driving routes, route fuel costs, and a California weekly EIA price lookup. Google Places/Routes remain off unless both `ENABLE_MAPS=true` and `GOOGLE_MAPS_API_KEY` are set. Set provider quotas and restrictions before opting in. EIA needs `EIA_API_KEY`; its results are regional weekly estimates, never station quotes. These adapters are tested with fixtures; hosted live acceptance awaits those credentials. Manual stops, Maps links, entered prices and detour calculations remain available.
+The Trips page opens with the trip agent: type up to eight stops and Nemotron Super looks them up, Google Routes orders the drive from home and back, and code prices the fuel from the car's MPG and the EIA Los Angeles weekly price (California's as a fallback), shown with its source and week. It needs live AI, `ENABLE_MAPS=true`, `GOOGLE_MAPS_API_KEY` and `EIA_API_KEY`. Below it, the manual planner includes place search, ordered driving routes, route fuel costs, and a California weekly EIA price lookup. Google Places/Routes remain off unless both `ENABLE_MAPS=true` and `GOOGLE_MAPS_API_KEY` are set. Set provider quotas and restrictions before opting in. EIA needs `EIA_API_KEY`; its results are regional weekly estimates, never station quotes. These adapters are tested with fixtures; hosted live acceptance awaits those credentials. Manual stops, Maps links, entered prices and detour calculations remain available.
 
 ## Reconciled cloud garage
 
@@ -86,6 +86,7 @@ The smoke script is an explicit integration test and makes calls when invoked wi
 - `/garage`: optional cloud dashboard and setup with anonymous visitor identity and Postgres storage.
 - `/api/cloud-command`: upstream Nano/Super command router, guarded by the same live-AI switch.
 - `src/components/garage-tools.tsx`: car setup, service history, record a service, odometer, mileage forecast, intervals, backup/restore (one export per tool).
+- `/api/plan-trip` and `src/lib/agent/trip.ts`: the trip agent (Super) behind the Trips panel.
 - `src/components/trip-planner.tsx`: local trip-cost and detour comparison.
 - `src/lib/garage.ts`, `maintenance.ts`, `trip.ts`: validated state transitions and deterministic calculations.
 - `/api/vehicle`: bounded, fixed-host EPA lookup with timeout and manual fallback.

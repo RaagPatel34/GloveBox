@@ -2,10 +2,12 @@
 import { useState, type FormEvent } from 'react';
 import { calculateTrip, type TripInput } from '@/lib/trip';
 import { DrivingPlanner } from '@/components/driving-planner';
+import { TripAgent } from '@/components/trip-agent';
 import { safeUrl } from '@/lib/maintenance';
 import { ExternalIcon } from '@/components/shell/icons';
+import type { Vehicle } from '@/lib/types';
 const money = (v:number) => new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(v);
-export function TripPlanner({mpg}:{mpg:number}) {
+export function TripPlanner({mpg,home}:{mpg:number;home:Vehicle['home']}) {
   const [values,setValues] = useState({miles:'',mpg:String(mpg),gallons:'',usualPrice:'',alternatePrice:'',extraMiles:'',extraMinutes:'0',hourlyValue:'0'});
   const [example,setExample] = useState(false);
   const [result,setResult] = useState<ReturnType<typeof calculateTrip>|null>(null);
@@ -21,7 +23,8 @@ export function TripPlanner({mpg}:{mpg:number}) {
       setResult(calculateTrip(Object.fromEntries(Object.entries(values).map(([key,value])=>[key,Number(value)])) as TripInput));
     }catch(err){setError((err as Error).message);}
   }
-  return <><DrivingPlanner mpg={mpg} onDistance={miles=>{setValues(v=>({...v,miles:String(miles)}));setResult(null);}}/><section className="tool-panel trip-panel" id="trip"><div className="section-heading"><div><h2>Is cheaper gas worth the detour?</h2></div><button className="text-button" onClick={loadExample}>Use example</button></div><p className="helper">Compare the savings at the pump with the extra fuel and time it takes to get there. All math runs locally. No AI credits needed.</p>
+  const useMiles=(miles:number)=>{setValues(v=>({...v,miles:String(miles)}));setResult(null);};
+  return <><TripAgent home={home} mpg={mpg} onDistance={useMiles}/><DrivingPlanner mpg={mpg} onDistance={useMiles}/><section className="tool-panel trip-panel" id="trip"><div className="section-heading"><div><h2>Is cheaper gas worth the detour?</h2></div><button className="text-button" onClick={loadExample}>Use example</button></div><p className="helper">Compare the savings at the pump with the extra fuel and time it takes to get there. All math runs locally. No AI credits needed.</p>
     <form onSubmit={submit}><div className="form-grid trip-inputs">{([
       ['miles','Original trip (mi)',0,10000],['mpg','Fuel economy (MPG)',1,150],['gallons','Gallons to buy',0.1,100],['usualPrice','Usual station ($/gal)',0.01,30],['alternatePrice','Alternate station ($/gal)',0.01,30],['extraMiles','Extra detour miles',0,1000],['extraMinutes','Extra detour minutes',0,1440],['hourlyValue','Value of your time ($/hr)',0,1000],
     ] as const).map(([key,label,min,max])=><label key={key}>{label}<input required type="number" min={min} max={max} step="any" value={values[key]} onChange={e=>change(key,e.target.value)}/></label>)}</div>

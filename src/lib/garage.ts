@@ -1,5 +1,7 @@
 import { LABELS, safeUrl, type Garage } from './maintenance.ts';
 import type { ScheduleItem, Vehicle, ServiceEntry } from './types';
+// The home saved when the owner left the location blank. Not a place to look up.
+export const NO_HOME_LABEL = 'Location not set';
 export const TIRE_SOURCE = 'https://www.nhtsa.gov/vehicle-safety/tires';
 export const HONDA_SOURCE = 'https://owners.honda.com/utility/download?path=%2Fstatic%2Fpdfs%2F2019%2FCivic+Sedan%2F2019_Civic_4D_Maintenance_Minder.pdf';
 const DAY = 86400000;
@@ -15,7 +17,7 @@ export function createGarage(input: { year: number; make: string; model: string;
   if (input.epaId && !/^\d{1,7}$/.test(input.epaId)) throw new Error('Invalid EPA vehicle ID.');
   bounded(input.weeklyMiles ?? 0, 0, 2000, "Weekly miles");
   const id = crypto.randomUUID();
-  const vehicle: Vehicle = { id, visitorId: 'local', year: input.year, make: input.make.trim(), model: input.model.trim(), odometer: input.odometer, epaMpg: input.mpg, weeklyMiles: input.weeklyMiles ?? 0, isDemo: false, mpgSource: input.epaId ? { kind: 'epa', url: `https://www.fueleconomy.gov/feg/noframes/${input.epaId}.shtml` } : { kind: 'manual' }, home: { label: input.location.trim() || 'Location not set', lat: 0, lng: 0 } };
+  const vehicle: Vehicle = { id, visitorId: 'local', year: input.year, make: input.make.trim(), model: input.model.trim(), odometer: input.odometer, epaMpg: input.mpg, weeklyMiles: input.weeklyMiles ?? 0, isDemo: false, mpgSource: input.epaId ? { kind: 'epa', url: `https://www.fueleconomy.gov/feg/noframes/${input.epaId}.shtml` } : { kind: 'manual' }, home: { label: input.location.trim() || NO_HOME_LABEL, lat: 0, lng: 0 } };
   const items: ScheduleItem[] = (Object.keys(LABELS) as ScheduleItem['kind'][]).map(kind => ({ id: kind, kind, vehicleId: id, status: 'unknown', ...(kind === 'tire_pressure' ? { intervalDays: 30 } : {}), intervalSource: kind === 'tire_pressure' ? { kind: 'nhtsa', url: TIRE_SOURCE, note: 'NHTSA recommends monthly cold tire-pressure checks. This reminder uses 30 days; use the pressure on the vehicle placard.' } : { kind: 'user', note: 'No interval assumed. Enter your manual’s guidance or a personal reminder.' } }));
   return { version: 1, vehicle, items, proposals: [], services: [], readingAt: now.toISOString(), plannedTripMiles: 0 };
 }
