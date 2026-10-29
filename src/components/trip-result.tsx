@@ -1,5 +1,6 @@
 import { ModelBadge } from "@/components/command/ModelBadge";
 import { ExternalIcon } from "@/components/shell/icons";
+import { tripPlaceKey } from "@/lib/trip";
 import type { TripPlan, Vehicle } from "@/lib/types";
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
@@ -26,11 +27,11 @@ export function TripResult({
   return (
     <div className="trip-result">
       {showModel && <ModelBadge model={trip.model} />}
-      <h3>{money.format(trip.fuelCost)} in fuel for {trip.totalMiles.toFixed(1)} miles</h3>
+      <h3><span className="font-mono tabular-nums">{money.format(trip.fuelCost)}</span> in fuel for <span className="font-mono tabular-nums">{trip.totalMiles.toFixed(1)}</span> miles</h3>
       <p>From home, {home.label}</p>
-      <ol className="location-results list-decimal">
+      <ol className="location-results list-decimal marker:font-mono">
         {trip.stops.map((stop) => (
-          <li key={stop.label}>
+          <li key={tripPlaceKey(stop)}>
             {STOP_LABEL[stop.type] && <span className="pill">{STOP_LABEL[stop.type]}</span>}{" "}
             {stop.name && stop.name !== stop.label ? <><strong className="font-medium">{stop.name}</strong> · {stop.label}</> : stop.label}
           </li>
@@ -44,12 +45,12 @@ export function TripResult({
       </dl>
       <p>
         <span className="pill">{PRICE_KIND_LABEL[trip.gasPrice.kind]}</span>{" "}
-        {trip.gasPrice.label ?? "Gas price"}, week of {trip.gasPrice.asOf}.{" "}
+        {trip.gasPrice.label ?? "Gas price"}, week of <span className="font-mono tabular-nums">{trip.gasPrice.asOf}</span>.{" "}
         <a href={trip.gasPrice.source} target="_blank" rel="noreferrer">EIA source <ExternalIcon /></a>
       </p>
       {trip.gasPrice.stale && <p className="helper">This price is more than two weeks old; check it before relying on it.</p>}
       <p className="helper">
-        Fuel = miles ÷ {mpg} MPG × price per gallon. A regional average, not a station quote. Time excludes traffic and time at stops.
+        Fuel = miles ÷ <span className="font-mono tabular-nums">{mpg}</span> MPG × price per gallon. A regional average, not a station quote. Time excludes traffic and time at stops.
       </p>
       <div className="actions">
         <a className="secondary link-button" href={trip.mapsUrl} target="_blank" rel="noreferrer">Open in Google Maps <ExternalIcon /></a>

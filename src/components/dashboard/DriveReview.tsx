@@ -4,13 +4,15 @@ import { useEffect, useState, type FormEvent } from "react";
 import { ModelBadge } from "@/components/command/ModelBadge";
 import { useGarage } from "@/components/garage/GarageProvider";
 import { fieldClass, primaryButton, quietButton } from "@/components/shell/ui";
+import { TripResult } from "@/components/trip-result";
 import type { ProposalCard } from "@/lib/dashboard";
 import { addProposals, isGarage, resolveProposal, sampleCommand, type CommandResult } from "@/lib/maintenance";
-import type { Proposal } from "@/lib/types";
+import { vehicleMpg } from "@/lib/trip";
+import type { Proposal, TripPlan, Vehicle } from "@/lib/types";
 
 const EXAMPLE = "I drove 300 miles on dirt roads";
 
-type Reply = { text: string; model: Proposal["model"] | null };
+type Reply = { text: string; model: Proposal["model"] | null; trip?: { plan: TripPlan; home: Vehicle["home"]; mpg: number } };
 
 // A decided card leaves first, then the schedule changes: cause, then effect.
 const CARD_EXIT_MS = 150;
@@ -60,7 +62,7 @@ export function DriveReview({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ command, mode, garage: { ...garage, proposals: [], services: [] } }),
-          signal: AbortSignal.timeout(30000),
+          signal: AbortSignal.timeout(120000),
         });
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || "The request failed. Please try again.");
@@ -68,12 +70,16 @@ export function DriveReview({
       }
       // Added to the garage as it is now: a live review can take seconds, and anything saved
       // meanwhile (a service, the planned-miles slider) must survive it.
-      update((current) => {
+      if (data.proposals.length > 0) update((current) => {
         const next = addProposals(current, data.proposals);
         if (!isGarage(next)) throw new Error("The response was invalid. Your schedule is unchanged.");
         return next;
       });
-      setReply({ text: data.message, model: data.source === "sample" ? "sample" : "super" });
+      setReply({
+        text: data.message,
+        model: data.source === "sample" ? "sample" : (data.tier ?? "super"),
+        ...(data.trip ? { trip: { plan: data.trip, home: garage.vehicle.home, mpg: vehicleMpg(garage.vehicle) } } : {}),
+      });
     } catch (err) {
       setError(
         err instanceof Error && err.name !== "TimeoutError"
@@ -123,7 +129,7 @@ export function DriveReview({
     <div className="rounded-2xl bg-panel p-5 ring-1 ring-white/5">
       <form onSubmit={submit}>
         <label htmlFor="drive" className="font-medium">
-          What happened on your last drive?
+          Tell GloveBox about a drive or errands
         </label>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           <input
@@ -134,11 +140,11 @@ export function DriveReview({
             value={command}
             disabled={busy}
             onChange={(event) => setCommand(event.target.value)}
-            placeholder="A dusty 300-mile weekend…"
+            placeholder="A dusty drive, or gas, car wash and Trader Joe's…"
             className={`min-w-0 flex-1 ${fieldClass}`}
           />
           <button type="submit" disabled={busy || !command.trim()} className={quietButton}>
-            {busy ? "Reviewing…" : "Review drive"}
+            {busy ? "Working…" : "Send"}
           </button>
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
@@ -179,6 +185,7 @@ export function DriveReview({
           {error}
         </p>
       )}
+      {reply?.trip && <TripResult trip={reply.trip.plan} home={reply.trip.home} mpg={reply.trip.mpg} showModel={false} />}
 
       {pending.length > 0 && (
         <section aria-labelledby="your-call-h" className="mt-5 border-t border-white/[0.06] pt-5">

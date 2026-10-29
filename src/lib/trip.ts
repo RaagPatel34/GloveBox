@@ -1,4 +1,7 @@
-import type { Vehicle } from "./types";
+import type { TripStop, Vehicle } from "./types";
+
+// Different businesses can share an address. Planning and rendering use the same identity.
+export const tripPlaceKey = (place: Omit<TripStop, "type">) => JSON.stringify([place.name, place.label, place.lat, place.lng]);
 
 export type TripInput = { miles: number; mpg: number; gallons: number; usualPrice: number; alternatePrice: number; extraMiles: number; extraMinutes: number; hourlyValue: number };
 export function calculateTrip(input: TripInput) {
