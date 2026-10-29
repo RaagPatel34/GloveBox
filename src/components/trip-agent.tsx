@@ -41,13 +41,13 @@ export function TripAgent({ home, mpg, onDistance }: { home: Vehicle["home"]; mp
     <section className="tool-panel" aria-label="Plan errands">
       <div className="section-heading">
         <h2>Plan your errands</h2>
-        <button className="text-button" type="button" onClick={() => { setStops(EXAMPLE); setReply(null); }}>
+        <button className="text-button" type="button" disabled={busy} onClick={() => { setStops(EXAMPLE); setReply(null); }}>
           Use demo stops
         </button>
       </div>
       <p className="helper">
         List the places you need to go. Nemotron looks them up on Google Maps, Google orders the drive from home and back,
-        and GloveBox prices the fuel at {mpg} MPG. Your stops are sent to Google.
+        and GloveBox prices the fuel at <span className="font-mono tabular-nums">{mpg}</span> MPG. Your stops are sent to Google.
       </p>
       <form onSubmit={plan}>
         <label>
@@ -55,13 +55,14 @@ export function TripAgent({ home, mpg, onDistance }: { home: Vehicle["home"]; mp
           <textarea
             value={stops}
             onChange={(event) => { setStops(event.target.value); setReply(null); }}
+            disabled={busy}
             required
             rows={4}
             maxLength={MAX_TRIP_STOPS * 201}
             placeholder={"Trader Joe's, Cerritos\n20 Civic Center Plaza, Santa Ana, CA"}
           />
         </label>
-        <p className="field-note">Starting from {home.label}. Up to {MAX_TRIP_STOPS} stops.</p>
+        <p className="field-note">Starting from {home.label}. Up to <span className="font-mono tabular-nums">{MAX_TRIP_STOPS}</span> stops.</p>
         <button className="primary" disabled={busy || lines.length === 0}>{busy ? "Planning…" : "Plan trip"}</button>
       </form>
 
@@ -75,11 +76,11 @@ export function TripAgent({ home, mpg, onDistance }: { home: Vehicle["home"]; mp
         {trip && (
           <div className="trip-result">
             <ModelBadge model={trip.model} />
-            <h3>{money.format(trip.fuelCost)} in fuel for {trip.totalMiles.toFixed(1)} miles</h3>
+            <h3><span className="font-mono tabular-nums">{money.format(trip.fuelCost)}</span> in fuel for <span className="font-mono tabular-nums">{trip.totalMiles.toFixed(1)}</span> miles</h3>
             <p>From home, {home.label}</p>
-            <ol className="location-results list-decimal">
+            <ol className="location-results list-decimal marker:font-mono">
               {trip.stops.map((stop) => (
-                <li key={stop.label}>
+                <li key={JSON.stringify([stop.name, stop.label, stop.lat, stop.lng])}>
                   {stop.name && stop.name !== stop.label ? <><strong className="font-medium">{stop.name}</strong> · {stop.label}</> : stop.label}
                 </li>
               ))}
@@ -92,12 +93,12 @@ export function TripAgent({ home, mpg, onDistance }: { home: Vehicle["home"]; mp
             </dl>
             <p>
               <span className="pill">{KIND_LABEL[trip.gasPrice.kind]}</span>{" "}
-              {trip.gasPrice.label ?? "Gas price"}, week of {trip.gasPrice.asOf}.{" "}
+              {trip.gasPrice.label ?? "Gas price"}, week of <span className="font-mono tabular-nums">{trip.gasPrice.asOf}</span>.{" "}
               <a href={trip.gasPrice.source} target="_blank" rel="noreferrer">EIA source <ExternalIcon /></a>
             </p>
             {trip.gasPrice.stale && <p className="helper">This price is more than two weeks old; check it before relying on it.</p>}
             <p className="helper">
-              Fuel = miles ÷ {mpg} MPG × price per gallon. A regional average, not a station quote. Time excludes traffic and time at stops.
+              Fuel = miles ÷ <span className="font-mono tabular-nums">{mpg}</span> MPG × price per gallon. A regional average, not a station quote. Time excludes traffic and time at stops.
             </p>
             <div className="actions">
               <a className="secondary link-button" href={trip.mapsUrl} target="_blank" rel="noreferrer">Open in Google Maps <ExternalIcon /></a>

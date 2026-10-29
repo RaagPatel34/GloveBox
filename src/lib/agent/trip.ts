@@ -4,7 +4,7 @@ import { mapsDirections, type RouteResult } from "../route-planner";
 import { MAX_TRIP_STOPS, tripCost } from "../trip";
 import type { GasPrice, LatLng, TripPlan, TripReply, Vehicle } from "../types";
 import type { Chat } from "./chat";
-import { runToolLoop, type Tool } from "./loop";
+import { DEFAULT_MAX_STEPS, runToolLoop, type Tool } from "./loop";
 
 // The trip agent (Super, per the spec's credit saver: Ultra is only for choosing between
 // gas stations). It finds the user's stops, routes them from home and back, and looks up
@@ -132,7 +132,8 @@ export async function planTrip(args: {
         const waiting = stops.filter((_, i) => !state.places[i]);
         if (waiting.length > 0) return { error: `Geocode these stops first: ${JSON.stringify(waiting)}.` };
         // Two stops typed differently can be the same place: drive there once.
-        const unique = [...new Map((state.places as Place[]).map((place) => [place.label, place])).values()];
+        // An address alone is not an identity: a mall can contain several businesses.
+        const unique = [...new Map((state.places as Place[]).map((place) => [JSON.stringify([place.name, place.label, place.lat, place.lng]), place])).values()];
         state.route ??= await callRecordingFailure(NO_ROUTE, () => services.route(home, unique));
         return {
           order: state.route.order.map((place) => place.name),
@@ -153,6 +154,8 @@ export async function planTrip(args: {
         return response;
       },
       tier: TIER,
+      // Allow one turn per geocode, plus price and route, even without batched tools.
+      maxSteps: Math.max(DEFAULT_MAX_STEPS, stops.length + 2),
       messages: [
         { role: "system", content: SYSTEM },
         { role: "user", content: JSON.stringify({ stops }) },
@@ -184,7 +187,7 @@ export async function planTrip(args: {
     fuelCost: tripCost(route.miles, mpg, price.price),
     gasPrice: price,
     model: TIER,
-    mapsUrl: mapsDirections([`${home.lat},${home.lng}`, ...route.order.map((place) => place.label), `${home.lat},${home.lng}`]),
+    mapsUrl: mapsDirections([`${home.lat},${home.lng}`, ...route.order.map((place) => `${place.lat},${place.lng}`), `${home.lat},${home.lng}`]),
   };
   const count = plan.stops.length === 1 ? "1 stop" : `${plan.stops.length} stops`;
   return reply(TIER, `Round trip from home: ${count}, ${plan.totalMiles.toFixed(1)} mi, ${usd.format(plan.fuelCost)} in fuel.`, plan);
