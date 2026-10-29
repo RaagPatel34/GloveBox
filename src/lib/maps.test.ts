@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { demoPlacesFetch, DEMO_GAS_STATIONS } from "./fixtures/demo-trip";
-import { findPlace, findPlaces, loopRouteRequest, parsePlace, placesRequest, type PostFetch } from "./maps";
+import { demoPlacesFetch, DEMO_CAR_WASHES, DEMO_GAS_STATIONS, DEMO_SANTA_ANA_STATION } from "./fixtures/demo-trip";
+import { findPlace, findPlaces, loopRouteRequest, parsePlace, type PostFetch } from "./maps";
 import { parseRoute } from "./route-planner";
 import { parseRegionalPrice, EIA_AREAS } from "./gas-price";
 
@@ -45,7 +45,7 @@ describe("findPlaces", () => {
   it("lists the gas stations near a point as named places", async () => {
     const fetchImpl = demoPlacesFetch();
 
-    const stations = await findPlaces("key", "gas", { near: home }, fetchImpl);
+    const stations = await findPlaces("key", "gas", home, fetchImpl);
 
     expect(stations.map((s) => s.name)).toEqual(["Chevron", "Arco", "Shell"]);
     expect(stations[0]).toEqual({ name: "Chevron", label: "7501 Beach Blvd, Buena Park, CA 90620", lat: 33.8582, lng: -118.0001 });
@@ -61,18 +61,28 @@ describe("findPlaces", () => {
   it("asks for car washes by their own place type", async () => {
     const fetchImpl = demoPlacesFetch();
 
-    const washes = await findPlaces("key", "wash", { near: home }, fetchImpl);
+    const washes = await findPlaces("key", "wash", home, fetchImpl);
 
-    expect(washes.map((w) => w.name)).toEqual(["Mister Car Wash", "Santa Ana Express Wash"]);
+    expect(washes.map((w) => w.name)).toEqual(DEMO_CAR_WASHES.map((w) => w.displayName.text));
     expect(fetchImpl.requests[0]).toMatchObject({ textQuery: "car wash", includedType: "car_wash" });
   });
 
-  it("can search along a route instead of around a point", () => {
-    expect(placesRequest("gas", { alongRoute: "encoded-polyline" })).toMatchObject({
-      textQuery: "gas station",
-      searchAlongRouteParameters: { polyline: { encodedPolyline: "encoded-polyline" } },
-    });
-    expect(placesRequest("gas", { alongRoute: "encoded-polyline" })).not.toHaveProperty("locationBias");
+  // The fake Places answers by the request's location bias, so a test that finds stations
+  // proves the search was sent to the right place.
+  it("finds only what is near the point it was asked about", async () => {
+    const santaAna = { lat: 33.7455, lng: -117.8677 };
+    const sanFrancisco = { lat: 37.7749, lng: -122.4194 };
+
+    expect((await findPlaces("key", "gas", santaAna, demoPlacesFetch())).map((s) => s.name)).toEqual([DEMO_SANTA_ANA_STATION.displayName.text]);
+    expect(await findPlaces("key", "gas", sanFrancisco, demoPlacesFetch())).toEqual([]);
+    expect(await findPlaces("key", "wash", sanFrancisco, demoPlacesFetch())).toEqual([]);
+  });
+
+  it("finds at least two gas stations within a few miles of the demo car's home", async () => {
+    const stations = await findPlaces("key", "gas", home, demoPlacesFetch());
+
+    expect(stations.map((s) => s.name)).toEqual(DEMO_GAS_STATIONS.map((s) => s.displayName.text));
+    expect(stations.length).toBeGreaterThanOrEqual(2);
   });
 
   it("sends the server key and drops places without a usable address or coordinates", async () => {
@@ -82,7 +92,7 @@ describe("findPlaces", () => {
       return Response.json({ places: [...DEMO_GAS_STATIONS.slice(0, 1), { displayName: { text: "No address" }, location: { latitude: 1, longitude: 1 } }, { formattedAddress: "No coords" }] });
     };
 
-    const stations = await findPlaces("secret", "gas", { near: home }, fetchImpl);
+    const stations = await findPlaces("secret", "gas", home, fetchImpl);
 
     expect(stations.map((s) => s.name)).toEqual(["Chevron"]);
     expect(calls[0].url).toBe("https://places.googleapis.com/v1/places:searchText");
@@ -90,8 +100,8 @@ describe("findPlaces", () => {
   });
 
   it("finds nothing when Places has no match, and throws when Places is down", async () => {
-    expect(await findPlaces("key", "gas", { near: home }, async () => Response.json({}))).toEqual([]);
-    await expect(findPlaces("key", "gas", { near: home }, async () => new Response("no", { status: 503 }))).rejects.toThrow("Places responded 503");
+    expect(await findPlaces("key", "gas", home, async () => Response.json({}))).toEqual([]);
+    await expect(findPlaces("key", "gas", home, async () => new Response("no", { status: 503 }))).rejects.toThrow("Places responded 503");
   });
 });
 

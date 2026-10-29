@@ -1,7 +1,7 @@
 // The .ts extension lets `npm run eval:router` load this file under plain Node.
 import { pacificDate } from "../days.ts";
 import { BASELINE_INTERVALS, isItemKind, isOdometerReading, isPlainDate, parseMiles } from "../intervals.ts";
-import type { ErrandStop, ScheduleItemKind } from "../types";
+import { toErrandStop, type ErrandStop, type ScheduleItemKind } from "../types.ts";
 import type { Chat } from "./chat";
 
 // Nano reads one command-bar input and says what kind it is, pulling out any fields.
@@ -59,13 +59,7 @@ function toOdometer(value: unknown): number | undefined {
 
 // The stops it can check: a gas or car-wash stop, or a place with a name of a sensible length.
 function toErrandStops(value: unknown): ErrandStop[] {
-  if (!Array.isArray(value)) return [];
-  return value.flatMap((stop): ErrandStop[] => {
-    const { type, name } = (typeof stop === "object" && stop !== null ? stop : {}) as Record<string, unknown>;
-    if (type === "gas" || type === "wash") return [{ type }];
-    const trimmed = typeof name === "string" ? name.trim() : "";
-    return type === "address" && trimmed !== "" && trimmed.length <= 200 ? [{ type, name: trimmed }] : [];
-  });
+  return Array.isArray(value) ? value.flatMap((stop) => toErrandStop(stop) ?? []) : [];
 }
 
 // The JSON object that ends last in the text: the answer comes after any reasoning or

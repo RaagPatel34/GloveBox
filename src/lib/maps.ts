@@ -63,30 +63,25 @@ const KINDS = {
   wash: { textQuery: "car wash", includedType: "car_wash" },
 } satisfies Record<StopKind, { textQuery: string; includedType: string }>;
 
-// Where to look: around a point (home, or a stop), or along a route's encoded polyline.
-export type PlacesNear = { near: LatLng } | { alongRoute: string };
-
-export const MAX_CANDIDATES = 5;
+const MAX_CANDIDATES = 5;
 
 const biasAround = ({ lat, lng }: LatLng, radius: number) => ({ circle: { center: { latitude: lat, longitude: lng }, radius } });
 
 // Real gas stations or car washes: the place type is strict, so a "Gas" cafe doesn't count.
-// Around a point it looks within about 5 miles (a bias, not a limit).
-export function placesRequest(kind: StopKind, where: PlacesNear) {
+// It looks within about 5 miles of `near` (a bias, not a limit).
+export function placesRequest(kind: StopKind, near: LatLng) {
   return {
     ...KINDS[kind],
     strictTypeFiltering: true,
     regionCode: "US",
     pageSize: MAX_CANDIDATES,
-    ...("near" in where
-      ? { locationBias: biasAround(where.near, 8000) }
-      : { searchAlongRouteParameters: { polyline: { encodedPolyline: where.alongRoute } } }),
+    locationBias: biasAround(near, 8000),
   };
 }
 
-// Candidate stops of one kind, in Google's order. Empty when there are none.
-export async function findPlaces(apiKey: string, kind: StopKind, where: PlacesNear, fetchImpl: PostFetch = fetch): Promise<Place[]> {
-  return parsePlaces(await searchText(apiKey, placesRequest(kind, where), fetchImpl));
+// Candidate stops of one kind near a point, in Google's order. Empty when there are none.
+export async function findPlaces(apiKey: string, kind: StopKind, near: LatLng, fetchImpl: PostFetch = fetch): Promise<Place[]> {
+  return parsePlaces(await searchText(apiKey, placesRequest(kind, near), fetchImpl));
 }
 
 async function searchText(apiKey: string, body: object, fetchImpl: PostFetch): Promise<unknown> {
