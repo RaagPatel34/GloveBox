@@ -79,6 +79,20 @@ describe("planTrip", () => {
     expect(chat.requests.every((r) => r.tier === "super")).toBe(true);
   });
 
+  it.each([
+    ["a gas price under a cent", { gasPrice: async () => ({ ...LA_PRICE, price: 0.005 }) }],
+    ["a route over the mileage limit", { route: async (_home: LatLng, stops: Place[]) => ({ order: stops, miles: 20000, minutes: 51 }) }],
+  ])("answers with a message, not an error, when %s can't be costed", async (_name, overrides) => {
+    const chat = scriptedChat({ super: [callTools(["geocode", { query: "Trader Joe's" }], ["getGasPrice", {}]), callTools(["computeRoute", {}])] });
+    const { services } = fakeServices(overrides);
+
+    const reply = await planTrip({ stops: ["Trader Joe's"], home: HOME, mpg: 32, chat, services });
+
+    expect(reply.plan).toBeNull();
+    expect(reply.message).toMatch(/cost|price|distance/i);
+    expect(reply.model).toBe("super");
+  });
+
   it("names a stop Google can't find instead of routing the rest", async () => {
     const chat = scriptedChat({
       super: [callTools(["geocode", { query: "Trader Joe's" }], ["geocode", { query: "Blorfville Mall" }], ["getGasPrice", {}])],

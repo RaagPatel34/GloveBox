@@ -4,6 +4,12 @@ import { findPlace, findPlaces, loopRouteRequest, parsePlace, type PostFetch } f
 import { parseRoute } from "./route-planner";
 import { parseRegionalPrice, EIA_AREAS } from "./gas-price";
 
+const DEMO_GROCERY_NEARBY = {
+  displayName: { text: "Trader Joe's" },
+  formattedAddress: "3333 W 1st St, Santa Ana, CA 92703",
+  location: { latitude: 33.7466, longitude: -117.9139 },
+};
+
 // Shapes copied from real Places (New), Routes and EIA v2 responses, October 2026.
 const traderJoes = {
   places: [
@@ -116,6 +122,22 @@ describe("findPlace", () => {
       textQuery: "Trader Joe's",
       locationBias: { circle: { center: { latitude: 33.8442, longitude: -117.9987 } } },
     });
+  });
+
+  it("takes the match closest to home when Google lists a far one first", async () => {
+    const far = { displayName: { text: "Trader Joe's" }, formattedAddress: "1 Market St, San Francisco, CA", location: { latitude: 37.79, longitude: -122.39 } };
+    const fetchImpl: PostFetch = async () => Response.json({ places: [far, DEMO_GROCERY_NEARBY] });
+
+    const place = await findPlace("key", "Trader Joe's", { lat: 33.8442, lng: -117.9987 }, fetchImpl);
+
+    expect(place?.label).toBe(DEMO_GROCERY_NEARBY.formattedAddress);
+  });
+
+  it("keeps Google's first match when there is no home to measure from", async () => {
+    const far = { displayName: { text: "Pier 39" }, formattedAddress: "Pier 39, San Francisco, CA", location: { latitude: 37.8087, longitude: -122.4098 } };
+    const fetchImpl: PostFetch = async () => Response.json({ places: [far, DEMO_GROCERY_NEARBY] });
+
+    expect((await findPlace("key", "Pier 39", undefined, fetchImpl))?.label).toBe(far.formattedAddress);
   });
 });
 

@@ -279,11 +279,19 @@ export async function planTrip(args: {
     const place = state.places[i];
     if (place && !typeAt.has(place.label)) typeAt.set(place.label, stop.type);
   });
+  // A route or price outside tripCost's limits is a bad answer from a provider, not a crash.
+  let fuelCost: number;
+  try {
+    fuelCost = tripCost(route.miles, mpg, price.price);
+  } catch (error) {
+    console.error("planTrip: fuel cost out of range", error);
+    return reply(TIER, `The route or gas price came back unusable, so I can't work out the fuel cost. ${BY_HAND}`);
+  }
   const plan: TripPlan = {
     stops: route.order.map((place) => ({ type: typeAt.get(place.label) ?? "address", ...place })),
     totalMiles: route.miles,
     totalMinutes: route.minutes,
-    fuelCost: tripCost(route.miles, mpg, price.price),
+    fuelCost,
     gasPrice: price,
     model: TIER,
     mapsUrl: mapsDirections([`${home.lat},${home.lng}`, ...route.order.map((place) => place.label), `${home.lat},${home.lng}`]),

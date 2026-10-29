@@ -45,15 +45,25 @@ export function loopRouteRequest(home: LatLng, stops: LatLng[]) {
   };
 }
 
-// Biased toward points within about 30 miles of `near` (not limited to them), so "Trader Joe's" means one close to home.
+// Biased toward points within about 30 miles of `near`, and of the matches Google returns the one closest to `near`
+// wins, so "Trader Joe's" means the one close to home. Never an outright refusal: a full address far from home is a
+// legitimate stop.
 export async function findPlace(apiKey: string, query: string, near?: LatLng, fetchImpl: PostFetch = fetch): Promise<Place | null> {
   const body = {
     textQuery: query,
     regionCode: "US",
-    pageSize: 1,
+    pageSize: near ? MAX_CANDIDATES : 1,
     ...(near ? { locationBias: biasAround(near, 50000) } : {}),
   };
-  return parsePlace(await searchText(apiKey, body, fetchImpl));
+  const places = parsePlaces(await searchText(apiKey, body, fetchImpl));
+  return near ? closestTo(near, places) : (places[0] ?? null);
+}
+
+// Equirectangular distance squared, enough to rank places a few hundred miles apart.
+function closestTo(point: LatLng, places: Place[]): Place | null {
+  const flatten = Math.cos((point.lat * Math.PI) / 180);
+  const apart = (place: Place) => (place.lat - point.lat) ** 2 + ((place.lng - point.lng) * flatten) ** 2;
+  return places.reduce<Place | null>((best, place) => (!best || apart(place) < apart(best) ? place : best), null);
 }
 
 // The kinds of stop the user can ask for without naming a place, as Places names them.
