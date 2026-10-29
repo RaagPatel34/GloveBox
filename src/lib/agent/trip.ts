@@ -4,7 +4,7 @@ import { mapsDirections, type RouteResult } from "../route-planner";
 import { MAX_TRIP_STOPS, tripCost, tripPlaceKey } from "../trip";
 import { toErrandStop, type ErrandStop, type GasPrice, type LatLng, type TripPlan, type TripReply, type TripStop, type Vehicle } from "../types";
 import type { Chat } from "./chat";
-import { runToolLoop, type Tool } from "./loop";
+import { DEFAULT_MAX_STEPS, runToolLoop, type Tool } from "./loop";
 
 // The trip agent (Super, per the spec's credit saver: Ultra is only for choosing between
 // gas stations). It finds the user's stops, routes them from home and back, and looks up
@@ -245,6 +245,8 @@ export async function planTrip(args: {
         return response;
       },
       tier: TIER,
+      // One turn per lookup, then price and route, even without batched tools.
+      maxSteps: Math.max(DEFAULT_MAX_STEPS, stops.length + 2),
       messages: [
         { role: "system", content: SYSTEM },
         { role: "user", content: JSON.stringify({ stops }) },
