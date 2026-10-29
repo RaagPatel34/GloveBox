@@ -1,4 +1,5 @@
 import type { DashboardItem } from "@/lib/dashboard";
+import { sourceAnchor } from "@/lib/garage-view";
 import { formatLimit, STATUS_LABEL } from "@/lib/readout";
 import { TONE } from "./tone";
 
@@ -8,6 +9,7 @@ export function ItemTile({ item }: { item: DashboardItem }) {
   const tone = TONE[item.status];
   const { value, unit } = formatLimit(item.limit);
   const used = item.usedPercent;
+  const source = sourceAnchor(item.source);
 
   return (
     <li className={`flex flex-col rounded-2xl bg-panel p-4 ring-1 ${tone.ring}`}>
@@ -42,7 +44,13 @@ export function ItemTile({ item }: { item: DashboardItem }) {
 
       <p className="mt-2 flex justify-between gap-2 font-mono text-[10px] uppercase tracking-[0.12em] text-muted">
         <span>{used === null ? "Interval unknown" : `${used}% used`}</span>
-        <span>{SOURCE_LABEL[item.source.kind]}</span>
+        {source.href ? (
+          <a href={source.href} target="_blank" rel="noreferrer" className="underline underline-offset-2">
+            {SOURCE_LABEL[item.source.kind]} ↗<span className="sr-only"> (opens the source page)</span>
+          </a>
+        ) : (
+          <span>{SOURCE_LABEL[item.source.kind]}</span>
+        )}
       </p>
     </li>
   );

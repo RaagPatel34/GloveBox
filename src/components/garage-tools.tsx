@@ -1,5 +1,8 @@
 'use client';
 import { useRef, useState, type FormEvent } from 'react';
+import { useGarage } from '@/components/garage/GarageProvider';
+import { applyMfrSchedule, requestMfrSchedule } from '@/lib/mfr-schedule';
+import type { Vehicle } from '@/lib/types';
 import { createGarage, logService, setSchedule, updateOdometer, setMileagePlan, HONDA_SOURCE, TIRE_SOURCE } from '@/lib/garage';
 import { isGarage, LABELS, type Garage } from '@/lib/maintenance';
 import { ExternalIcon } from '@/components/shell/icons';
@@ -14,6 +17,7 @@ export function CarSetup({ existing, onSave, onCancel }: { existing:boolean; onS
   const [busy,setBusy] = useState(false);
   const [error,setError] = useState('');
   const [notice,setNotice] = useState('');
+  const { update } = useGarage();
   function change(name:keyof typeof values,value:string) { setValues({...values,[name]:value}); if (['year','make','model','mpg'].includes(name)) setEpaId(''); if (['year','make','model'].includes(name)) { setOptions([]);setModelMatches([]); } setNotice(''); }
   async function lookup(id?:string, modelName?:string) {
     setBusy(true);setError('');setNotice('');
@@ -29,8 +33,19 @@ export function CarSetup({ existing, onSave, onCancel }: { existing:boolean; onS
   }
   function submit(e:FormEvent<HTMLFormElement>) {
     e.preventDefault();setError('');
-    try { onSave(createGarage({ year:Number(values.year),make:values.make,model:values.model,mpg:Number(values.mpg),odometer:Number(values.odometer),location:values.location,weeklyMiles:Number(values.weeklyMiles),epaId:epaId || undefined })); }
+    try {
+      const garage = createGarage({ year:Number(values.year),make:values.make,model:values.model,mpg:Number(values.mpg),odometer:Number(values.odometer),location:values.location,weeklyMiles:Number(values.weeklyMiles),epaId:epaId || undefined });
+      onSave(garage);
+      void addManufacturerIntervals(garage.vehicle);
+    }
     catch(err) {setError((err as Error).message);}
+  }
+  // After the car is saved, never before: a slow or failed search cannot hold up setup. It lands on the garage
+  // as it is by then, so anything the owner set or recorded in the meantime is kept.
+  async function addManufacturerIntervals(vehicle:Vehicle) {
+    const intervals = await requestMfrSchedule(vehicle);
+    if (intervals.length === 0) return;
+    update(current => current.vehicle.id === vehicle.id ? applyMfrSchedule(current, intervals) : current, 'Manufacturer intervals added where you had none. Each links to its source.');
   }
   return <section className="tool-panel setup-panel" aria-labelledby="setup-title"><div className="section-heading"><h2 id="setup-title">Make room for your car</h2><button className="text-button" onClick={onCancel}>Cancel</button></div><p className="helper">Start with what you know. Service dates stay unknown until you record them. Liquid-fuel cars only; EV charging is not supported yet.</p><form onSubmit={submit}>
     <div className="form-grid"><label>Year<input required type="number" min="1984" max={new Date().getFullYear()+1} value={values.year} onChange={e=>change('year',e.target.value)} disabled={busy}/></label><label>Make<input required maxLength={80} placeholder="Honda" value={values.make} onChange={e=>change('make',e.target.value)} disabled={busy}/></label><label>Model<input required maxLength={100} placeholder="Civic" value={values.model} onChange={e=>change('model',e.target.value)} disabled={busy}/></label></div>

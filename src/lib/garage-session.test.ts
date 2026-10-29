@@ -35,3 +35,10 @@ describe("garageUpdated", () => {
     expect(garageUpdated(empty, (garage) => garage)).toBe(empty);
   });
 });
+
+describe("garageUpdated with a change that changes nothing", () => {
+  it("keeps the session, so Undo survives and nothing is saved again", () => {
+    const afterReset = resetToDemo({ garage: mine, beforeReset: null }, demo);
+    expect(garageUpdated(afterReset, (garage) => garage)).toBe(afterReset);
+  });
+});
