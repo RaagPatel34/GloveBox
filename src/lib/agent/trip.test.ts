@@ -170,6 +170,39 @@ describe("planTrip", () => {
     expect(reply.plan?.stops).toHaveLength(1);
   });
 
+  it.each([0, 0.001])("keeps distinct businesses at the same street address (coordinate offset %s)", async (offset) => {
+    const stops = ["Mall pharmacy", "Mall grocery"];
+    const places = stops.map((name, index) => ({ name, label: "100 Main St, Buena Park, CA", lat: 33.87 + index * offset, lng: -118 }));
+    const chat = scriptedChat({ super: [
+      callTools(["geocode", { query: stops[0] }], ["geocode", { query: stops[1] }], ["getGasPrice", {}]),
+      callTools(["computeRoute", {}]),
+    ] });
+    const { services, calls } = fakeServices({ findPlace: async (query) => places[stops.indexOf(query)] });
+
+    const reply = await planTrip({ stops, home: HOME, mpg: 32, chat, services });
+
+    expect(calls.route).toEqual([places]);
+    expect(reply.plan?.stops.map((place) => place.name)).toEqual([...stops].reverse());
+    const url = new URL(reply.plan!.mapsUrl);
+    expect(url.searchParams.get("waypoints")).toBe([...places].reverse().map((place) => `${place.lat},${place.lng}`).join("|"));
+  });
+
+  it("finishes eight stops when the model calls each tool in a separate turn", async () => {
+    const stops = Array.from({ length: 8 }, (_, i) => `Stop ${i + 1}`);
+    const chat = scriptedChat({ super: [
+      ...stops.map((query) => callTools(["geocode", { query }])),
+      callTools(["getGasPrice", {}]),
+      callTools(["computeRoute", {}]),
+    ] });
+    const { services } = fakeServices({
+      findPlace: async (query) => ({ name: query, label: `${query}, Buena Park, CA`, lat: 33.87, lng: -118 }),
+    });
+
+    const reply = await planTrip({ stops, home: HOME, mpg: 32, chat, services });
+
+    expect(reply.plan?.stops.map((place) => place.name)).toEqual([...stops].reverse());
+    expect(chat.requests).toHaveLength(10);
+  });
   it("asks for one to eight distinct stops before calling the model", async () => {
     const { services, calls } = fakeServices();
     const ask = "Enter 1–8 different stops, each under 200 characters.";
