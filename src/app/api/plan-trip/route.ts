@@ -1,8 +1,7 @@
-import { planTrip, type TripServices } from "@/lib/agent/trip";
-import { EIA_AREAS, fetchRegionalPrice } from "@/lib/gas-price";
-import { computeLoopRoute, findPlace } from "@/lib/maps";
+import { planTrip } from "@/lib/agent/trip";
 import { missingNebiusConfig, nebiusChat } from "@/lib/nebius";
 import { boundedJson, sameOrigin } from "@/lib/request-json";
+import { tripServices } from "@/lib/trip-services";
 import type { TripReply } from "@/lib/types";
 
 // The trip panel: POST { stops, home, mpg } -> TripReply. The car lives in the browser,
@@ -10,9 +9,8 @@ import type { TripReply } from "@/lib/types";
 export async function POST(request: Request) {
   const answer = (message: string, status: number) => Response.json({ model: null, message, plan: null } satisfies TripReply, { status });
   if (!sameOrigin(request)) return answer("Cross-origin requests are not accepted.", 403);
-  const mapsKey = process.env.ENABLE_MAPS === "true" ? process.env.GOOGLE_MAPS_API_KEY : undefined;
-  const eiaKey = process.env.EIA_API_KEY;
-  if (!mapsKey || !eiaKey) return answer("Trip planning needs Google Maps and EIA prices, which aren't connected yet. You can still plan the drive by hand below.", 503);
+  const services = tripServices();
+  if (!services) return answer("Trip planning needs Google Maps and EIA prices, which aren't connected yet. You can still plan the drive by hand below.", 503);
 
   let body: Record<string, unknown>;
   try {
@@ -33,12 +31,6 @@ export async function POST(request: Request) {
 
   const missing = missingNebiusConfig(["super"]);
   if (missing.length > 0) console.warn(`Trip agent is offline: ${missing.join(", ")} not set`);
-  const services: TripServices = {
-    findPlace: (query, near) => findPlace(mapsKey, query, near),
-    route: (from, stops) => computeLoopRoute(mapsKey, from, stops),
-    // The Los Angeles weekly average, or California's when LA's is unavailable.
-    gasPrice: () => fetchRegionalPrice(eiaKey, EIA_AREAS.la).catch(() => fetchRegionalPrice(eiaKey, EIA_AREAS.ca)),
-  };
 
   const reply = await planTrip({
     stops: body.stops,

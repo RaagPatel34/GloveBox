@@ -8,6 +8,7 @@ import { GarageTransfer } from "@/components/garage-transfer";
 import { useGarage } from "@/components/garage/GarageProvider";
 import { panelClass, primaryButton, quietButton } from "@/components/shell/ui";
 import { numberFormat } from "@/lib/readout";
+import { vehicleMpg } from "@/lib/trip";
 
 const READY_NOTICE = "Your car is ready. Add your service history in the Service log.";
 
@@ -67,7 +68,7 @@ export default function CarPage() {
           <div>
             <dt>Fuel economy</dt>
             <dd>
-              {vehicle.mpgOverride || vehicle.epaMpg} MPG <span className="tiny font-sans">· {mpgSource}</span>
+              {vehicleMpg(vehicle)} MPG <span className="tiny font-sans">· {mpgSource}</span>
             </dd>
           </div>
           <div>

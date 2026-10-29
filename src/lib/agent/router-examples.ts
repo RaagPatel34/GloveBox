@@ -77,8 +77,8 @@ export const ROUTER_EXAMPLES: RouterExample[] = [
   },
   {
     input: "gas, car wash and Trader Joe's before Friday",
-    expected: { intent: "errand" },
-    sample: '{"intent":"errand"}',
+    expected: { intent: "errand", stops: [{ type: "gas" }, { type: "wash" }, { type: "address", name: "Trader Joe's" }] },
+    sample: '{"intent":"errand","stops":[{"type":"gas"},{"type":"wash"},{"type":"address","name":"Trader Joe\'s"}]}',
   },
   {
     input: "what's the capital of France",

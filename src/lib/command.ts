@@ -2,9 +2,11 @@ import { randomUUID } from "node:crypto";
 import type { Chat } from "./agent/chat";
 import { runMaintenanceAgent, type ActionRoute, type AgentRoute, type MaintenanceEffect } from "./agent/maintenance";
 import { routeCommand } from "./agent/router";
+import { planTrip, type TripServices } from "./agent/trip";
 import { MAX_COMMAND_LENGTH } from "./command-limits";
 import { commandReply as reply } from "./command-reply";
 import { formatReadDate, numberFormat, STATUS_LABEL } from "./readout";
+import { vehicleMpg } from "./trip";
 import type { CarSnapshot, CommandReply, Proposal } from "./types";
 
 // One command-bar input, end to end: Nano routes it, Super records service logs and
@@ -14,13 +16,17 @@ import type { CarSnapshot, CommandReply, Proposal } from "./types";
 
 const EXAMPLES =
   "Try something you did, like “just got a car wash”, your odometer, like “odometer is 48,210”, " +
-  "or something coming up, like “camping trip, 300 miles on dirt roads”.";
+  "something coming up, like “camping trip, 300 miles on dirt roads”, or errands, like “gas, car wash and Trader Joe's”.";
+const ERRAND_EXAMPLE = "Try listing them, like “gas, car wash and Trader Joe's”.";
+const NO_TRIP = "Trip planning needs Google Maps and EIA prices, which aren't connected yet.";
 
 export async function runCommand(args: {
   text: unknown;
   car: CarSnapshot | null;
   // The visitor's cards still waiting on Apply or Dismiss. A new suggestion for one of their items replaces it.
   pending?: Proposal[];
+  // Google Maps and EIA for errands. Null when they are not connected (see tripServices).
+  trip?: TripServices | null;
   // Null when the AI is not configured (see missingNebiusConfig).
   chat: Chat | null;
   now: Date;
@@ -28,7 +34,7 @@ export async function runCommand(args: {
   saveProposals: (proposals: Proposal[]) => Promise<void>;
   newId?: () => string;
 }): Promise<CommandReply> {
-  const { car, chat, now, pending = [], newId = randomUUID } = args;
+  const { car, chat, now, pending = [], trip = null, newId = randomUUID } = args;
   const text = typeof args.text === "string" ? args.text.trim() : "";
   if (text === "" || text.length > MAX_COMMAND_LENGTH) {
     return reply(null, `Type what happened, in ${MAX_COMMAND_LENGTH} characters or fewer. ${EXAMPLES}`);
@@ -53,12 +59,19 @@ export async function runCommand(args: {
     switch (routed.intent) {
       case "unknown":
         return reply("nano", `I couldn't tell what to do with that. ${EXAMPLES}`);
-      case "errand":
-        return reply(
-          "nano",
-          "That sounds like an errand. Trip planning is coming soon; for now I can log a service or an odometer " +
-            "reading, or suggest schedule changes for something coming up, like a camping trip.",
-        );
+      case "errand": {
+        if (!routed.stops) return reply("nano", `Which places do you want to go? ${ERRAND_EXAMPLE}`);
+        if (!trip) return reply("nano", NO_TRIP);
+        // Super finds the places and plans the drive; code builds the plan from what the tools found.
+        const planned = await planTrip({
+          stops: routed.stops,
+          home: car.vehicle.home,
+          mpg: vehicleMpg(car.vehicle),
+          chat: tracked,
+          services: trip,
+        });
+        return reply(planned.model ?? "nano", planned.message, [], 0, planned.plan);
+      }
     }
     route = routed;
     state = await runMaintenanceAgent({ chat: tracked, car, now, text, route, newId, pending });

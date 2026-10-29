@@ -2,9 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { TripResult } from "@/components/trip-result";
 import { MAX_COMMAND_LENGTH } from "@/lib/command-limits";
 import { commandReply } from "@/lib/command-reply";
-import type { CommandReply } from "@/lib/types";
+import type { CommandReply, Vehicle } from "@/lib/types";
 import { ModelBadge } from "./ModelBadge";
 
 const UNREACHABLE = commandReply(null, "Could not reach GloveBox. Check your connection and try again.");
@@ -18,7 +19,7 @@ async function sendCommand(text: string): Promise<CommandReply> {
     });
     const body = (await res.json()) as Partial<CommandReply>;
     return typeof body.message === "string"
-      ? commandReply(body.model ?? null, body.message, body.changes, body.proposals)
+      ? commandReply(body.model ?? null, body.message, body.changes, body.proposals, body.trip)
       : UNREACHABLE;
   } catch {
     return UNREACHABLE;
@@ -27,7 +28,9 @@ async function sendCommand(text: string): Promise<CommandReply> {
 
 // One line to tell GloveBox what happened. A reply that changed the car or added proposal
 // cards reloads the dashboard (a server component), so the tiles and cards are current.
-export function CommandBar() {
+// An errand's reply shows the trip plan under the message; it changes nothing, so the
+// dashboard stays as it is.
+export function CommandBar({ home, mpg }: { home: Vehicle["home"]; mpg: number }) {
   const router = useRouter();
   const [text, setText] = useState("");
   const [pending, setPending] = useState(false);
@@ -84,6 +87,7 @@ export function CommandBar() {
                 ))}
               </ul>
             )}
+            {reply.trip && <TripResult trip={reply.trip} home={home} mpg={mpg} showModel={false} />}
           </div>
         )}
       </div>

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { BASELINE_INTERVALS } from "../intervals";
 import { NOW } from "../test-support";
 import { checkRouterExample, expectedRoute, ROUTER_EXAMPLES } from "./router-examples";
-import { checkRoute, parseRoute, routeCommand } from "./router";
+import { checkRoute, parseRoute, routeCommand, type Route } from "./router";
 import { say, scriptedChat } from "./scripted-chat";
 
 describe("routeCommand on the fixed example set", () => {
@@ -123,5 +123,46 @@ describe("checkRoute", () => {
       'intent: expected "odometer", got "event"',
       "odometer: expected 48210, got undefined",
     ]);
+  });
+
+  it("compares errand stops by value", () => {
+    const route: Route = { intent: "errand", stops: [{ type: "gas" }] };
+    expect(checkRoute(route, { intent: "errand", stops: [{ type: "gas" }] })).toEqual([]);
+    expect(checkRoute(route, { intent: "errand", stops: [{ type: "wash" }] })).toEqual([
+      'stops: expected [{"type":"wash"}], got [{"type":"gas"}]',
+    ]);
+  });
+});
+
+describe("parseRoute: errands", () => {
+  it("keeps the gas, the car wash and the named place, in the order given", () => {
+    const raw = `{"intent":"errand","stops":[{"type":"gas"},{"type":"wash"},{"type":"address","name":" Trader Joe's "}]}`;
+    expect(parseRoute(raw)).toEqual({
+      intent: "errand",
+      stops: [{ type: "gas" }, { type: "wash" }, { type: "address", name: "Trader Joe's" }],
+    });
+  });
+
+  it("asks for clarification instead of silently dropping invalid destinations", () => {
+    const raw = JSON.stringify({
+      intent: "errand",
+      stops: [{ type: "gas" }, { type: "teleport" }, { type: "address" }, { type: "address", name: "  " }, "Costco", { type: "address", name: "x".repeat(201) }, null],
+    });
+    expect(parseRoute(raw)).toEqual({ intent: "errand" });
+    expect(parseRoute(JSON.stringify({ intent: "errand", stops: [{ type: "gas" }, { type: "address", name: "" }] }))).toEqual({ intent: "errand" });
+  });
+
+  it("is still an errand, with no stops, when the reply names none it can use", () => {
+    expect(parseRoute('{"intent":"errand"}')).toEqual({ intent: "errand" });
+    expect(parseRoute('{"intent":"errand","stops":"gas"}')).toEqual({ intent: "errand" });
+    expect(parseRoute('{"intent":"errand","stops":[]}')).toEqual({ intent: "errand" });
+  });
+
+  it("tells Nano how to write the stops", async () => {
+    const chat = scriptedChat({ nano: [say('{"intent":"unknown"}')] });
+    await routeCommand("hi", chat, NOW);
+    const prompt = JSON.stringify(chat.requests[0].messages[0]);
+    expect(prompt).toContain('{\\"type\\":\\"gas\\"}');
+    expect(prompt).toContain('\\"type\\":\\"address\\",\\"name\\"');
   });
 });

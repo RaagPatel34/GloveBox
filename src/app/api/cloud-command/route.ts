@@ -5,6 +5,7 @@ import { commandReply } from "@/lib/command-reply";
 import { updateCar } from "@/lib/db/car-store";
 import { addProposals, loadProposals } from "@/lib/db/proposal-store";
 import { missingNebiusConfig, nebiusChat } from "@/lib/nebius";
+import { tripServices } from "@/lib/trip-services";
 import { VISITOR_COOKIE } from "@/lib/visitor";
 
 // The command bar: POST { text } -> CommandReply. The car is the one the visitor cookie
@@ -34,6 +35,7 @@ export async function POST(request: Request) {
       text,
       car,
       pending,
+      trip: tripServices(),
       chat: missing.length > 0 ? null : nebiusChat(),
       now: new Date(),
       save: (next) => updateCar(visitorId!, next, car ?? undefined),

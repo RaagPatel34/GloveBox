@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { loopRouteRequest, parsePlace } from "./maps";
+import { demoPlacesFetch, DEMO_CAR_WASHES, DEMO_GAS_STATIONS, DEMO_SANTA_ANA_STATION } from "./fixtures/demo-trip";
+import { findPlace, findPlaces, loopRouteRequest, parsePlace, type PostFetch } from "./maps";
 import { parseRoute } from "./route-planner";
 import { parseRegionalPrice, EIA_AREAS } from "./gas-price";
+
+const DEMO_GROCERY_NEARBY = {
+  displayName: { text: "Trader Joe's" },
+  formattedAddress: "3333 W 1st St, Santa Ana, CA 92703",
+  location: { latitude: 33.7466, longitude: -117.9139 },
+};
 
 // Shapes copied from real Places (New), Routes and EIA v2 responses, October 2026.
 const traderJoes = {
@@ -35,6 +42,102 @@ describe("parsePlace", () => {
     expect(parsePlace({ places: [{ ...place, location: undefined }] })).toBeNull();
     expect(parsePlace({ places: [{ ...place, location: { latitude: 91, longitude: 0 } }] })).toBeNull();
     expect(parsePlace({ places: [{ ...place, formattedAddress: "" }] })).toBeNull();
+  });
+});
+
+describe("findPlaces", () => {
+  const home = { lat: 33.8442, lng: -117.9987 };
+
+  it("lists the gas stations near a point as named places", async () => {
+    const fetchImpl = demoPlacesFetch();
+
+    const stations = await findPlaces("key", "gas", home, fetchImpl);
+
+    expect(stations.map((s) => s.name)).toEqual(["Chevron", "Arco", "Shell"]);
+    expect(stations[0]).toEqual({ name: "Chevron", label: "7501 Beach Blvd, Buena Park, CA 90620", lat: 33.8582, lng: -118.0001 });
+    expect(fetchImpl.requests).toEqual([
+      expect.objectContaining({
+        textQuery: "gas station",
+        includedType: "gas_station",
+        locationBias: { circle: { center: { latitude: 33.8442, longitude: -117.9987 }, radius: 8000 } },
+      }),
+    ]);
+  });
+
+  it("asks for car washes by their own place type", async () => {
+    const fetchImpl = demoPlacesFetch();
+
+    const washes = await findPlaces("key", "wash", home, fetchImpl);
+
+    expect(washes.map((w) => w.name)).toEqual(DEMO_CAR_WASHES.map((w) => w.displayName.text));
+    expect(fetchImpl.requests[0]).toMatchObject({ textQuery: "car wash", includedType: "car_wash" });
+  });
+
+  // The fake Places answers by the request's location bias, so a test that finds stations
+  // proves the search was sent to the right place.
+  it("finds only what is near the point it was asked about", async () => {
+    const santaAna = { lat: 33.7455, lng: -117.8677 };
+    const sanFrancisco = { lat: 37.7749, lng: -122.4194 };
+
+    expect((await findPlaces("key", "gas", santaAna, demoPlacesFetch())).map((s) => s.name)).toEqual([DEMO_SANTA_ANA_STATION.displayName.text]);
+    expect(await findPlaces("key", "gas", sanFrancisco, demoPlacesFetch())).toEqual([]);
+    expect(await findPlaces("key", "wash", sanFrancisco, demoPlacesFetch())).toEqual([]);
+  });
+
+  it("finds at least two gas stations within a few miles of the demo car's home", async () => {
+    const stations = await findPlaces("key", "gas", home, demoPlacesFetch());
+
+    expect(stations.map((s) => s.name)).toEqual(DEMO_GAS_STATIONS.map((s) => s.displayName.text));
+    expect(stations.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("sends the server key and drops places without a usable address or coordinates", async () => {
+    const calls: { url: string; headers: Record<string, string> }[] = [];
+    const fetchImpl: PostFetch = async (url, init) => {
+      calls.push({ url, headers: init.headers as Record<string, string> });
+      return Response.json({ places: [...DEMO_GAS_STATIONS.slice(0, 1), { displayName: { text: "No address" }, location: { latitude: 1, longitude: 1 } }, { formattedAddress: "No coords" }] });
+    };
+
+    const stations = await findPlaces("secret", "gas", home, fetchImpl);
+
+    expect(stations.map((s) => s.name)).toEqual(["Chevron"]);
+    expect(calls[0].url).toBe("https://places.googleapis.com/v1/places:searchText");
+    expect(calls[0].headers["X-Goog-Api-Key"]).toBe("secret");
+  });
+
+  it("finds nothing when Places has no match, and throws when Places is down", async () => {
+    expect(await findPlaces("key", "gas", home, async () => Response.json({}))).toEqual([]);
+    await expect(findPlaces("key", "gas", home, async () => new Response("no", { status: 503 }))).rejects.toThrow("Places responded 503");
+  });
+});
+
+describe("findPlace", () => {
+  it("looks a named place up near home, so Trader Joe's means the one close by", async () => {
+    const fetchImpl = demoPlacesFetch();
+
+    const place = await findPlace("key", "Trader Joe's", { lat: 33.8442, lng: -117.9987 }, fetchImpl);
+
+    expect(place).toMatchObject({ name: "Trader Joe's", label: "3333 W 1st St, Santa Ana, CA 92703" });
+    expect(fetchImpl.requests[0]).toMatchObject({
+      textQuery: "Trader Joe's",
+      locationBias: { circle: { center: { latitude: 33.8442, longitude: -117.9987 } } },
+    });
+  });
+
+  it("takes the match closest to home when Google lists a far one first", async () => {
+    const far = { displayName: { text: "Trader Joe's" }, formattedAddress: "1 Market St, San Francisco, CA", location: { latitude: 37.79, longitude: -122.39 } };
+    const fetchImpl: PostFetch = async () => Response.json({ places: [far, DEMO_GROCERY_NEARBY] });
+
+    const place = await findPlace("key", "Trader Joe's", { lat: 33.8442, lng: -117.9987 }, fetchImpl);
+
+    expect(place?.label).toBe(DEMO_GROCERY_NEARBY.formattedAddress);
+  });
+
+  it("keeps Google's first match when there is no home to measure from", async () => {
+    const far = { displayName: { text: "Pier 39" }, formattedAddress: "Pier 39, San Francisco, CA", location: { latitude: 37.8087, longitude: -122.4098 } };
+    const fetchImpl: PostFetch = async () => Response.json({ places: [far, DEMO_GROCERY_NEARBY] });
+
+    expect((await findPlace("key", "Pier 39", undefined, fetchImpl))?.label).toBe(far.formattedAddress);
   });
 });
 

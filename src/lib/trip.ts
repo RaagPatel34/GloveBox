@@ -1,3 +1,8 @@
+import type { TripStop, Vehicle } from "./types";
+
+// Different businesses can share an address. Planning and rendering use the same identity.
+export const tripPlaceKey = (place: Omit<TripStop, "type">) => JSON.stringify([place.name, place.label, place.lat, place.lng]);
+
 export type TripInput = { miles: number; mpg: number; gallons: number; usualPrice: number; alternatePrice: number; extraMiles: number; extraMinutes: number; hourlyValue: number };
 export function calculateTrip(input: TripInput) {
   const limits: Record<keyof TripInput, [number,number]> = { miles: [0,10000], mpg:[1,150], gallons:[0.1,100], usualPrice:[0.01,30], alternatePrice:[0.01,30], extraMiles:[0,1000], extraMinutes:[0,1440], hourlyValue:[0,1000] };
@@ -13,6 +18,9 @@ export function calculateTrip(input: TripInput) {
   const netAfterTime = netFuelSavings - timeCost;
   return { baselineFuelCost: input.miles / input.mpg * input.usualPrice, totalMiles: input.miles + input.extraMiles, purchaseSavings, detourFuelCost, netFuelSavings, timeCost, netAfterTime, breakEvenExtraMiles: Math.max(0, (purchaseSavings - timeCost) * input.mpg / input.usualPrice), worthIt: netAfterTime > 0.005 };
 }
+// The MPG to cost a drive at: the real-world figure the driver set, else the EPA one.
+export const vehicleMpg = (vehicle: Pick<Vehicle, "epaMpg" | "mpgOverride">) => vehicle.mpgOverride || vehicle.epaMpg;
+
 // The most stops the trip agent plans in one drive.
 export const MAX_TRIP_STOPS = 8;
 

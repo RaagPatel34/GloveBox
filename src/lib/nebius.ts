@@ -36,13 +36,21 @@ export function missingNebiusConfig(tiers: ModelTier[]): string[] {
   return ["NEBIUS_API_KEY", ...tiers.map((tier) => MODEL_ENV[tier])].filter((name) => !process.env[name]);
 }
 
+// Optional. A local stand-in (Qwen on Ollama) thinks before every reply unless told "none",
+// which makes it too slow for the 25s timeout. Unset means the provider's default.
+export function reasoningEffort(): OpenAI.ReasoningEffort | undefined {
+  return (process.env.NEBIUS_REASONING_EFFORT || undefined) as OpenAI.ReasoningEffort | undefined;
+}
+
 // The agents' Chat (src/lib/agent/chat.ts), backed by Token Factory.
 export function nebiusChat(): Chat {
   return async ({ tier, messages, tools }) => {
+    const effort = reasoningEffort();
     const response = await nebius().chat.completions.create({
       model: modelFor(tier),
       messages,
       ...(tools && tools.length > 0 ? { tools, tool_choice: "auto" as const } : {}),
+      ...(effort ? { reasoning_effort: effort } : {}),
     });
     const message = response.choices[0]?.message;
     return {
