@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildDashboard } from "./dashboard";
-import { dueBasis, garageToSnapshot, legacyHashRoute, SOURCE_TEXT, wheelPlan } from "./garage-view";
+import { dueBasis, garageToSnapshot, legacyHashRoute, SOURCE_TEXT, sourceAnchor, wheelPlan } from "./garage-view";
 import { demoGarage } from "./maintenance";
 import { formatLimit } from "./readout";
 import { NOW } from "./test-support";
@@ -102,5 +102,19 @@ describe("legacyHashRoute", () => {
   it("leaves other hashes alone", () => {
     expect(legacyHashRoute("")).toBeNull();
     expect(legacyHashRoute("#main")).toBeNull();
+  });
+});
+
+describe("sourceAnchor", () => {
+  const SUSSEX = "https://www.sussexhonda.com/2019-honda-civic-maintenance-schedule/";
+
+  it("links a manufacturer interval to the page it came from", () => {
+    expect(sourceAnchor({ kind: "manufacturer", url: SUSSEX })).toEqual({ text: "Manufacturer schedule", href: SUSSEX });
+  });
+
+  it("is plain text for a baseline, and for a manufacturer interval with no usable link", () => {
+    expect(sourceAnchor({ kind: "baseline" })).toEqual({ text: "Illustrative baseline" });
+    expect(sourceAnchor({ kind: "manufacturer" })).toEqual({ text: "Manufacturer schedule" });
+    expect(sourceAnchor({ kind: "manufacturer", url: "javascript:alert(1)" })).toEqual({ text: "Manufacturer schedule" });
   });
 });

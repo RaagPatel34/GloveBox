@@ -2,7 +2,8 @@ import { useRef, type CSSProperties } from "react";
 import { TONE } from "@/components/health/tone";
 import { isRollable, RollingNumber } from "@/components/motion/RollingNumber";
 import type { DashboardItem } from "@/lib/dashboard";
-import { SOURCE_TEXT } from "@/lib/garage-view";
+import { ExternalIcon } from "@/components/shell/icons";
+import { sourceAnchor } from "@/lib/garage-view";
 import { formatLimit, STATUS_LABEL } from "@/lib/readout";
 
 // One upkeep item: what it is, how it stands, how far through its interval it is,
@@ -25,6 +26,7 @@ export function Tile({
   const tone = TONE[item.status];
   const { value, unit } = formatLimit(item.limit);
   const used = item.usedPercent;
+  const source = sourceAnchor(item.source);
   const noticing = useRef<number | null>(null);
   function startNoticing() {
     if (!changed || !onSeen || noticing.current !== null) return;
@@ -81,7 +83,14 @@ export function Tile({
       </div>
       <p className="mt-2 flex justify-between gap-2 text-xs text-muted">
         <span>{used === null ? "No interval set" : `${used}% of interval`}</span>
-        <span>{SOURCE_TEXT[item.source.kind]}</span>
+        {source.href ? (
+          <a href={source.href} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-foreground">
+            {source.text} <ExternalIcon />
+            <span className="sr-only">(opens the source page)</span>
+          </a>
+        ) : (
+          <span>{source.text}</span>
+        )}
       </p>
     </li>
   );

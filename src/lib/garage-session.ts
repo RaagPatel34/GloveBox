@@ -11,10 +11,12 @@ export function garageSaved(_session: GarageSession, next: Garage): GarageSessio
 }
 
 // A change worked out from the garage as it is when it lands, so a slow request (a live
-// drive review) never overwrites what changed while it was running.
+// drive review) never overwrites what changed while it was running. A change that returns the
+// garage as it was is not a save: it keeps Undo and shows no notice.
 export function garageUpdated(session: GarageSession, change: (garage: Garage) => Garage): GarageSession {
   if (!session.garage) return session;
-  return garageSaved(session, change(session.garage));
+  const next = change(session.garage);
+  return next === session.garage ? session : garageSaved(session, next);
 }
 
 export function resetToDemo(session: GarageSession, demo: Garage): GarageSession {

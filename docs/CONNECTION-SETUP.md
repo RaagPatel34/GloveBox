@@ -28,7 +28,7 @@ For the embedded map, use a separate browser key restricted to Maps Embed API an
 
 ## 4. Tavily — source search
 
-The feature preview is connected and returned five source links in the hosted acceptance test. Its Free plan stops at the credit limit with pay-as-you-go off. For a new environment, create an account at https://app.tavily.com/. Review the available credits and disable any automatic spending before testing. Add TAVILY_API_KEY privately and set ENABLE_TAVILY=true only once usage is approved. The app requests basic search with no generated answer. Search excerpts require station/grade/date/conditions verification; they are not certified pump prices.
+The feature preview is connected and returned five source links in the hosted acceptance test. Its Free plan stops at the credit limit with pay-as-you-go off. For a new environment, create an account at https://app.tavily.com/. Review the available credits and disable any automatic spending before testing. Add TAVILY_API_KEY privately and set ENABLE_TAVILY=true only once usage is approved. Trips requests basic search (1 credit) with no generated answer. Saving a new car on Car & settings also runs one advanced search (2 credits, still no generated answer) to find the manufacturer service schedule, in the background after the car is saved; if it fails or times out the car is unaffected. Both only run when ENABLE_TAVILY=true. Search excerpts require station/grade/date/conditions verification; they are not certified pump prices.
 
 ## 5. Daily weather — after database and release acceptance
 

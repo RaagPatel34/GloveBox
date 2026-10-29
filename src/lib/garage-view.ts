@@ -1,4 +1,4 @@
-import type { Garage } from "./maintenance";
+import { safeUrl, type Garage } from "./maintenance";
 import { numberFormat } from "./readout";
 import type { CarSnapshot, ScheduleItem } from "./types";
 
@@ -22,6 +22,13 @@ export const SOURCE_TEXT: Record<ScheduleItem["intervalSource"]["kind"], string>
   user: "Your record",
   nhtsa: "NHTSA guidance",
 };
+
+// The words for an interval's source, and its link when there is a page to open: only a manufacturer
+// interval carries one.
+export function sourceAnchor(source: ScheduleItem["intervalSource"]): { text: string; href?: string } {
+  const text = SOURCE_TEXT[source.kind];
+  return source.kind === "manufacturer" && safeUrl(source.url) ? { text, href: source.url } : { text };
+}
 
 // Same zone as readout.ts: GloveBox is a California app.
 const basisDateFormat = new Intl.DateTimeFormat("en-US", {
