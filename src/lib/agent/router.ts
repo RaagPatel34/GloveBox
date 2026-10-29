@@ -59,7 +59,9 @@ function toOdometer(value: unknown): number | undefined {
 
 // The stops it can check: a gas or car-wash stop, or a place with a name of a sensible length.
 function toErrandStops(value: unknown): ErrandStop[] {
-  return Array.isArray(value) ? value.flatMap((stop) => toErrandStop(stop) ?? []) : [];
+  if (!Array.isArray(value)) return [];
+  const stops = value.flatMap((stop) => toErrandStop(stop) ?? []);
+  return stops.length === value.length ? stops : [];
 }
 
 // The JSON object that ends last in the text: the answer comes after any reasoning or

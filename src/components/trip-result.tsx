@@ -1,5 +1,6 @@
 import { ModelBadge } from "@/components/command/ModelBadge";
 import { ExternalIcon } from "@/components/shell/icons";
+import { tripPlaceKey } from "@/lib/trip";
 import type { TripPlan, Vehicle } from "@/lib/types";
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
@@ -30,7 +31,7 @@ export function TripResult({
       <p>From home, {home.label}</p>
       <ol className="location-results list-decimal">
         {trip.stops.map((stop) => (
-          <li key={stop.label}>
+          <li key={tripPlaceKey(stop)}>
             {STOP_LABEL[stop.type] && <span className="pill">{STOP_LABEL[stop.type]}</span>}{" "}
             {stop.name && stop.name !== stop.label ? <><strong className="font-medium">{stop.name}</strong> · {stop.label}</> : stop.label}
           </li>

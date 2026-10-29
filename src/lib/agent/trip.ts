@@ -1,7 +1,7 @@
 import { NO_HOME_LABEL } from "../garage";
 import type { Place, StopKind } from "../maps";
 import { mapsDirections, type RouteResult } from "../route-planner";
-import { MAX_TRIP_STOPS, tripCost } from "../trip";
+import { MAX_TRIP_STOPS, tripCost, tripPlaceKey } from "../trip";
 import { toErrandStop, type ErrandStop, type GasPrice, type LatLng, type TripPlan, type TripReply, type TripStop, type Vehicle } from "../types";
 import type { Chat } from "./chat";
 import { runToolLoop, type Tool } from "./loop";
@@ -224,7 +224,7 @@ export async function planTrip(args: {
           };
         }
         // Two stops typed differently can be the same place: drive there once.
-        const unique = [...new Map((state.places as Place[]).map((place) => [place.label, place])).values()];
+        const unique = [...new Map((state.places as Place[]).map((place) => [tripPlaceKey(place), place])).values()];
         state.route ??= await callRecordingFailure(NO_ROUTE, () => services.route(home, unique));
         return {
           order: state.route.order.map((place) => place.name),
@@ -277,16 +277,16 @@ export async function planTrip(args: {
   const typeAt = new Map<string, TripStop["type"]>();
   stops.forEach((stop, i) => {
     const place = state.places[i];
-    if (place && !typeAt.has(place.label)) typeAt.set(place.label, stop.type);
+    if (place && !typeAt.has(tripPlaceKey(place))) typeAt.set(tripPlaceKey(place), stop.type);
   });
   const plan: TripPlan = {
-    stops: route.order.map((place) => ({ type: typeAt.get(place.label) ?? "address", ...place })),
+    stops: route.order.map((place) => ({ type: typeAt.get(tripPlaceKey(place)) ?? "address", ...place })),
     totalMiles: route.miles,
     totalMinutes: route.minutes,
     fuelCost: tripCost(route.miles, mpg, price.price),
     gasPrice: price,
     model: TIER,
-    mapsUrl: mapsDirections([`${home.lat},${home.lng}`, ...route.order.map((place) => place.label), `${home.lat},${home.lng}`]),
+    mapsUrl: mapsDirections([`${home.lat},${home.lng}`, ...route.order.map((place) => `${place.lat},${place.lng}`), `${home.lat},${home.lng}`]),
   };
   if (state.candidates.gas) plan.gasCandidates = state.candidates.gas.places.map((place) => ({ type: "gas", ...place }));
   const count = plan.stops.length === 1 ? "1 stop" : `${plan.stops.length} stops`;

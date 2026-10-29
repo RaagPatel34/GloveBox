@@ -48,6 +48,21 @@ function fakeServices(overrides: Partial<TripServices> = {}) {
 }
 
 describe("planTrip", () => {
+  it("keeps distinct gas and wash businesses at the same street address", async () => {
+    const station = { name: "Gas station", label: "100 Main St", lat: 33.85, lng: -118 };
+    const wash = { name: "Car wash", label: station.label, lat: 33.8501, lng: -118 };
+    const { services } = fakeServices({ findPlaces: async (kind) => [kind === "gas" ? station : wash] });
+    const chat = scriptedChat({ super: [
+      callTools(["findNearby", { type: "gas" }], ["findNearby", { type: "wash" }], ["getGasPrice", {}]),
+      callTools(["computeRoute", {}]),
+    ] });
+
+    const reply = await planTrip({ stops: [{ type: "gas" }, { type: "wash" }], home: HOME, mpg: 32, chat, services });
+
+    expect(reply.plan?.stops).toEqual([{ type: "wash", ...wash }, { type: "gas", ...station }]);
+    expect(new URL(reply.plan!.mapsUrl).searchParams.get("waypoints")).toBe(`${wash.lat},${wash.lng}|${station.lat},${station.lng}`);
+  });
+
   it("orders the stops from home by the route, and prices the drive in code from the route miles, MPG and EIA price", async () => {
     const chat = scriptedChat({
       super: [

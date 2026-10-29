@@ -1,8 +1,8 @@
-import type { Proposal, ScheduleItem, Vehicle, ServiceEntry } from './types';
+import type { Proposal, ScheduleItem, Vehicle, ServiceEntry, ModelTier, TripPlan } from './types';
 
 export const STORAGE_KEY = 'glovebox.v1';
 export type Garage = { version: 1; vehicle: Vehicle; items: ScheduleItem[]; proposals: Proposal[]; services?: ServiceEntry[]; readingAt?: string; plannedTripMiles?: number };
-export type CommandResult = { proposals: Proposal[]; message: string; source: 'sample' | 'nebius'; model?: string };
+export type CommandResult = { proposals: Proposal[]; message: string; source: 'sample' | 'nebius'; model?: string; tier?: ModelTier; trip?: TripPlan };
 const DAY = 86_400_000;
 export const LABELS: Record<ScheduleItem['kind'], string> = {
   wash: 'Exterior wash', oil: 'Oil change', tire_rotation: 'Tire rotation',

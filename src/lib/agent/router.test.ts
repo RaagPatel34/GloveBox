@@ -143,12 +143,13 @@ describe("parseRoute: errands", () => {
     });
   });
 
-  it("drops a stop it cannot trust and keeps the rest", () => {
+  it("asks for clarification instead of silently dropping invalid destinations", () => {
     const raw = JSON.stringify({
       intent: "errand",
       stops: [{ type: "gas" }, { type: "teleport" }, { type: "address" }, { type: "address", name: "  " }, "Costco", { type: "address", name: "x".repeat(201) }, null],
     });
-    expect(parseRoute(raw)).toEqual({ intent: "errand", stops: [{ type: "gas" }] });
+    expect(parseRoute(raw)).toEqual({ intent: "errand" });
+    expect(parseRoute(JSON.stringify({ intent: "errand", stops: [{ type: "gas" }, { type: "address", name: "" }] }))).toEqual({ intent: "errand" });
   });
 
   it("is still an errand, with no stops, when the reply names none it can use", () => {
