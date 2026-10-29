@@ -33,7 +33,7 @@ beforeEach(async () => {
   vi.stubEnv("DATABASE_URL", "postgres://local/test");
   driver.db = new PGlite();
   for (const statement of SCHEMA_STATEMENTS) await driver.db.exec(statement);
-});
+}, 30_000);
 afterEach(async () => { await driver.db?.close(); vi.unstubAllEnvs(); });
 
 it("an event finishing after a demo reset reports a recoverable failure without changing the new car", async () => {
