@@ -10,9 +10,9 @@ const PRICE_KIND_LABEL = { eia: "EIA regional average", area: "Area average", st
 const STOP_LABEL = { gas: "Gas", wash: "Car wash", address: "" } as const;
 
 // A planned drive from home and back: the stops in driving order, the fuel and where its
-// price comes from, and a map of the drive on request. Shared by the Trips panel and the command bar. `onDistance` adds the
-// button that hands the miles to the detour calculator, where there is one. `showModel` is
-// off where the caller already shows which model answered.
+// price comes from, and a map of the drive on request. Shared by the Trips panel and the
+// command bar. `onDistance` adds the button that hands the miles to the detour calculator,
+// where there is one. `showModel` is off where the caller already shows which model answered.
 export function TripResult({
   trip,
   home,
@@ -55,7 +55,7 @@ export function TripResult({
       <p className="helper">
         Fuel = miles ÷ <span className="font-mono tabular-nums">{mpg}</span> MPG × price per gallon. A regional average, not a station quote. Time excludes traffic and time at stops.
       </p>
-      <RouteMap key={points.join("|")} stops={points} />
+      <RouteMap key={points.join("|")} points={points} headingLevel={4} />
       <div className="actions">
         <a className="secondary link-button" href={trip.mapsUrl} target="_blank" rel="noreferrer">Open in Google Maps <ExternalIcon /></a>
         {onDistance && (

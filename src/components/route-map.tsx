@@ -1,24 +1,25 @@
 "use client";
 import { useState } from "react";
-import { routeEmbedUrl } from "@/lib/route-embed";
+import { canDrawRoute, routeEmbedUrl } from "@/lib/route-embed";
 
-// The route as an interactive Google Map (Maps Embed API, Directions mode). `stops` are in
-// driving order, first to last: coordinates ("lat,lng") or addresses. The map loads only on
-// request, since loading it tells Google the stops. Uses the domain-restricted browser key;
-// without it, or for a route the embed cannot take, the caller's stop list and Maps link stand.
-export function RouteMap({ stops }: { stops: string[] }) {
+// The route as an interactive Google Map (Maps Embed API, Directions mode). `points` are in
+// driving order, first to last (for a trip, home at both ends): coordinates ("lat,lng") or
+// addresses. `headingLevel` is one below the heading the map sits under. Draws nothing for
+// points the embed cannot take. The map loads only on request, since loading it tells Google
+// the points. Uses the domain-restricted browser key; without it, the caller's stop list and
+// Maps link stand.
+export function RouteMap({ points, headingLevel }: { points: string[]; headingLevel: 3 | 4 }) {
   const [show, setShow] = useState(false);
+  if (!canDrawRoute(points)) return null;
   const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
-  const src = routeEmbedUrl(stops, key);
-  if (stops.length < 2) return null;
+  const src = routeEmbedUrl(points, key);
+  const Heading = `h${headingLevel}` as const;
   return (
     <div className="route-map">
-      <h4>Route map</h4>
+      <Heading>Route map</Heading>
       {!src ? (
         <p className="helper">
-          {key
-            ? "This route has too many stops to draw here. The stop list and the Google Maps link still show the drive."
-            : "The route map is waiting for a Google Maps connection. The stop list and the Google Maps link still show the drive."}
+          The route map is waiting for a Google Maps connection. The stop list and the Google Maps link still show the drive.
         </p>
       ) : (
         <>
