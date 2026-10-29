@@ -7,7 +7,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const LINCOLN = "https://www.hondaoflincoln.com/2019-honda-civic-maintenance-schedule/";
+const SCHEDULE_SOURCE = "https://owners.honda.com/2019-civic/schedule/";
 const post = (body: unknown, headers: Record<string, string> = {}) =>
   POST(new Request("https://glovebox.test/api/mfr-schedule", { method: "POST", headers, body: JSON.stringify(body) }));
 const civic = { year: 2019, make: "Honda", model: "Civic" };
@@ -42,13 +42,13 @@ describe("POST /api/mfr-schedule", () => {
     enableTavily();
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => Response.json({ results: [{ url: LINCOLN, content: "Oil and filter change: every 7,500 miles or 12 months." }] })),
+      vi.fn(async () => Response.json({ results: [{ url: SCHEDULE_SOURCE, content: "Oil and filter change: every 7,500 miles or 12 months." }] })),
     );
     const response = await post(civic);
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
       status: "ok",
-      intervals: [{ kind: "oil", intervalMiles: 7500, intervalDays: 365, url: LINCOLN }],
+      intervals: [{ kind: "oil", intervalMiles: 7500, intervalDays: 365, url: SCHEDULE_SOURCE }],
     });
   });
 
@@ -65,7 +65,7 @@ describe("requestMfrSchedule (the browser's side)", () => {
   const reply = (status: number, body: unknown) => async () => Response.json(body, { status });
 
   it("returns the intervals the server found", async () => {
-    const intervals = [{ kind: "oil", intervalMiles: 7500, url: LINCOLN }];
+    const intervals = [{ kind: "oil", intervalMiles: 7500, url: SCHEDULE_SOURCE }];
     expect(await requestMfrSchedule(civic, reply(200, { status: "ok", intervals }))).toEqual(intervals);
   });
 
@@ -80,12 +80,12 @@ describe("requestMfrSchedule (the browser's side)", () => {
   });
 
   it("keeps only intervals that are still plausible and linkable", async () => {
-    const good = { kind: "oil", intervalMiles: 7500, url: LINCOLN };
+    const good = { kind: "oil", intervalMiles: 7500, url: SCHEDULE_SOURCE };
     const intervals = [
       good,
-      { kind: "oil", intervalMiles: 150000, url: LINCOLN },
+      { kind: "oil", intervalMiles: 150000, url: SCHEDULE_SOURCE },
       { kind: "tire_rotation", intervalMiles: 7500, url: "http://insecure.example/x" },
-      { kind: "wash", intervalDays: 14, url: LINCOLN },
+      { kind: "wash", intervalDays: 14, url: SCHEDULE_SOURCE },
       { kind: "brake_check" },
       "nonsense",
     ];

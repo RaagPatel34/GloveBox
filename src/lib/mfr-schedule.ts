@@ -23,7 +23,7 @@ const LOOKUP_TIMEOUT_MS = 8000;
 // A little longer than the server's own wait, so the browser hears its answer.
 const CLIENT_TIMEOUT_MS = 12000;
 
-// Forums and video: opinions, not schedules. Dealers and guides stay in.
+// Forum results are excluded at search time; only official maker sources are accepted below.
 const EXCLUDED_DOMAINS = [
   "reddit.com",
   "quora.com",
@@ -35,8 +35,6 @@ const EXCLUDED_DOMAINS = [
   "pinterest.com",
 ];
 
-// Guides that translate owner's-manual codes (such as Honda's Maintenance Minder) into miles and months.
-const TRUSTED_GUIDES = ["getgaragehub.com", "kbb.com", "edmunds.com", "costaoils.com", "oreillyauto.com"];
 
 // Anything outside these ranges is a template error, a forum guess or a different part, not this item's interval.
 const BOUNDS: Record<MfrKind, { miles: [number, number]; days: [number, number] }> = {
@@ -87,10 +85,10 @@ function daysIn(text: string): Found[] {
 
 // The in-range number written just after the keyword, else the closest one before it ("At 7,500 miles: oil
 // change"). A number that follows another item's keyword belongs to that item, not to this one.
-function pick(found: Found[], from: number, [min, max]: [number, number], keywordBefore: (at: number) => boolean): number | undefined {
+function pick(found: Found[], from: number, [min, max]: [number, number], keywordBefore: (at: number) => boolean, until = Infinity): number | undefined {
   const inRange = found.filter((f) => f.value >= min && f.value <= max);
   const before = [...inRange].reverse().find((f) => f.at < from && !keywordBefore(f.at));
-  return (inRange.find((f) => f.at >= from) ?? before)?.value;
+  return (inRange.find((f) => f.at >= from && f.at < until) ?? before)?.value;
 }
 
 // A line that only states a service point ("Every 7,500 miles or 12 months:") heads the items under it.
@@ -120,7 +118,7 @@ function chunksOf(content: string): string[][] {
     );
 }
 
-type SearchResult = { url: string; content: string; score: number };
+type SearchResult = { url: string; title: string; content: string; score: number };
 
 function searchResults(body: unknown): SearchResult[] {
   const results = (body as { results?: unknown } | null)?.results;
@@ -128,21 +126,25 @@ function searchResults(body: unknown): SearchResult[] {
   return results.flatMap((r: unknown): SearchResult[] => {
     const row = (r ?? {}) as Record<string, unknown>;
     if (!safeUrl(row.url) || typeof row.content !== "string") return [];
-    return [{ url: row.url, content: row.content, score: typeof row.score === "number" ? row.score : 0 }];
+    return [{ url: row.url, title: typeof row.title === "string" ? row.title : "", content: row.content, score: typeof row.score === "number" ? row.score : 0 }];
   });
 }
 
-// 3 the maker's own site, 2 a dealer of that make, 1 a guide we trust. 0: not a schedule source.
-function authority(url: string, make: string): number {
+// Only the maker's own domain can supply an interval labelled Manufacturer schedule.
+// Independent guides and dealerships remain useful reading, but are not manufacturer evidence.
+function isManufacturer(url: string, make: string): boolean {
   const maker = make.toLowerCase().replace(/[^a-z0-9]/g, "");
-  const host = new URL(url).hostname.toLowerCase().replaceAll("-", "");
-  if (EXCLUDED_DOMAINS.some((d) => host === d || host.endsWith(`.${d}`))) return 0;
-  if (maker.length >= 3 && (host === `${maker}.com` || host.endsWith(`.${maker}.com`))) return 3;
-  // sussexhonda.com, hondaoflincoln.com, longotoyotaofprosper.com; not affordable-autos.com or programs.com.
-  const name = host.split(".").at(-2) ?? "";
-  if (maker.length >= 3 && (name.startsWith(maker) || name.endsWith(maker) || name.includes(`${maker}of`) || name.includes(`of${maker}`))) return 2;
-  if (TRUSTED_GUIDES.some((d) => host === d || host.endsWith(`.${d}`))) return 1;
-  return 0;
+  const host = new URL(url).hostname.toLowerCase();
+  return maker.length >= 3 && (host === maker + ".com" || host.endsWith("." + maker + ".com"));
+}
+
+// A search query is not evidence that a result applies to this car. Require the requested
+// year and full model name in the result itself; ambiguous results leave existing intervals alone.
+function matchesVehicle(result: SearchResult, vehicle: Pick<Vehicle, "year" | "model">): boolean {
+  const text = decodeURIComponent(result.url) + " " + result.title + " " + result.content;
+  const words = text.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const model = vehicle.model.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  return (" " + words + " ").includes(" " + vehicle.year + " ") && (" " + words + " ").includes(" " + model + " ");
 }
 
 function intervalFrom(kind: MfrKind, miles: number | undefined, days: number | undefined, url: string): MfrInterval | null {
@@ -161,11 +163,10 @@ function intervalFrom(kind: MfrKind, miles: number | undefined, days: number | u
 }
 
 // Best-ranked source first; the first source that states an item wins it.
-function extractIntervals(results: SearchResult[], make: string): MfrInterval[] {
+function extractIntervals(results: SearchResult[], vehicle: Pick<Vehicle, "year" | "make" | "model">): MfrInterval[] {
   const ranked = results
-    .map((r) => ({ ...r, rank: authority(r.url, make) }))
-    .filter((r) => r.rank > 0)
-    .sort((a, b) => b.rank - a.rank || b.score - a.score);
+    .filter((r) => isManufacturer(r.url, vehicle.make) && matchesVehicle(r, vehicle))
+    .sort((a, b) => b.score - a.score);
 
   const found = new Map<MfrKind, MfrInterval>();
   for (const result of ranked) {
@@ -184,15 +185,19 @@ function extractIntervals(results: SearchResult[], make: string): MfrInterval[] 
           if (found.has(kind)) continue;
           // An engine air filter line must not also be read as the cabin filter's.
           const text = kind === "engine_filter" ? segment.replace(new RegExp(KEYWORDS.cabin_filter, "gi"), (m) => " ".repeat(m.length)) : segment;
-          const at = text.search(KEYWORDS[kind]);
-          if (at < 0) continue;
+          const match = KEYWORDS[kind].exec(text);
+          if (!match) continue;
+          const at = match.index;
+          const end = at + match[0].length;
+          const following = KINDS.map((k) => text.slice(end).search(KEYWORDS[k])).filter((i) => i >= 0);
+          const until = inherits || following.length === 0 ? Infinity : end + Math.min(...following);
           const miles = inherits ? heading?.miles : ownMiles;
           const days = inherits ? heading?.days : ownDays;
           const from = inherits ? 0 : at;
           const interval = intervalFrom(
             kind,
-            pick(miles ?? [], from, BOUNDS[kind].miles, keywordBefore),
-            pick(days ?? [], from, BOUNDS[kind].days, keywordBefore),
+            pick(miles ?? [], from, BOUNDS[kind].miles, keywordBefore, until),
+            pick(days ?? [], from, BOUNDS[kind].days, keywordBefore, until),
             result.url,
           );
           if (interval) found.set(kind, interval);
@@ -227,7 +232,7 @@ export async function lookupMfrSchedule(
       }),
     });
     if (!response.ok) return { status: "unavailable", intervals: [] };
-    const intervals = extractIntervals(searchResults(await response.json()), vehicle.make);
+    const intervals = extractIntervals(searchResults(await response.json()), vehicle);
     return { status: intervals.length > 0 ? "ok" : "empty", intervals };
   } catch (error) {
     return { status: error instanceof Error && error.name === "TimeoutError" ? "timeout" : "unavailable", intervals: [] };
@@ -249,15 +254,15 @@ export async function requestMfrSchedule(
     });
     if (!response.ok) return [];
     const intervals = ((await response.json()) as { intervals?: unknown }).intervals;
-    return Array.isArray(intervals) ? intervals.flatMap((raw) => cleanInterval(raw) ?? []) : [];
+    return Array.isArray(intervals) ? intervals.flatMap((raw) => cleanInterval(raw, vehicle.make) ?? []) : [];
   } catch {
     return [];
   }
 }
 
-function cleanInterval(raw: unknown): MfrInterval | null {
+function cleanInterval(raw: unknown, make: string): MfrInterval | null {
   const row = (raw ?? {}) as Record<string, unknown>;
-  if (!isMfrKind(row.kind) || !safeUrl(row.url)) return null;
+  if (!isMfrKind(row.kind) || !safeUrl(row.url) || !isManufacturer(row.url, make)) return null;
   return intervalFrom(row.kind, row.intervalMiles as number | undefined, row.intervalDays as number | undefined, row.url);
 }
 
@@ -277,7 +282,8 @@ export function applyMfrSchedule(garage: Garage, intervals: MfrInterval[]): Gara
   const { year, make, model } = garage.vehicle;
   let changed = false;
   const items = garage.items.map((item) => {
-    const found = intervals.find((i) => i.kind === item.kind);
+    const candidate = intervals.find((i) => i.kind === item.kind);
+    const found = candidate && cleanInterval(candidate, make);
     if (!found || !safeUrl(found.url) || !isUnset(item)) return item;
     changed = true;
     const host = new URL(found.url).hostname.replace(/^www\./, "");

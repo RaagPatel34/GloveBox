@@ -6,8 +6,8 @@ import { applyMfrSchedule, lookupMfrSchedule } from "./mfr-schedule";
 
 const CIVIC = { year: 2019, make: "Honda", model: "Civic" };
 
-const SUSSEX = "https://www.sussexhonda.com/2019-honda-civic-maintenance-schedule/";
-const LINCOLN = "https://www.hondaoflincoln.com/2019-honda-civic-maintenance-schedule/";
+const FILTER_SOURCE = "https://owners.honda.com/2019-civic/filters/";
+const SCHEDULE_SOURCE = "https://owners.honda.com/2019-civic/schedule/";
 const COSTA = "https://www.costaoils.com/blog/2019-honda-civic-oil-change";
 
 // What Tavily answers: each result's `content` is up to three chunks joined by " [...] ".
@@ -20,12 +20,12 @@ describe("lookupMfrSchedule on the demo Civic", () => {
   it("reads the oil, rotation, filter and brake intervals and keeps each one's own source link", async () => {
     const fetcher = tavily([
       {
-        url: SUSSEX,
+        url: FILTER_SOURCE,
         content:
           "Maintenance Minder Sub-Code 2: Replace air cleaner element every 15,000 miles. Replace dust and pollen filter every 15,000 miles in city driving.",
       },
       {
-        url: LINCOLN,
+        url: SCHEDULE_SOURCE,
         content:
           "Oil and filter change: every 7,500 miles or 12 months.\nRotate tires every 7,500 miles.\nBrake inspection every 7,500 miles. [...] Spark plugs: see your manual.",
       },
@@ -36,11 +36,11 @@ describe("lookupMfrSchedule on the demo Civic", () => {
 
     expect(result.status).toBe("ok");
     expect(result.intervals).toEqual([
-      { kind: "oil", intervalMiles: 7500, intervalDays: 365, url: LINCOLN },
-      { kind: "tire_rotation", intervalMiles: 7500, url: LINCOLN },
-      { kind: "cabin_filter", intervalMiles: 15000, url: SUSSEX },
-      { kind: "engine_filter", intervalMiles: 15000, url: SUSSEX },
-      { kind: "brake_check", intervalMiles: 7500, url: LINCOLN },
+      { kind: "oil", intervalMiles: 7500, intervalDays: 365, url: SCHEDULE_SOURCE },
+      { kind: "tire_rotation", intervalMiles: 7500, url: SCHEDULE_SOURCE },
+      { kind: "cabin_filter", intervalMiles: 15000, url: FILTER_SOURCE },
+      { kind: "engine_filter", intervalMiles: 15000, url: FILTER_SOURCE },
+      { kind: "brake_check", intervalMiles: 7500, url: SCHEDULE_SOURCE },
     ]);
   });
 });
@@ -48,8 +48,8 @@ describe("lookupMfrSchedule on the demo Civic", () => {
 describe("what is not accepted as a manufacturer interval", () => {
   it("drops numbers outside the plausible range for the item (TC-02)", async () => {
     const fetcher = tavily([
-      { url: LINCOLN, content: "Replace spark plugs and engine oil every 150,000 miles." },
-      { url: SUSSEX, content: "Oil change every 500 miles if you enjoy it. Tire rotation every 500 miles." },
+      { url: SCHEDULE_SOURCE, content: "Replace spark plugs and engine oil every 150,000 miles." },
+      { url: FILTER_SOURCE, content: "Oil change every 500 miles if you enjoy it. Tire rotation every 500 miles." },
     ]);
     expect(await lookupMfrSchedule(CIVIC, { apiKey: "test-only", fetcher })).toEqual({ status: "empty", intervals: [] });
   });
@@ -64,10 +64,10 @@ describe("what is not accepted as a manufacturer interval", () => {
     expect((await lookupMfrSchedule(CIVIC, { apiKey: "test-only", fetcher })).intervals).toEqual([]);
   });
 
-  it("prefers the maker's own page over a dealer's, whatever the search score", async () => {
+  it("rejects dealer guidance even with a higher search score", async () => {
     const owners = "https://owners.honda.com/vehicles/information/2019/Civic-Sedan/maintenance";
     const fetcher = tavily([
-      { url: LINCOLN, score: 0.99, content: "Oil change every 5,000 miles." },
+      { url: "https://www.hondaoflincoln.com/2019-honda-civic-maintenance-schedule/", score: 0.99, content: "Oil change every 5,000 miles." },
       { url: owners, score: 0.1, content: "Oil change every 7,500 miles or 12 months." },
     ]);
     const { intervals } = await lookupMfrSchedule(CIVIC, { apiKey: "test-only", fetcher });
@@ -77,17 +77,17 @@ describe("what is not accepted as a manufacturer interval", () => {
   it("reads the lower end of a range and does not borrow a neighbouring line's mileage", async () => {
     const fetcher = tavily([
       {
-        url: LINCOLN,
+        url: SCHEDULE_SOURCE,
         content:
           "Oil change: 7,500 – 10,000 miles or 12 months\nTransmission fluid every 30,000 miles\nCabin air filter: replace as needed\nBrake pads typically last 25,000 to 70,000 miles",
       },
     ]);
     const { intervals } = await lookupMfrSchedule(CIVIC, { apiKey: "test-only", fetcher });
-    expect(intervals).toEqual([{ kind: "oil", intervalMiles: 7500, intervalDays: 365, url: LINCOLN }]);
+    expect(intervals).toEqual([{ kind: "oil", intervalMiles: 7500, intervalDays: 365, url: SCHEDULE_SOURCE }]);
   });
 
   it("reads a grid whose mileage is a heading over its items", async () => {
-    const toyota = "https://www.hodgetoyota.com/toyota-camry-maintenance-schedule";
+    const toyota = "https://www.toyota.com/2022/camry/maintenance-schedule";
     const fetcher = tavily([
       {
         url: toyota,
@@ -170,8 +170,8 @@ describe("the search it sends", () => {
 
 describe("applyMfrSchedule", () => {
   const NOW = new Date("2026-10-29T12:00:00Z");
-  const OIL = { kind: "oil", intervalMiles: 7500, intervalDays: 365, url: LINCOLN } as const;
-  const CABIN = { kind: "cabin_filter", intervalMiles: 15000, url: SUSSEX } as const;
+  const OIL = { kind: "oil", intervalMiles: 7500, intervalDays: 365, url: SCHEDULE_SOURCE } as const;
+  const CABIN = { kind: "cabin_filter", intervalMiles: 15000, url: FILTER_SOURCE } as const;
   const newCar = () =>
     createGarage({ year: 2019, make: "Honda", model: "Civic", odometer: 48000, mpg: 34, location: "Buena Park, CA" }, NOW);
   const item = (garage: Garage, kind: string) => garage.items.find((i) => i.kind === kind)!;
@@ -182,10 +182,10 @@ describe("applyMfrSchedule", () => {
     expect(item(garage, "oil")).toMatchObject({
       intervalMiles: 7500,
       intervalDays: 365,
-      intervalSource: { kind: "manufacturer", url: LINCOLN },
+      intervalSource: { kind: "manufacturer", url: SCHEDULE_SOURCE },
     });
-    expect(item(garage, "oil").intervalSource.note).toContain("hondaoflincoln.com");
-    expect(item(garage, "cabin_filter")).toMatchObject({ intervalMiles: 15000, intervalSource: { kind: "manufacturer", url: SUSSEX } });
+    expect(item(garage, "oil").intervalSource.note).toContain("owners.honda.com");
+    expect(item(garage, "cabin_filter")).toMatchObject({ intervalMiles: 15000, intervalSource: { kind: "manufacturer", url: FILTER_SOURCE } });
     expect(isGarage(garage)).toBe(true);
   });
 
@@ -243,8 +243,8 @@ describe("review fixes", () => {
     expect((await lookupMfrSchedule(ram, { apiKey: "test-only", fetcher: ramResults })).intervals).toEqual([]);
   });
 
-  it("still reads real dealer and maker sites for those makes", async () => {
-    const dealer = "https://www.hodgeford.com/f150-maintenance";
+  it("reads a matching maker page for a different make", async () => {
+    const dealer = "https://www.ford.com/2021/f-150/maintenance";
     const ford = { year: 2021, make: "Ford", model: "F-150" };
     const fetcher = tavily([{ url: dealer, content: "Oil change every 10,000 miles or 12 months." }]);
     expect((await lookupMfrSchedule(ford, { apiKey: "test-only", fetcher })).intervals).toEqual([
@@ -253,27 +253,27 @@ describe("review fixes", () => {
   });
 
   it("does not give an item the previous item's mileage", async () => {
-    const owners = "https://owners.honda.com/maintenance";
+    const owners = "https://owners.honda.com/2019/civic/maintenance";
     const fetcher = tavily([{ url: owners, content: "Tire rotation every 7,500 miles, wiper blade inspection as needed" }]);
     const { intervals } = await lookupMfrSchedule(CIVIC, { apiKey: "test-only", fetcher });
     expect(intervals).toEqual([{ kind: "tire_rotation", intervalMiles: 7500, url: owners }]);
   });
 
   it("still reads a mileage written before its items", async () => {
-    const fetcher = tavily([{ url: LINCOLN, content: "At 7,500 miles: oil change, rotate tires" }]);
+    const fetcher = tavily([{ url: SCHEDULE_SOURCE, content: "At 7,500 miles: oil change, rotate tires" }]);
     const { intervals } = await lookupMfrSchedule(CIVIC, { apiKey: "test-only", fetcher });
     expect(intervals).toEqual([
-      { kind: "oil", intervalMiles: 7500, url: LINCOLN },
-      { kind: "tire_rotation", intervalMiles: 7500, url: LINCOLN },
+      { kind: "oil", intervalMiles: 7500, url: SCHEDULE_SOURCE },
+      { kind: "tire_rotation", intervalMiles: 7500, url: SCHEDULE_SOURCE },
     ]);
   });
 
   it("reads items listed after a heading on the same line", async () => {
-    const fetcher = tavily([{ url: LINCOLN, content: "Every 7,500 miles or 12 months: Oil and filter change; Tire rotation" }]);
+    const fetcher = tavily([{ url: SCHEDULE_SOURCE, content: "Every 7,500 miles or 12 months: Oil and filter change; Tire rotation" }]);
     const { intervals } = await lookupMfrSchedule(CIVIC, { apiKey: "test-only", fetcher });
     expect(intervals).toEqual([
-      { kind: "oil", intervalMiles: 7500, intervalDays: 365, url: LINCOLN },
-      { kind: "tire_rotation", intervalMiles: 7500, intervalDays: 365, url: LINCOLN },
+      { kind: "oil", intervalMiles: 7500, intervalDays: 365, url: SCHEDULE_SOURCE },
+      { kind: "tire_rotation", intervalMiles: 7500, intervalDays: 365, url: SCHEDULE_SOURCE },
     ]);
   });
 });
