@@ -21,7 +21,7 @@ A teammate running locally must receive credentials through a private secret-sha
 
 ## Repository and access
 
-The repository was observed to be public on October 28; this setup pass did not change its visibility. The feature preview remains Vercel-login protected. The pending public-access exception was canceled under the owner's zero-dollar priority. No main-branch merge or production release was performed.
+The repository was observed to be public on October 28; this setup pass did not change its visibility. The feature preview remains Vercel-login protected. The pending public-access exception was canceled under the owner's zero-dollar priority. No production release was performed. As of October 29, 2026 `main` includes the merged multi-page app, trip planner, errands, manufacturer schedule and route map (see [ISSUE-STATUS.md](ISSUE-STATUS.md)); the October 28 service checks above were taken on the feature preview before that merge, so recheck them on the next deployment.
 
 The local tracked source tree matched the GitHub feature branch before this documentation update. A scan for the exact configured local credentials found no matches in tracked files. `.env.local` is ignored; `.env.example` is the only tracked environment file. These checks cover the current feature snapshot, not an audit of every branch or historical commit.
 

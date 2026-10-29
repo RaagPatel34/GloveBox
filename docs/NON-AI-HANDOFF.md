@@ -1,5 +1,7 @@
 # Non-AI integration handoff — October 24, 2026
 
+> Historical. Written against the `codex/first-working-flow` branch, since merged to `main` ([#2](https://github.com/RaagPatel34/GloveBox/pull/2)). Items below that say embedded map or manufacturer lookup is unfinished are now merged ([#34](https://github.com/RaagPatel34/GloveBox/pull/34), [#40](https://github.com/RaagPatel34/GloveBox/pull/40)); see [ISSUE-STATUS.md](ISSUE-STATUS.md) for current state.
+
 ## Combined and verified
 
 - Existing tabbed preview plus the teammate's PR #27 proposal cards/store and PR #28 weather/nudge work.
