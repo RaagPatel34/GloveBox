@@ -1,0 +1,197 @@
+import { randomUUID } from "node:crypto";
+import { PGlite } from "@electric-sql/pglite";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { demoCar } from "../fixtures/demo-car";
+import { decideProposal, proposeAdjustment } from "../proposals";
+import { NOW } from "../test-support";
+import { buildDashboard } from "../dashboard";
+import { logService, updateOdometer } from "../service-log";
+import { loadCar, saveCar, updateCar } from "./car-store";
+import { addProposals, loadProposal, loadProposals, saveDecision } from "./proposal-store";
+import { SCHEMA_STATEMENTS } from "./schema";
+import { runCommand } from "../command";
+import { callTools, say, scriptedChat } from "../agent/scripted-chat";
+
+// Replace the external HTTPS driver with real Postgres running locally in WASM.
+// Lazy statements preserve Neon's transaction API; no application modules are mocked.
+const driver = vi.hoisted(() => ({ db: null as PGlite | null }));
+vi.mock("@neondatabase/serverless", () => ({ neon: () => {
+  const sql = (parts: TemplateStringsArray, ...params: unknown[]) => {
+    const query = parts.reduce((text, part, i) => text + (i ? `$${i}` : "") + part, "");
+    return { query, params, then: (resolve: (value: unknown) => unknown, reject: (error: unknown) => unknown) => driver.db!.query(query, params).then(result => result.rows).then(resolve, reject) };
+  };
+  sql.transaction = async (queries: { query: string; params: unknown[] }[]) => driver.db!.transaction(async tx => {
+    const results = [];
+    for (const query of queries) results.push((await tx.query(query.query, query.params)).rows);
+    return results;
+  });
+  return sql;
+} }));
+
+const visitor = "11111111-2222-4333-8444-555555555555";
+beforeEach(async () => {
+  vi.stubEnv("DATABASE_URL", "postgres://local/test");
+  driver.db = new PGlite();
+  for (const statement of SCHEMA_STATEMENTS) await driver.db.exec(statement);
+});
+afterEach(async () => { await driver.db?.close(); vi.unstubAllEnvs(); });
+
+it("an event finishing after a demo reset reports a recoverable failure without changing the new car", async () => {
+  const car = demoCar(NOW, visitor, randomUUID);
+  await saveCar(visitor, car);
+  const replacement = demoCar(NOW, visitor, randomUUID);
+  const chat = scriptedChat({
+    nano: [say(JSON.stringify({ intent: "event" }))],
+    super: [callTools(["proposeAdjustment", {
+      item: "engine_filter", newDueOdometer: 48_300, reason: "Dirt-road dust",
+    }]), say("Done.")],
+  });
+  const result = await runCommand({
+    text: "camping trip, 300 miles on dirt roads", car, chat, now: NOW,
+    save: async () => { throw new Error("Events must not save the car"); },
+    saveProposals: async proposals => {
+      await saveCar(visitor, replacement);
+      await addProposals(visitor, proposals);
+    },
+  });
+  expect(result).toMatchObject({ proposals: 0, message: "Could not save those suggestions. Please try again." });
+  expect(await loadProposals(visitor)).toEqual([]);
+  expect(await loadCar(visitor)).toEqual(replacement);
+});
+
+it("a batch containing a stale car proposal rolls back every new card and pending-card replacement", async () => {
+  const staleCar = demoCar(NOW, visitor, randomUUID);
+  const stale = proposeAdjustment(staleCar, { kind: "engine_filter", dueOdometer: 48_300, reason: "Old event" }, NOW, randomUUID);
+  const car = demoCar(NOW, visitor, randomUUID);
+  await saveCar(visitor, car);
+  const waiting = proposeAdjustment(car, { kind: "engine_filter", dueOdometer: 48_400, reason: "Waiting event" }, NOW, randomUUID);
+  const fresh = proposeAdjustment(car, { kind: "engine_filter", dueOdometer: 48_300, reason: "New event" }, NOW, randomUUID);
+  if (!stale.ok || !waiting.ok || !fresh.ok) throw new Error("Proposal failed");
+  await addProposals(visitor, [waiting.proposal]);
+  await expect(addProposals(visitor, [fresh.proposal, stale.proposal])).rejects.toThrow();
+  expect(await loadProposals(visitor)).toEqual([waiting.proposal]);
+  expect(await loadProposal(visitor, fresh.proposal.id)).toBeNull();
+  expect(await loadCar(visitor)).toEqual(car);
+});
+
+it("persists pending, applied and dismissed states and reloads the changed schedule", async () => {
+  const car = demoCar(NOW, visitor, randomUUID);
+  await saveCar(visitor, car);
+  const result = proposeAdjustment(car, { kind: "engine_filter", dueOdometer: 48_300, reason: "Dirt roads" }, NOW, randomUUID);
+  if (!result.ok) throw new Error(result.error);
+  await addProposals(visitor, [result.proposal]);
+  expect(await loadProposals(visitor)).toEqual([result.proposal]);
+  const applied = decideProposal(car, result.proposal, "apply", NOW);
+  if (!applied.ok) throw new Error(applied.error);
+  expect(await saveDecision(visitor, applied)).toBe(true);
+  expect((await loadProposal(visitor, result.proposal.id))!.state).toBe("applied");
+  expect((await loadCar(visitor))!.items.find(i => i.kind === "engine_filter")!.dueOdometer).toBe(48_300);
+  const second = { ...result.proposal, id: randomUUID() };
+  await addProposals(visitor, [second]);
+  const dismissed = decideProposal(car, second, "dismiss", NOW);
+  if (!dismissed.ok) throw new Error(dismissed.error);
+  expect(await saveDecision(visitor, dismissed)).toBe(true);
+  expect((await loadProposal(visitor, second.id))!.state).toBe("dismissed");
+  expect((await loadProposals(visitor)).map(p => p.id)).toEqual([result.proposal.id]);
+});
+
+it("refuses other visitors, repeated Apply, and a proposal whose schedule moved after it was read", async () => {
+  const car = demoCar(NOW, visitor, randomUUID);
+  await saveCar(visitor, car);
+  const result = proposeAdjustment(car, { kind: "engine_filter", dueOdometer: 48_300, reason: "Dirt roads" }, NOW, randomUUID);
+  if (!result.ok) throw new Error(result.error);
+  await addProposals(visitor, [result.proposal]);
+  const applied = decideProposal(car, result.proposal, "apply", NOW);
+  if (!applied.ok) throw new Error(applied.error);
+  const other = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
+  expect(await loadProposals(other)).toEqual([]);
+  expect(await loadProposal(other, result.proposal.id)).toBeNull();
+  expect(await saveDecision(other, applied)).toBe(false);
+  expect(await saveDecision(visitor, applied)).toBe(true);
+  expect(await saveDecision(visitor, applied)).toBe(false);
+  const stale = { ...result.proposal, id: randomUUID() };
+  await addProposals(visitor, [stale]);
+  expect(await saveDecision(visitor, { ...applied, proposal: { ...stale, state: "applied" } })).toBe(false);
+  expect((await loadProposal(visitor, stale.id))!.state).toBe("pending");
+});
+
+it("Apply and Dismiss racing for one card leave one consistent decision", async () => {
+  const car = demoCar(NOW, visitor, randomUUID);
+  await saveCar(visitor, car);
+  const result = proposeAdjustment(car, { kind: "engine_filter", dueOdometer: 48_300, reason: "Dirt roads" }, NOW, randomUUID);
+  if (!result.ok) throw new Error(result.error);
+  await addProposals(visitor, [result.proposal]);
+  const applied = decideProposal(car, result.proposal, "apply", NOW);
+  const dismissed = decideProposal(car, result.proposal, "dismiss", NOW);
+  if (!applied.ok || !dismissed.ok) throw new Error("Decision failed");
+  const outcomes = await Promise.all([saveDecision(visitor, dismissed), saveDecision(visitor, applied)]);
+  expect(outcomes.filter(Boolean)).toHaveLength(1);
+  const stored = await loadProposal(visitor, result.proposal.id);
+  const savedCar = await loadCar(visitor);
+  expect(savedCar!.items.find(i => i.kind === "engine_filter")!.dueOdometer).toBe(stored!.state === "applied" ? 48_300 : result.proposal.from.dueOdometer);
+});
+
+it.each(["service", "odometer"])("an older %s snapshot cannot revert an applied filter adjustment", async (change) => {
+  const car = demoCar(NOW, visitor, randomUUID);
+  await saveCar(visitor, car);
+  const result = proposeAdjustment(car, { kind: "engine_filter", dueOdometer: 48_300, reason: "Dirt roads" }, NOW, randomUUID);
+  if (!result.ok) throw new Error(result.error);
+  const oldCommand = change === "service" ? logService(car, { kind: "wash" }, NOW) : updateOdometer(car, 48_100, NOW);
+  if (!oldCommand.ok) throw new Error(oldCommand.error);
+  await addProposals(visitor, [result.proposal]);
+  const applied = decideProposal(car, result.proposal, "apply", NOW);
+  if (!applied.ok) throw new Error(applied.error);
+  await saveDecision(visitor, applied);
+  await updateCar(visitor, oldCommand.car, car);
+  const loaded = (await loadCar(visitor))!;
+  expect(loaded.items.find(i => i.kind === "engine_filter")!.dueOdometer).toBe(48_300);
+  expect(buildDashboard(loaded, NOW).items.find(i => i.kind === "engine_filter")!.status).toBe("due_soon");
+  expect((await loadProposal(visitor, result.proposal.id))!.state).toBe("applied");
+});
+
+it("intentional service on the adjusted item resets its interval", async () => {
+  const car = demoCar(NOW, visitor, randomUUID);
+  await saveCar(visitor, car);
+  const proposed = proposeAdjustment(car, { kind: "engine_filter", dueOdometer: 48_300, reason: "Dust" }, NOW, randomUUID);
+  if (!proposed.ok) throw new Error(proposed.error);
+  await addProposals(visitor, [proposed.proposal]);
+  const applied = decideProposal(car, proposed.proposal, "apply", NOW);
+  if (!applied.ok) throw new Error(applied.error);
+  await saveDecision(visitor, applied);
+  const serviced = logService(car, { kind: "engine_filter" }, NOW);
+  if (!serviced.ok) throw new Error(serviced.error);
+  await updateCar(visitor, serviced.car, car);
+  expect((await loadCar(visitor))!.items.find(i => i.kind === "engine_filter")!.dueOdometer).toBe(68_000);
+});
+
+it("overlapping event requests leave one pending proposal per item", async () => {
+  const car = demoCar(NOW, visitor, randomUUID);
+  await saveCar(visitor, car);
+  const first = proposeAdjustment(car, { kind: "engine_filter", dueOdometer: 48_300, reason: "First event" }, NOW, randomUUID);
+  const second = proposeAdjustment(car, { kind: "engine_filter", dueOdometer: 48_400, reason: "Second event" }, NOW, randomUUID);
+  if (!first.ok || !second.ok) throw new Error("Proposal failed");
+  // PGlite serializes transactions. This guards the replacement contract, while the
+  // production row lock also serializes separate Postgres connections.
+  await Promise.all([addProposals(visitor, [first.proposal]), addProposals(visitor, [second.proposal])]);
+  expect((await loadProposals(visitor)).filter(p => p.state === "pending")).toHaveLength(1);
+  expect((await loadProposal(visitor, first.proposal.id))!.state).toBe("dismissed");
+  expect((await loadProposal(visitor, second.proposal.id))!.state).toBe("pending");
+});
+
+it("keeps Hide behavior when reconciling the legacy proposal store", async () => {
+  const car = demoCar(NOW, visitor, randomUUID);
+  await saveCar(visitor, car);
+  const result = proposeAdjustment(car, { kind: "engine_filter", dueOdometer: 48_300, reason: "Dust" }, NOW, randomUUID);
+  if (!result.ok) throw new Error(result.error);
+  await addProposals(visitor, [result.proposal]);
+  const apply = decideProposal(car, result.proposal, "apply", NOW);
+  if (!apply.ok) throw new Error(apply.error);
+  expect(await saveDecision(visitor, apply)).toBe(true);
+  const stored = (await loadProposal(visitor, result.proposal.id))!;
+  const hide = decideProposal((await loadCar(visitor))!, stored, "hide", NOW);
+  if (!hide.ok) throw new Error(hide.error);
+  expect(await saveDecision(visitor, hide)).toBe(true);
+  expect(await loadProposals(visitor)).toEqual([]);
+  expect((await loadProposal(visitor, stored.id))!.state).toBe("applied");
+  expect((await loadCar(visitor))!.items.find(i => i.kind === "engine_filter")!.dueOdometer).toBe(48_300);
+});

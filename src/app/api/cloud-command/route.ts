@@ -36,7 +36,10 @@ export async function POST(request: Request) {
       pending,
       chat: missing.length > 0 ? null : nebiusChat(),
       now: new Date(),
-      save: (next) => updateCar(visitorId!, next, car ?? undefined),
+      save: async (next) => {
+        if (!car) throw new Error("The command has no saved car.");
+        await updateCar(visitorId!, next, car);
+      },
       saveProposals: (proposals) => addProposals(visitorId!, proposals),
     });
     return Response.json(reply);

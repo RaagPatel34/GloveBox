@@ -12,6 +12,7 @@ import { getSql } from "./sql";
 
 // The cards to show: pending and applied, in the order they were made. Dismissed and hidden ones are gone.
 export async function loadProposals(visitorId: string): Promise<Proposal[]> {
+  if (!isVisitorId(visitorId)) return [];
   const sql = getSql();
   const rows = (await sql`SELECT p.* FROM proposals p JOIN vehicles v ON v.id = p.vehicle_id
     WHERE v.visitor_id = ${visitorId} AND p.state <> 'dismissed' AND p.hidden_at IS NULL
@@ -26,15 +27,21 @@ export async function loadProposal(visitorId: string, proposalId: string): Promi
   return rows.length === 0 ? null : proposalFromRow(rows[0]);
 }
 
-// Adds new proposals, all or none. A proposal for a vehicle the visitor does not own is skipped.
+// Adds new proposals, all or none. A missing or unowned vehicle/item rejects the whole batch.
 // A new proposal replaces any card still pending for the same item: that one is dismissed in
 // the same transaction, so there is never more than one card waiting per item.
 export async function addProposals(visitorId: string, proposals: Proposal[]): Promise<void> {
   if (!isVisitorId(visitorId)) throw new Error("Invalid visitor ID");
   if (proposals.length === 0) return;
   const sql = getSql();
-  await sql.transaction(
-    proposals.flatMap((proposal) => {
+  // Lock all affected items before replacement, in a stable order across batches.
+  // A second request waits here and its following UPDATE sees the first request's INSERT.
+  const itemIds = [...new Set(proposals.map(proposal => proposal.itemId))].sort();
+  await sql.transaction([
+    sql`SELECT s.id FROM schedule_items s JOIN vehicles v ON v.id = s.vehicle_id
+      WHERE v.visitor_id = ${visitorId} AND s.id = ANY(${itemIds}::text[])
+      ORDER BY s.id FOR UPDATE OF s`,
+    ...proposals.flatMap((proposal) => {
       const row = proposalToRow(proposal);
       return [
         sql`UPDATE proposals SET state = 'dismissed'
@@ -42,12 +49,14 @@ export async function addProposals(visitorId: string, proposals: Proposal[]): Pr
             AND vehicle_id = (SELECT id FROM vehicles WHERE id = ${row.vehicle_id} AND visitor_id = ${visitorId})`,
         sql`INSERT INTO proposals (id, vehicle_id, item_id, from_due_at, from_due_odometer, to_due_at,
             to_due_odometer, reason, model, state)
-          SELECT ${row.id}, ${row.vehicle_id}, ${row.item_id}, ${row.from_due_at}, ${row.from_due_odometer},
-            ${row.to_due_at}, ${row.to_due_odometer}, ${row.reason}, ${row.model}, ${row.state}
-          WHERE EXISTS (SELECT 1 FROM vehicles WHERE id = ${row.vehicle_id} AND visitor_id = ${visitorId})`,
+          VALUES (${row.id},
+            (SELECT v.id FROM vehicles v JOIN schedule_items s ON s.vehicle_id = v.id
+              WHERE v.id = ${row.vehicle_id} AND v.visitor_id = ${visitorId} AND s.id = ${row.item_id}),
+            ${row.item_id}, ${row.from_due_at}, ${row.from_due_odometer},
+            ${row.to_due_at}, ${row.to_due_odometer}, ${row.reason}, ${row.model}, ${row.state})`,
       ];
     }),
-  );
+  ]);
 }
 
 // Records the user's decision on a card (see decideProposal). Only a still-pending card is
@@ -78,14 +87,24 @@ export async function saveDecision(visitorId: string, decided: Decided): Promise
     const item = decided.car?.items.find((i) => i.id === proposal.itemId);
     if (!item) return false;
     const from = proposalToRow(proposal);
-    rows = await sql`WITH moved AS (
+    rows = await sql`WITH owned_item AS (
+          SELECT s.id FROM schedule_items s JOIN vehicles v ON v.id = s.vehicle_id
+          WHERE s.id = ${item.id} AND v.visitor_id = ${visitorId}
+          FOR UPDATE OF s
+        ), eligible AS (
+          SELECT p.id FROM proposals p JOIN vehicles v ON v.id = p.vehicle_id
+          WHERE p.id = ${proposal.id} AND p.item_id = ${item.id}
+            AND p.state = 'pending' AND v.visitor_id = ${visitorId}
+            AND EXISTS (SELECT 1 FROM owned_item)
+          FOR UPDATE OF p
+        ), moved AS (
           UPDATE schedule_items SET due_at = ${item.dueAt ?? null}, due_odometer = ${item.dueOdometer ?? null},
             status = ${item.status}
           WHERE id = ${item.id}
             AND vehicle_id = (SELECT id FROM vehicles WHERE id = ${proposal.vehicleId} AND visitor_id = ${visitorId})
             AND due_at IS NOT DISTINCT FROM ${from.from_due_at}::timestamptz
             AND due_odometer IS NOT DISTINCT FROM ${from.from_due_odometer}::integer
-            AND EXISTS (SELECT 1 FROM proposals WHERE id = ${proposal.id} AND item_id = ${item.id} AND state = 'pending')
+            AND EXISTS (SELECT 1 FROM eligible)
           RETURNING id
         )
         , cleared_nudges AS (
