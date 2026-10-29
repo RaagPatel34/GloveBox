@@ -10,14 +10,18 @@ const lookup = (content: string, url = SOURCE) => lookupMfrSchedule(CIVIC, {
 
 describe("manufacturer schedule review regressions", () => {
   it.each([
+    "At 15,000 miles replace cabin filter, oil change as needed.",
+    "At 15,000 miles replace cabin filter, oil change.",
     "Oil change as needed, tire rotation every 7,500 miles.",
     "Oil change every 150,000 miles, tire rotation every 7,500 miles.",
     "Oil change as needed, tire rotation every 7,500 miles or 6 months.",
   ])("does not borrow another service's numbers: %s", async (content) => {
     const result = await lookup(content);
-    expect(result.intervals.map(i => i.kind)).toEqual(["tire_rotation"]);
+    expect(result.intervals.map(i => i.kind)).toEqual([content.includes("cabin") ? "cabin_filter" : "tire_rotation"]);
   });
   it.each([
+    ["2019 Honda Civic maintenance. 2016 Honda Accord: Oil change every 5,000 miles.", SOURCE],
+    ["2019 Honda Civic maintenance. 2019 Honda Accord: Oil change every 5,000 miles.", SOURCE],
     ["2016 Honda Accord: Oil change every 5,000 miles.", "https://owners.honda.com/vehicles/information/2016/Accord/maintenance"],
     ["2019 Honda Accord: Oil change every 5,000 miles.", "https://owners.honda.com/vehicles/information/2019/Accord/maintenance"],
     ["Oil change every 5,000 miles.", "https://owners.honda.com/maintenance"],

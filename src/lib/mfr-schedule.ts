@@ -85,9 +85,9 @@ function daysIn(text: string): Found[] {
 
 // The in-range number written just after the keyword, else the closest one before it ("At 7,500 miles: oil
 // change"). A number that follows another item's keyword belongs to that item, not to this one.
-function pick(found: Found[], from: number, [min, max]: [number, number], keywordBefore: (at: number) => boolean, until = Infinity): number | undefined {
+function pick(found: Found[], from: number, [min, max]: [number, number], earlierService: boolean, until = Infinity): number | undefined {
   const inRange = found.filter((f) => f.value >= min && f.value <= max);
-  const before = [...inRange].reverse().find((f) => f.at < from && !keywordBefore(f.at));
+  const before = earlierService ? undefined : [...inRange].reverse().find((f) => f.at < from);
   return (inRange.find((f) => f.at >= from && f.at < until) ?? before)?.value;
 }
 
@@ -140,10 +140,21 @@ function isManufacturer(url: string, make: string): boolean {
 
 // A search query is not evidence that a result applies to this car. Require the requested
 // year and full model name in the result itself; ambiguous results leave existing intervals alone.
-function matchesVehicle(result: SearchResult, vehicle: Pick<Vehicle, "year" | "model">): boolean {
+function matchesVehicle(result: SearchResult, vehicle: Pick<Vehicle, "year" | "make" | "model">): boolean {
   const text = decodeURIComponent(result.url) + " " + result.title + " " + result.content;
   const words = text.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   const model = vehicle.model.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const tokens = words.split(" ");
+  const make = vehicle.make.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().split(" ");
+  const modelWords = model.split(" ");
+  // A result can include matching navigation text and another car's schedule. Conflicting
+  // years or explicit year/make/model headings make the entire result ambiguous.
+  for (let i = 0; i < tokens.length; i++) {
+    if (!/^(?:19|20)\d{2}$/.test(tokens[i])) continue;
+    if (Number(tokens[i]) !== vehicle.year) return false;
+    if (make.every((word, j) => tokens[i + 1 + j] === word) &&
+        !modelWords.every((word, j) => tokens[i + 1 + make.length + j] === word)) return false;
+  }
   return (" " + words + " ").includes(" " + vehicle.year + " ") && (" " + words + " ").includes(" " + model + " ");
 }
 
@@ -180,7 +191,6 @@ function extractIntervals(results: SearchResult[], vehicle: Pick<Vehicle, "year"
         const ownMiles = milesIn(segment);
         const ownDays = daysIn(segment);
         const inherits = ownMiles.length === 0 && ownDays.length === 0;
-        const keywordBefore = (at: number) => KINDS.some((k) => segment.slice(0, at).search(KEYWORDS[k]) >= 0);
         for (const kind of KINDS) {
           if (found.has(kind)) continue;
           // An engine air filter line must not also be read as the cabin filter's.
@@ -188,6 +198,7 @@ function extractIntervals(results: SearchResult[], vehicle: Pick<Vehicle, "year"
           const match = KEYWORDS[kind].exec(text);
           if (!match) continue;
           const at = match.index;
+          const earlierService = KINDS.some((k) => segment.slice(0, at).search(KEYWORDS[k]) >= 0);
           const end = at + match[0].length;
           const following = KINDS.map((k) => text.slice(end).search(KEYWORDS[k])).filter((i) => i >= 0);
           const until = inherits || following.length === 0 ? Infinity : end + Math.min(...following);
@@ -196,8 +207,8 @@ function extractIntervals(results: SearchResult[], vehicle: Pick<Vehicle, "year"
           const from = inherits ? 0 : at;
           const interval = intervalFrom(
             kind,
-            pick(miles ?? [], from, BOUNDS[kind].miles, keywordBefore, until),
-            pick(days ?? [], from, BOUNDS[kind].days, keywordBefore, until),
+            pick(miles ?? [], from, BOUNDS[kind].miles, earlierService, until),
+            pick(days ?? [], from, BOUNDS[kind].days, earlierService, until),
             result.url,
           );
           if (interval) found.set(kind, interval);
