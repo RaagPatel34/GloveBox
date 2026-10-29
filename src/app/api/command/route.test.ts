@@ -6,6 +6,7 @@ import { POST } from "./route";
 
 const mocks = vi.hoisted(() => ({ chat: vi.fn(), completion: vi.fn(), services: vi.fn(), missing: vi.fn(() => [] as string[]) }));
 vi.mock("@/lib/nebius", () => ({
+  reasoningEffort: () => undefined,
   nebiusChat: () => mocks.chat,
   nebius: () => ({ chat: { completions: { create: mocks.completion } } }),
   modelFor: (tier: string) => `test-${tier}`,

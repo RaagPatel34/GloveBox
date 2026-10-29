@@ -39,13 +39,13 @@ export function TripAgent({ home, mpg, onDistance }: { home: Vehicle["home"]; mp
     <section className="tool-panel" aria-label="Plan errands">
       <div className="section-heading">
         <h2>Plan your errands</h2>
-        <button className="text-button" type="button" onClick={() => { setStops(EXAMPLE); setReply(null); }}>
+        <button className="text-button" type="button" disabled={busy} onClick={() => { setStops(EXAMPLE); setReply(null); }}>
           Use demo stops
         </button>
       </div>
       <p className="helper">
         List the places you need to go. Nemotron looks them up on Google Maps, Google orders the drive from home and back,
-        and GloveBox prices the fuel at {mpg} MPG. Your stops are sent to Google.
+        and GloveBox prices the fuel at <span className="font-mono tabular-nums">{mpg}</span> MPG. Your stops are sent to Google.
       </p>
       <form onSubmit={plan}>
         <label>
@@ -53,13 +53,14 @@ export function TripAgent({ home, mpg, onDistance }: { home: Vehicle["home"]; mp
           <textarea
             value={stops}
             onChange={(event) => { setStops(event.target.value); setReply(null); }}
+            disabled={busy}
             required
             rows={4}
             maxLength={MAX_TRIP_STOPS * 201}
             placeholder={"Trader Joe's, Cerritos\n20 Civic Center Plaza, Santa Ana, CA"}
           />
         </label>
-        <p className="field-note">Starting from {home.label}. Up to {MAX_TRIP_STOPS} stops.</p>
+        <p className="field-note">Starting from {home.label}. Up to <span className="font-mono tabular-nums">{MAX_TRIP_STOPS}</span> stops.</p>
         <button className="primary" disabled={busy || lines.length === 0}>{busy ? "Planning…" : "Plan trip"}</button>
       </form>
 
