@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { calculateTrip, tripCost } from '../src/lib/trip.ts';
+import { calculateTrip, tripCost, vehicleMpg } from '../src/lib/trip.ts';
 const input={miles:42,mpg:32,gallons:12,usualPrice:4.89,alternatePrice:4.59,extraMiles:8,extraMinutes:15,hourlyValue:0};
 const close=(a,b)=>assert.ok(Math.abs(a-b)<0.000001,`${a} differs from ${b}`);
 test('compares pump savings with entire additional distance without double-counting purchase and trip cost',()=>{
@@ -20,4 +20,9 @@ test('tripCost prices the fuel a drive burns: 64 mi at 32 MPG and $4.50/gal is $
 });
 test('tripCost refuses impossible miles, MPG and prices rather than pricing them',()=>{
   for(const [miles,mpg,price] of [[-1,32,4.5],[NaN,32,4.5],[10,0,4.5],[10,151,4.5],[10,32,0],[10,32,31],[10,32,Infinity]])assert.throws(()=>tripCost(miles,mpg,price));
+});
+test('vehicleMpg is the real-world MPG the driver set, else the EPA figure',()=>{
+  assert.equal(vehicleMpg({epaMpg:34}),34);
+  assert.equal(vehicleMpg({epaMpg:34,mpgOverride:29}),29);
+  assert.equal(vehicleMpg({epaMpg:34,mpgOverride:0}),34);
 });

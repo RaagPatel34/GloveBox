@@ -11,7 +11,8 @@ import { VISITOR_COOKIE } from "@/lib/visitor";
 // The command bar: POST { text } -> CommandReply. The car is the one the visitor cookie
 // points at, the same one the dashboard shows. The logic lives in src/lib/command.ts.
 export async function POST(request: Request) {
-  const reply = (message: string, status: number) => Response.json({ model: null, message, changes: [] }, { status });  if (request.headers.get("origin") && request.headers.get("origin") !== new URL(request.url).origin) return reply("Cross-origin requests are not accepted.", 403);
+  const reply = (message: string, status: number) => Response.json({ model: null, message, changes: [] }, { status });
+  if (request.headers.get("origin") && request.headers.get("origin") !== new URL(request.url).origin) return reply("Cross-origin requests are not accepted.", 403);
   if (process.env.ENABLE_LIVE_AI !== "true") return reply("Live AI is paused. Use the local garage for service records and sample suggestions.", 503);
   if (!process.env.DATABASE_URL) return reply("Cloud storage is not configured. Your local garage remains available.", 503);
   let body: unknown;

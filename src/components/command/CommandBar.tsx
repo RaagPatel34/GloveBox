@@ -2,9 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { TripResult } from "@/components/trip-result";
 import { MAX_COMMAND_LENGTH } from "@/lib/command-limits";
 import { commandReply } from "@/lib/command-reply";
-import { TripResult } from "@/components/trip-result";
 import type { CommandReply, Vehicle } from "@/lib/types";
 import { ModelBadge } from "./ModelBadge";
 
@@ -87,7 +87,7 @@ export function CommandBar({ home, mpg }: { home: Vehicle["home"]; mpg: number }
                 ))}
               </ul>
             )}
-            {reply.trip && <TripResult trip={reply.trip} home={home} mpg={mpg} />}
+            {reply.trip && <TripResult trip={reply.trip} home={home} mpg={mpg} showModel={false} />}
           </div>
         )}
       </div>

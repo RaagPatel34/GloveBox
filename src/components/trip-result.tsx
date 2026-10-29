@@ -3,26 +3,29 @@ import { ExternalIcon } from "@/components/shell/icons";
 import type { TripPlan, Vehicle } from "@/lib/types";
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
-const KIND_LABEL = { eia: "EIA regional average", area: "Area average", station: "Station price" } as const;
+const PRICE_KIND_LABEL = { eia: "EIA regional average", area: "Area average", station: "Station price" } as const;
 const STOP_LABEL = { gas: "Gas", wash: "Car wash", address: "" } as const;
 
 // A planned drive from home and back: the stops in driving order, the fuel and where its
 // price comes from. Shared by the Trips panel and the command bar. `onDistance` adds the
-// button that hands the miles to the detour calculator, where there is one.
+// button that hands the miles to the detour calculator, where there is one. `showModel` is
+// off where the caller already shows which model answered.
 export function TripResult({
   trip,
   home,
   mpg,
+  showModel = true,
   onDistance,
 }: {
   trip: TripPlan;
   home: Vehicle["home"];
   mpg: number;
+  showModel?: boolean;
   onDistance?: (miles: number) => void;
 }) {
   return (
     <div className="trip-result">
-      <ModelBadge model={trip.model} />
+      {showModel && <ModelBadge model={trip.model} />}
       <h3>{money.format(trip.fuelCost)} in fuel for {trip.totalMiles.toFixed(1)} miles</h3>
       <p>From home, {home.label}</p>
       <ol className="location-results list-decimal">
@@ -40,7 +43,7 @@ export function TripResult({
         <div><dt>Gas price</dt><dd>${trip.gasPrice.price.toFixed(3)}/gal</dd></div>
       </dl>
       <p>
-        <span className="pill">{KIND_LABEL[trip.gasPrice.kind]}</span>{" "}
+        <span className="pill">{PRICE_KIND_LABEL[trip.gasPrice.kind]}</span>{" "}
         {trip.gasPrice.label ?? "Gas price"}, week of {trip.gasPrice.asOf}.{" "}
         <a href={trip.gasPrice.source} target="_blank" rel="noreferrer">EIA source <ExternalIcon /></a>
       </p>
