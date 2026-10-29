@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { BASELINE_INTERVALS } from "../intervals";
 import { NOW } from "../test-support";
 import { checkRouterExample, expectedRoute, ROUTER_EXAMPLES } from "./router-examples";
-import { checkRoute, parseRoute, routeCommand } from "./router";
+import { checkRoute, parseRoute, routeCommand, type Route } from "./router";
 import { say, scriptedChat } from "./scripted-chat";
 
 describe("routeCommand on the fixed example set", () => {
@@ -126,7 +126,7 @@ describe("checkRoute", () => {
   });
 
   it("compares errand stops by value", () => {
-    const route = { intent: "errand", stops: [{ type: "gas" }] } as const;
+    const route: Route = { intent: "errand", stops: [{ type: "gas" }] };
     expect(checkRoute(route, { intent: "errand", stops: [{ type: "gas" }] })).toEqual([]);
     expect(checkRoute(route, { intent: "errand", stops: [{ type: "wash" }] })).toEqual([
       'stops: expected [{"type":"wash"}], got [{"type":"gas"}]',

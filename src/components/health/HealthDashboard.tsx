@@ -30,7 +30,7 @@ export function HealthDashboard({ dashboard, nudges = [] }: { dashboard: Dashboa
 
       <NudgeList nudges={nudges} />
 
-      <CommandBar />
+      <CommandBar home={vehicle.home} mpg={vehicle.mpgOverride || vehicle.epaMpg} />
 
       <ProposalCards cards={dashboard.proposals} />
 

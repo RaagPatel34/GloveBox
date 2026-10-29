@@ -1,4 +1,6 @@
-import type { PostFetch } from "../maps";
+import type { TripServices } from "../agent/trip";
+import { findPlace, findPlaces, type PostFetch } from "../maps";
+import type { GasPrice } from "../types";
 
 // The spec's demo errand: gas, a car wash and a grocery stop toward Santa Ana, starting from
 // the demo car's home (Knott's Berry Farm, Buena Park). Google's answers are canned in the
@@ -34,6 +36,28 @@ export const DEMO_CAR_WASHES = [
 ];
 
 export const DEMO_GROCERY = place("Trader Joe's", "3333 W 1st St, Santa Ana, CA 92703", 33.7466, -117.9139);
+
+export const DEMO_GAS_PRICE: GasPrice = {
+  price: 5.883,
+  asOf: "2026-10-26",
+  source: "https://www.eia.gov/dnav/pet/hist/LeafHandler.ashx?n=PET&s=EMM_EPMR_PTE_Y05LA_DPG&f=W",
+  kind: "eia",
+  label: "Los Angeles weekly regular gasoline average",
+  stale: false,
+};
+
+// Trip services for the demo errand: canned Places through the real Google adapter, the stops
+// driven in the order given for a fixed distance, and a fixed weekly price.
+export function demoTripServices() {
+  const fetchImpl = demoPlacesFetch();
+  const services: TripServices = {
+    findPlace: (query, near) => findPlace("demo", query, near, fetchImpl),
+    findPlaces: (kind, where) => findPlaces("demo", kind, where, fetchImpl),
+    route: async (_home, stops) => ({ order: stops, miles: 14.2, minutes: 31 }),
+    gasPrice: async () => DEMO_GAS_PRICE,
+  };
+  return { services, requests: fetchImpl.requests };
+}
 
 // A fake Places searchText: canned answers by what the request asks for, with every request
 // body recorded so a test can check what was sent.
