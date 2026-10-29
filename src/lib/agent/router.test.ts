@@ -124,4 +124,44 @@ describe("checkRoute", () => {
       "odometer: expected 48210, got undefined",
     ]);
   });
+
+  it("compares errand stops by value", () => {
+    const route = { intent: "errand", stops: [{ type: "gas" }] } as const;
+    expect(checkRoute(route, { intent: "errand", stops: [{ type: "gas" }] })).toEqual([]);
+    expect(checkRoute(route, { intent: "errand", stops: [{ type: "wash" }] })).toEqual([
+      'stops: expected [{"type":"wash"}], got [{"type":"gas"}]',
+    ]);
+  });
+});
+
+describe("parseRoute: errands", () => {
+  it("keeps the gas, the car wash and the named place, in the order given", () => {
+    const raw = `{"intent":"errand","stops":[{"type":"gas"},{"type":"wash"},{"type":"address","name":" Trader Joe's "}]}`;
+    expect(parseRoute(raw)).toEqual({
+      intent: "errand",
+      stops: [{ type: "gas" }, { type: "wash" }, { type: "address", name: "Trader Joe's" }],
+    });
+  });
+
+  it("drops a stop it cannot trust and keeps the rest", () => {
+    const raw = JSON.stringify({
+      intent: "errand",
+      stops: [{ type: "gas" }, { type: "teleport" }, { type: "address" }, { type: "address", name: "  " }, "Costco", { type: "address", name: "x".repeat(201) }, null],
+    });
+    expect(parseRoute(raw)).toEqual({ intent: "errand", stops: [{ type: "gas" }] });
+  });
+
+  it("is still an errand, with no stops, when the reply names none it can use", () => {
+    expect(parseRoute('{"intent":"errand"}')).toEqual({ intent: "errand" });
+    expect(parseRoute('{"intent":"errand","stops":"gas"}')).toEqual({ intent: "errand" });
+    expect(parseRoute('{"intent":"errand","stops":[]}')).toEqual({ intent: "errand" });
+  });
+
+  it("tells Nano how to write the stops", async () => {
+    const chat = scriptedChat({ nano: [say('{"intent":"unknown"}')] });
+    await routeCommand("hi", chat, NOW);
+    const prompt = JSON.stringify(chat.requests[0].messages[0]);
+    expect(prompt).toContain('{\\"type\\":\\"gas\\"}');
+    expect(prompt).toContain('\\"type\\":\\"address\\",\\"name\\"');
+  });
 });

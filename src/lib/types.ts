@@ -80,6 +80,10 @@ export type TripStop = LatLng & {
   type: "gas" | "wash" | "address";
 };
 
+// A stop as the user asked for it: "gas" and "car wash" are kinds of place to find, anything
+// else is a named place.
+export type ErrandStop = { type: "gas" | "wash" } | { type: "address"; name: string };
+
 export type DetourVerdict = {
   station: string;
   savings: number;

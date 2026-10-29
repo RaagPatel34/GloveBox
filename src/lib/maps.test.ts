@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { loopRouteRequest, parsePlace } from "./maps";
+import { demoPlacesFetch, DEMO_GAS_STATIONS } from "./fixtures/demo-trip";
+import { findPlace, findPlaces, loopRouteRequest, parsePlace, placesRequest, type PostFetch } from "./maps";
 import { parseRoute } from "./route-planner";
 import { parseRegionalPrice, EIA_AREAS } from "./gas-price";
 
@@ -35,6 +36,76 @@ describe("parsePlace", () => {
     expect(parsePlace({ places: [{ ...place, location: undefined }] })).toBeNull();
     expect(parsePlace({ places: [{ ...place, location: { latitude: 91, longitude: 0 } }] })).toBeNull();
     expect(parsePlace({ places: [{ ...place, formattedAddress: "" }] })).toBeNull();
+  });
+});
+
+describe("findPlaces", () => {
+  const home = { lat: 33.8442, lng: -117.9987 };
+
+  it("lists the gas stations near a point as named places", async () => {
+    const fetchImpl = demoPlacesFetch();
+
+    const stations = await findPlaces("key", "gas", { near: home }, fetchImpl);
+
+    expect(stations.map((s) => s.name)).toEqual(["Chevron", "Arco", "Shell"]);
+    expect(stations[0]).toEqual({ name: "Chevron", label: "7501 Beach Blvd, Buena Park, CA 90620", lat: 33.8582, lng: -118.0001 });
+    expect(fetchImpl.requests).toEqual([
+      expect.objectContaining({
+        textQuery: "gas station",
+        includedType: "gas_station",
+        locationBias: { circle: { center: { latitude: 33.8442, longitude: -117.9987 }, radius: 8000 } },
+      }),
+    ]);
+  });
+
+  it("asks for car washes by their own place type", async () => {
+    const fetchImpl = demoPlacesFetch();
+
+    const washes = await findPlaces("key", "wash", { near: home }, fetchImpl);
+
+    expect(washes.map((w) => w.name)).toEqual(["Mister Car Wash", "Santa Ana Express Wash"]);
+    expect(fetchImpl.requests[0]).toMatchObject({ textQuery: "car wash", includedType: "car_wash" });
+  });
+
+  it("can search along a route instead of around a point", () => {
+    expect(placesRequest("gas", { alongRoute: "encoded-polyline" })).toMatchObject({
+      textQuery: "gas station",
+      searchAlongRouteParameters: { polyline: { encodedPolyline: "encoded-polyline" } },
+    });
+    expect(placesRequest("gas", { alongRoute: "encoded-polyline" })).not.toHaveProperty("locationBias");
+  });
+
+  it("sends the server key and drops places without a usable address or coordinates", async () => {
+    const calls: { url: string; headers: Record<string, string> }[] = [];
+    const fetchImpl: PostFetch = async (url, init) => {
+      calls.push({ url, headers: init.headers as Record<string, string> });
+      return Response.json({ places: [...DEMO_GAS_STATIONS.slice(0, 1), { displayName: { text: "No address" }, location: { latitude: 1, longitude: 1 } }, { formattedAddress: "No coords" }] });
+    };
+
+    const stations = await findPlaces("secret", "gas", { near: home }, fetchImpl);
+
+    expect(stations.map((s) => s.name)).toEqual(["Chevron"]);
+    expect(calls[0].url).toBe("https://places.googleapis.com/v1/places:searchText");
+    expect(calls[0].headers["X-Goog-Api-Key"]).toBe("secret");
+  });
+
+  it("finds nothing when Places has no match, and throws when Places is down", async () => {
+    expect(await findPlaces("key", "gas", { near: home }, async () => Response.json({}))).toEqual([]);
+    await expect(findPlaces("key", "gas", { near: home }, async () => new Response("no", { status: 503 }))).rejects.toThrow("Places responded 503");
+  });
+});
+
+describe("findPlace", () => {
+  it("looks a named place up near home, so Trader Joe's means the one close by", async () => {
+    const fetchImpl = demoPlacesFetch();
+
+    const place = await findPlace("key", "Trader Joe's", { lat: 33.8442, lng: -117.9987 }, fetchImpl);
+
+    expect(place).toMatchObject({ name: "Trader Joe's", label: "3333 W 1st St, Santa Ana, CA 92703" });
+    expect(fetchImpl.requests[0]).toMatchObject({
+      textQuery: "Trader Joe's",
+      locationBias: { circle: { center: { latitude: 33.8442, longitude: -117.9987 } } },
+    });
   });
 });
 

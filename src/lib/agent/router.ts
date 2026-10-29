@@ -1,7 +1,7 @@
 // The .ts extension lets `npm run eval:router` load this file under plain Node.
 import { pacificDate } from "../days.ts";
 import { BASELINE_INTERVALS, isItemKind, isOdometerReading, isPlainDate, parseMiles } from "../intervals.ts";
-import type { ScheduleItemKind } from "../types";
+import type { ErrandStop, ScheduleItemKind } from "../types";
 import type { Chat } from "./chat";
 
 // Nano reads one command-bar input and says what kind it is, pulling out any fields.
@@ -14,7 +14,8 @@ export type Route =
   | { intent: "service_log"; item?: ScheduleItemKind; date?: string; odometer?: number }
   | { intent: "odometer"; odometer: number }
   | { intent: "event" }
-  | { intent: "errand" }
+  // The places to go, in the order they were typed, when the reply names any it can use.
+  | { intent: "errand"; stops?: ErrandStop[] }
   | { intent: "unknown" };
 
 const ITEM_LIST = Object.entries(BASELINE_INTERVALS)
@@ -30,7 +31,9 @@ function systemPrompt(today: string): string {
     '  "date" as YYYY-MM-DD if they said when, and "odometer" as a whole number if they gave the mileage.',
     '- "odometer": the user is telling you the current odometer reading. Add "odometer" as a whole number.',
     '- "event": something coming up that affects the car, such as a trip or a change in driving.',
-    '- "errand": places they want to go, such as gas, a car wash or a shop.',
+    '- "errand": places they want to go, such as gas, a car wash or a shop. Add "stops", in the order they said them:',
+    '  {"type":"gas"} for gas, {"type":"wash"} for a car wash, and {"type":"address","name":"Trader Joe\'s"} for any named place.',
+    '  Leave out deadlines like "before Friday".',
     '- "unknown": anything else.',
     `Item ids: ${ITEM_LIST}.`,
     'Example: "just got a car wash" -> {"intent":"service_log","item":"wash"}',
@@ -52,6 +55,17 @@ export async function routeCommand(text: string, chat: Chat, now: Date): Promise
 function toOdometer(value: unknown): number | undefined {
   const n = parseMiles(value);
   return isOdometerReading(n) ? n : undefined;
+}
+
+// The stops it can check: a gas or car-wash stop, or a place with a name of a sensible length.
+function toErrandStops(value: unknown): ErrandStop[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((stop): ErrandStop[] => {
+    const { type, name } = (typeof stop === "object" && stop !== null ? stop : {}) as Record<string, unknown>;
+    if (type === "gas" || type === "wash") return [{ type }];
+    const trimmed = typeof name === "string" ? name.trim() : "";
+    return type === "address" && trimmed !== "" && trimmed.length <= 200 ? [{ type, name: trimmed }] : [];
+  });
 }
 
 // The JSON object that ends last in the text: the answer comes after any reasoning or
@@ -111,9 +125,12 @@ export function parseRoute(raw: string | null): Route {
       const odometer = toOdometer(fields.odometer);
       return odometer === undefined ? unknown : { intent: "odometer", odometer };
     }
+    case "errand": {
+      const stops = toErrandStops(fields.stops);
+      return stops.length > 0 ? { intent: "errand", stops } : { intent: "errand" };
+    }
     case "event":
-    case "errand":
-      return { intent: fields.intent };
+      return { intent: "event" };
     default:
       return unknown;
   }
@@ -127,6 +144,6 @@ export function checkRoute(actual: Route, expected: Route): string[] {
   const want = expected as Record<string, unknown>;
   const show = (value: unknown) => JSON.stringify(value) ?? "undefined";
   return [...new Set([...Object.keys(want), ...Object.keys(got)])]
-    .filter((key) => got[key] !== want[key])
+    .filter((key) => show(got[key]) !== show(want[key]))
     .map((key) => `${key}: expected ${show(want[key])}, got ${show(got[key])}`);
 }
