@@ -1,5 +1,7 @@
 # GloveBox release readiness — October 25, 2026
 
+> Updated October 29: the work below is now on `main` rather than a feature branch, and #11–#14 (manufacturer schedule, trip planner, errands, route map) have merged since. The official-requirement table is unchanged and still open. See [ISSUE-STATUS.md](ISSUE-STATUS.md) for current issue and PR state.
+
 The non-AI core works. The hackathon entry is not yet submission-ready because the required live NVIDIA model on Nebius remains disabled at the owner's request. Do not count optional provider accounts as official eligibility requirements.
 
 ## Official requirements

@@ -15,6 +15,7 @@ Two agents (Claude Code and Codex) work this repo for two people. These rules ke
 - **Branch from `main`.** One issue per branch, one branch per PR. Push only to branches you created; to change a teammate's branch, open your own PR against it.
 - **One garage.** Every page reads and writes the browser garage through `useGarage()` (`src/components/garage/GarageProvider.tsx`, localStorage key `glovebox.v1`). New features extend that `Garage`; storage stays in the provider.
 - **Design tokens only.** Colours come from the `:root` tokens in `src/app/globals.css` and their Tailwind names (`bg-panel`, `text-muted`, `text-overdue-text`, …). Status hues mean status only; focus, selection and "Changed" use the foreground. Instrument Sans sets prose, Martian Mono sets every number.
+- **Docs move with the code.** A PR that changes behaviour, an env var or a route updates the README and `docs/ISSUE-STATUS.md` in the same PR. Status docs carry a date; re-date them when you touch them.
 - **Green before a PR:** `npm test`, `npm run typecheck` and `npm run lint` all pass.
 
 ### Where features live
@@ -23,7 +24,7 @@ Two agents (Claude Code and Codex) work this repo for two people. These rules ke
 | --- | --- | --- | --- |
 | `/` | Dashboard | How is my car? | Next up hero, drive review and suggestion cards, Coming up tiles, weather check |
 | `/log` | Service log | What has been done? | Service history, record a service, update odometer, mileage forecast, planned miles (phone) |
-| `/trips` | Trips | What will this drive cost? | Route planner, gas-detour calculator |
+| `/trips` | Trips | What will this drive cost? | Trip agent (stops to ordered route, miles, fuel cost), route map, manual route planner, gas-detour calculator |
 | `/car` | Car & settings | How is this set up? | Add/replace car, reset demo, intervals and sources, backup and restore, copy to cloud, AI status |
 
 The shell (rail on desktop, top strip and tab bar on phones) is `src/app/(garage)/layout.tsx`. `/garage` is the optional cloud garage, linked from Car & settings only.

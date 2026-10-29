@@ -2,7 +2,7 @@
 
 Your car’s upkeep and trip costs, with the reasoning in plain sight.
 
-Built for the **Nebius x NVIDIA Global AI Hackathon — Best Apps and Agents**. Live inference is currently paused at the team’s request until credits are available. The core product needs no AI key.
+Built for the **Nebius x NVIDIA Global AI Hackathon — Best Apps and Agents**. Live inference is off by default (`ENABLE_LIVE_AI=false`) until Nebius credits are available; a local Qwen model can stand in during development (see below). The core product needs no AI key.
 
 ## What works
 
@@ -13,6 +13,8 @@ Built for the **Nebius x NVIDIA Global AI Hackathon — Best Apps and Agents**. 
 - Compare gas-detour savings, extra fuel use, and optional time cost using deterministic math.
 - Open manually entered stops in Google Maps. Distances and prices are entered by the user, not fetched or claimed to be live.
 - Save locally, export a JSON backup, and validate it before restoring. Restoring asks before it replaces your garage; resetting the demo car offers Undo.
+- Plan a trip: type up to eight stops (or say your errands in the command bar), get an ordered Google Routes drive from home and back, miles, and a fuel cost from the car's MPG and the EIA weekly price. A planned trip can be drawn on a Google Directions map behind a Load route map button.
+- Saving a new car looks up its manufacturer service intervals with Tavily and shows each with a link to its source; your own intervals are never replaced.
 - View NHTSA tire-care guidance and an applicable Honda sedan reference. User-entered sources are labeled as user records, not independently verified.
 
 ## Run
@@ -31,7 +33,7 @@ Open http://localhost:3000. Choose **Add my car** or **Load demo car**. The app 
 | --- | --- | --- |
 | `/` | Dashboard | The next thing your car needs, the drive review and its suggestions, everything else coming up, the weather check |
 | `/log` | Service log | Service history, record a service, update the odometer, mileage forecast |
-| `/trips` | Trips | Route planner and the gas-detour calculator |
+| `/trips` | Trips | Trip agent, route planner with map, and the gas-detour calculator |
 | `/car` | Car & settings | Add or replace your car, intervals and sources, backup and restore, copy to the cloud garage, AI status |
 
 On a desktop the car, its odometer and its status counts stay in a rail on the left; on a phone they fold into a top strip with a tab bar at the bottom. Core features work without credentials; optional EPA lookup requires network access. Sample suggestions run locally in the browser.
@@ -52,7 +54,7 @@ On the Dashboard, choose **Live · Nemotron** to plan errands under the command 
 
 The Dashboard includes your teammate’s Open-Meteo forecast and air-quality rules. Search a US city or ZIP code and explicitly check its conditions. This uses no AI or paid key; incomplete or unavailable conditions are labeled. Forecast guidance never changes your records automatically.
 
-The command bar takes errands too: “gas, car wash and Trader Joe's” goes through the router (Nano) to the same trip agent and shows the plan under the bar. Gas and car-wash stops are real stations and washes found near home with Google Places (the candidates are kept for the detour verdict), and a named place resolves to the one near home. The Trips page opens with the trip agent: type up to eight stops and Nemotron Super looks them up, Google Routes orders the drive from home and back, and code prices the fuel from the car's MPG and the EIA Los Angeles weekly price (California's as a fallback), shown with its source and week. It needs live AI, `ENABLE_MAPS=true`, `GOOGLE_MAPS_API_KEY` and `EIA_API_KEY`. Below it, the manual planner includes place search, ordered driving routes, route fuel costs, and a California weekly EIA price lookup. Google Places/Routes remain off unless both `ENABLE_MAPS=true` and `GOOGLE_MAPS_API_KEY` are set. Set provider quotas and restrictions before opting in. EIA needs `EIA_API_KEY`; its results are regional weekly estimates, never station quotes. These adapters are tested with fixtures; hosted live acceptance awaits those credentials. Manual stops, Maps links, entered prices and detour calculations remain available.
+The command bar takes errands too: “gas, car wash and Trader Joe's” goes through the router (Nano) to the same trip agent and shows the plan under the bar. Gas and car-wash stops are real stations and washes found near home with Google Places (the candidates are kept for the detour verdict), and a named place resolves to the one near home. The Trips page opens with the trip agent: type up to eight stops and Nemotron Super looks them up, Google Routes orders the drive from home and back, and code prices the fuel from the car's MPG and the EIA Los Angeles weekly price (California's as a fallback), shown with its source and week. It needs live AI, `ENABLE_MAPS=true`, `GOOGLE_MAPS_API_KEY` and `EIA_API_KEY`. Below it, the manual planner includes place search, ordered driving routes, route fuel costs, and a California weekly EIA price lookup. Google Places/Routes remain off unless both `ENABLE_MAPS=true` and `GOOGLE_MAPS_API_KEY` are set. Set provider quotas and restrictions before opting in. EIA needs `EIA_API_KEY`; its results are regional weekly estimates, never station quotes. These adapters are tested with fixtures; hosted live acceptance awaits those credentials. The route map needs `NEXT_PUBLIC_GOOGLE_MAPS_KEY`, a browser key restricted to the Embed API and your domain; without it the stop list and an Open in Google Maps link remain. Manual stops, Maps links, entered prices and detour calculations remain available.
 
 ## Reconciled cloud garage
 
@@ -75,6 +77,21 @@ When credits are available:
 3. Set `NEBIUS_MODEL_SUPER` to the chosen NVIDIA Nemotron ID and rerun the smoke test. It incurs two inference calls per configured model.
 4. Set `ENABLE_LIVE_AI=true`, restart, and test **Live · Nemotron**.
 5. Add shared request metering and a spending budget before exposing paid inference publicly. See [deployment instructions](docs/DEPLOYMENT.md).
+
+### Local Qwen3.5 stand-in (no credits)
+
+Any OpenAI-compatible server works. Run [Ollama](https://ollama.com/) on the same PC as `npm run dev`, run `ollama pull qwen3.5:4b`, and set these in `.env.local`:
+
+```dotenv
+NEBIUS_BASE_URL=http://localhost:11434/v1/
+NEBIUS_API_KEY=ollama
+NEBIUS_MODEL_NANO=qwen3.5:4b
+NEBIUS_MODEL_SUPER=qwen3.5:4b
+NEBIUS_MODEL_ULTRA=qwen3.5:4b
+NEBIUS_REASONING_EFFORT=none
+```
+
+All three tiers share one model, a development substitute for the Nemotron tiers. `NEBIUS_REASONING_EFFORT=none` stops Qwen thinking first (about 5 s a reply instead of 20 s, under the 25 s timeout). Run `npm run smoke` for tool calling and `npm run eval:router` for command classification, then restart `npm run dev`. A Vercel deployment cannot reach `localhost`; it needs a hosted endpoint. To return to Nebius, restore its endpoint, key and model IDs and clear the reasoning setting.
 
 The smoke script is an explicit integration test and makes calls when invoked with credentials regardless of the application’s enable switch. Do not run it while credit use is deferred.
 
@@ -116,24 +133,26 @@ Browser verification covered the complete EPA flow: 2019 Honda → Civic 4Dr →
 - [Real-user testing worksheet](docs/USER-TEST.md)
 - [Original product roadmap](docs/SPEC.md)
 
-[Feature-branch preview](https://glove-box-git-codex-first-working-flow-glovebox2.vercel.app/) is deployed. Public video: pending. The repository is still private. A sample-only preview is **not** a complete hackathon entry; restore and verify real NVIDIA/Nebius runtime usage before submission.
+Public video: pending. The stable hosted URL and the funded Nemotron run are tracked in [#4](https://github.com/RaagPatel34/GloveBox/issues/4). A sample-only preview is **not** a complete hackathon entry; restore and verify real NVIDIA/Nebius runtime usage before submission.
 
 ## Not implemented
 
-Verified automatic station-price discovery and account authentication are not implemented. Tavily source search and opt-in daily weather job code are implemented, but require provider configuration and hosted acceptance before claiming them live. See the [issue acceptance audit](docs/ISSUE-STATUS.md) for implemented work, gaps, and delivery order. The current preview covers own-car upkeep and manually sourced detour comparison.
+Verified automatic station-price discovery, the live gas-price detour verdict ([#15](https://github.com/RaagPatel34/GloveBox/issues/15)), odometer-photo reading ([#17](https://github.com/RaagPatel34/GloveBox/issues/17)) and account authentication are not implemented. The opt-in daily weather job ([#16](https://github.com/RaagPatel34/GloveBox/issues/16)) is code only: it needs a migrated database, `CRON_SECRET` and a production release. Provider-backed features need their keys and hosted acceptance before you call them live. See the [issue status](docs/ISSUE-STATUS.md) for what is merged, what is open and the delivery order.
 
-## License
-
-[MIT](LICENSE)
-
-### October 24 integration follow-up
+## Cloud copy and source search
 
 Records includes an explicit copy into an empty cloud garage and download of the original transferred archive. Existing cloud cars are never overwritten; later edits do not sync. The complete original history is preserved, with old proposals archived rather than reactivated.
 
 Trips includes optional Tavily source search (ENABLE_TAVILY + TAVILY_API_KEY; no generated answer), and saving a new car runs one Tavily search for its manufacturer service intervals (each shown with a link to its source; the owner's own intervals are never replaced) and Google directions embed (NEXT_PUBLIC_GOOGLE_MAPS_KEY restricted to the Embed API and website domains). Both wait for account setup. Search excerpts must not be represented as verified station quotes.
 
-Daily weather: migrate the schema, configure CRON_SECRET privately and ENABLE_DAILY_WEATHER=true, and obtain per-car consent in /garage. Vercel cron runs production only. The bounded hackathon batch covers at most 10 cars per invocation, prioritizes oldest eligible work, and prevents duplicate checks within 24 hours. No AI, email or push notifications. Keep disabled until hosted verification and release approval. See docs/NON-AI-HANDOFF.md.
+## Daily weather
+
+Migrate the schema, configure CRON_SECRET privately and ENABLE_DAILY_WEATHER=true, and obtain per-car consent in /garage. Vercel cron runs production only. The bounded hackathon batch covers at most 10 cars per invocation, prioritizes oldest eligible work, and prevents duplicate checks within 24 hours. No AI, email or push notifications. Keep disabled until hosted verification and release approval. See docs/NON-AI-HANDOFF.md.
 
 ## Neon setup verification
 
 The Neon CLI requires Node 22.20 or newer; app verification also supports Node 22.13 using explicit TypeScript stripping for scripts. `neon deploy` pulls the database variables into `.env.local`; it does not configure Vercel automatically. Keep `ENABLE_LIVE_AI=false` while AI is paused. See [release readiness](docs/RELEASE-READINESS.md) for official submission gates.
+
+## License
+
+[MIT](LICENSE)
