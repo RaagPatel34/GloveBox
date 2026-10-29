@@ -32,6 +32,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# shared credential files that don't start with .env (e.g. friend-credentials.env)
+*.env
+*credentials*
 
 # vercel
 .vercel

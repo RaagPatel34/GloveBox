@@ -20,6 +20,30 @@ describe("missingNebiusConfig", () => {
 });
 
 
+describe("reasoning effort", () => {
+  afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
+
+  it("sends NEBIUS_REASONING_EFFORT when set, and nothing when unset", async () => {
+    vi.stubEnv("ENABLE_LIVE_AI", "true");
+    vi.stubEnv("NEBIUS_API_KEY", "test-not-a-real-key");
+    vi.stubEnv("NEBIUS_MODEL_NANO", "qwen3.5:4b");
+    const bodies: Record<string, unknown>[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (_url: unknown, init?: RequestInit) => {
+      bodies.push(JSON.parse(String(init?.body)));
+      return new Response(JSON.stringify({ id: "x", object: "chat.completion", created: 0, model: "m", choices: [{ index: 0, finish_reason: "stop", message: { role: "assistant", content: "ok" } }] }), { headers: { "Content-Type": "application/json" } });
+    }));
+    const chat = nebiusChat();
+
+    vi.stubEnv("NEBIUS_REASONING_EFFORT", "none");
+    await chat({ tier: "nano", messages: [{ role: "user", content: "hi" }] });
+    vi.stubEnv("NEBIUS_REASONING_EFFORT", "");
+    await chat({ tier: "nano", messages: [{ role: "user", content: "hi" }] });
+
+    expect(bodies[0].reasoning_effort).toBe("none");
+    expect(bodies[1]).not.toHaveProperty("reasoning_effort");
+  });
+});
+
 describe("live inference opt-in", () => {
   afterEach(() => vi.unstubAllEnvs());
   it("blocks direct clients and the router adapter even when credentials exist", async () => {
