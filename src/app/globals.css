@@ -138,6 +138,10 @@ body { margin: 0; background: var(--background); color: var(--foreground); font-
   .app-shell .trip-result h3 { margin: 12px 0; font-size: clamp(22px, 3vw, 30px); line-height: 1.2; font-weight: 500; letter-spacing: -.01em; }
   .app-shell .trip-result p { font-size: 14px; line-height: 1.6; }
   .app-shell .trip-result p + p { margin-top: 6px; }
+  .app-shell .route-map { margin-top: 16px; }
+  .app-shell .route-map h4 { margin-bottom: 4px; font-size: 14px; font-weight: 500; }
+  .app-shell .route-map .secondary { margin-top: 10px; }
+  .app-shell .route-map-frame { display: block; width: 100%; max-width: 100%; height: clamp(300px, 70vw, 420px); margin: 12px 0 4px; border: 0; border-radius: 12px; background: var(--panel); box-shadow: 0 0 0 1px rgb(255 255 255 / .08); }
   .app-shell .calculation-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: 16px; margin: 16px 0; }
   .app-shell .calculation-grid span, .app-shell .calculation-grid dt { display: block; font-size: 12px; color: var(--muted); }
   .app-shell .calculation-grid strong, .app-shell .calculation-grid dd { display: block; margin: 4px 0 0; font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 18px; font-weight: 400; }
