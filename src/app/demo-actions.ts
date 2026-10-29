@@ -29,5 +29,5 @@ export async function loadDemoCarAction(_previous: DemoCarState, formData: FormD
   }
 
   await setVisitorCookie(visitorId);
-  redirect("/");
+  redirect("/garage");
 }

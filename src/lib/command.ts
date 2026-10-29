@@ -3,6 +3,7 @@ import type { Chat } from "./agent/chat";
 import { runMaintenanceAgent, type ActionRoute, type AgentRoute, type MaintenanceEffect } from "./agent/maintenance";
 import { routeCommand } from "./agent/router";
 import { MAX_COMMAND_LENGTH } from "./command-limits";
+import { commandReply as reply } from "./command-reply";
 import { formatReadDate, numberFormat, STATUS_LABEL } from "./readout";
 import type { CarSnapshot, CommandReply, Proposal } from "./types";
 
@@ -14,10 +15,6 @@ import type { CarSnapshot, CommandReply, Proposal } from "./types";
 const EXAMPLES =
   "Try something you did, like “just got a car wash”, your odometer, like “odometer is 48,210”, " +
   "or something coming up, like “camping trip, 300 miles on dirt roads”.";
-
-const reply = (
-  model: CommandReply["model"], message: string, changes: string[] = [], proposalsAdded = 0,
-): CommandReply => ({ model, message, changes, proposalsAdded });
 
 export async function runCommand(args: {
   text: unknown;

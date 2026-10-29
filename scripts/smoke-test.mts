@@ -1,74 +1,40 @@
-// Day-1 check: which Nemotron models can our key see, and does tool calling work on each?
-// Run with `npm run smoke` (reads .env.local).
-import OpenAI from "openai";
-
+// Lists available Nemotron IDs, then verifies a complete tool-call round trip.
+import OpenAI from 'openai';
 if (!process.env.NEBIUS_API_KEY) {
-  console.error("NEBIUS_API_KEY is missing. Copy .env.example to .env.local and fill it in.");
+  console.error('Set NEBIUS_API_KEY in .env.local first. Never commit that file.');
   process.exit(1);
 }
-
-const client = new OpenAI({
-  baseURL: process.env.NEBIUS_BASE_URL ?? "https://api.tokenfactory.nebius.com/v1/",
-  apiKey: process.env.NEBIUS_API_KEY,
-});
-
-const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
-  {
-    type: "function",
-    function: {
-      name: "tripCost",
-      description: "Fuel cost in dollars for a drive.",
-      parameters: {
-        type: "object",
-        properties: {
-          miles: { type: "number" },
-          mpg: { type: "number" },
-          pricePerGal: { type: "number" },
-        },
-        required: ["miles", "mpg", "pricePerGal"],
-      },
-    },
-  },
-];
-
-const models = await client.models.list();
-const nemotron = models.data.map((m) => m.id).filter((id) => /nemotron/i.test(id));
-
-console.log(`\nNemotron models visible to this key (${nemotron.length}):`);
-for (const id of nemotron) console.log(`  ${id}`);
-
-const configured = [
-  ["NANO", process.env.NEBIUS_MODEL_NANO],
-  ["SUPER", process.env.NEBIUS_MODEL_SUPER],
-  ["ULTRA", process.env.NEBIUS_MODEL_ULTRA],
-] as const;
-const toTest = configured.some(([, id]) => id)
-  ? configured.filter(([, id]) => id).map(([tier, id]) => [tier, id!] as const)
-  : nemotron.map((id) => ["?", id] as const);
-
-console.log("\nTool-calling test:");
-for (const [tier, model] of toTest) {
-  const started = Date.now();
-  try {
-    const res = await client.chat.completions.create({
-      model,
-      messages: [
-        {
-          role: "user",
-          content: "How much does it cost to drive 42 miles in a 32 mpg car with gas at $4.89/gal?",
-        },
-      ],
-      tools,
-      tool_choice: "auto",
-    });
-    const call = res.choices[0]?.message.tool_calls?.[0];
-    const ms = Date.now() - started;
-    if (call?.type === "function") {
-      console.log(`  ✅ [${tier}] ${model} (${ms}ms) → ${call.function.name}(${call.function.arguments})`);
-    } else {
-      console.log(`  ⚠️  [${tier}] ${model} (${ms}ms) answered without calling the tool`);
-    }
-  } catch (err) {
-    console.log(`  ❌ [${tier}] ${model}: ${err instanceof Error ? err.message : err}`);
+const client = new OpenAI({ baseURL: process.env.NEBIUS_BASE_URL ?? 'https://api.tokenfactory.nebius.com/v1/', apiKey: process.env.NEBIUS_API_KEY, timeout: 25000, maxRetries: 0 });
+let failed = false;
+try {
+  const models = await client.models.list();
+  const available = models.data.map(m => m.id).filter(id => /nemotron/i.test(id));
+  console.log('Available Nemotron model IDs:');
+  for (const id of available) console.log(`  ${id}`);
+  const selected = [...new Set([process.env.NEBIUS_MODEL_SUPER, process.env.NEBIUS_MODEL_NANO, process.env.NEBIUS_MODEL_ULTRA].filter((id): id is string => Boolean(id)))];
+  if (!selected.length) {
+    console.error('Set NEBIUS_MODEL_SUPER to one of the listed IDs, then run npm run smoke again. No inference requests were made.');
+    process.exitCode = 1;
   }
-}
+  for (const model of selected) {
+    try {
+      const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [{ role: 'user', content: 'Use tripCost to calculate fuel cost for exactly 42 miles, 32 mpg, and $4.89 per gallon. Then report the returned cost in dollars.' }];
+      const response = await client.chat.completions.create({ model, messages, max_tokens: 1500, tools: [{ type: 'function', function: { name: 'tripCost', description: 'Compute fuel cost in dollars.', parameters: { type: 'object', properties: { miles: { type: 'number' }, mpg: { type: 'number' }, pricePerGal: { type: 'number' } }, required: ['miles', 'mpg', 'pricePerGal'], additionalProperties: false } } }], tool_choice: { type: 'function', function: { name: 'tripCost' } } });
+      const message = response.choices[0]?.message;
+      const calls = message?.tool_calls;
+      if (calls?.length !== 1 || calls[0].type !== 'function' || calls[0].function.name !== 'tripCost') throw new Error('Expected one tripCost tool call');
+      const call = calls[0];
+      const args = JSON.parse(call.function.arguments);
+      if (args.miles !== 42 || args.mpg !== 32 || args.pricePerGal !== 4.89) throw new Error('Tool arguments did not match the requested inputs');
+      const fuelCost = Math.round(args.miles / args.mpg * args.pricePerGal * 100) / 100;
+      const final = await client.chat.completions.create({ model, max_tokens: 1500, messages: [...messages, message, { role: 'tool', tool_call_id: call.id, content: JSON.stringify({ fuelCost, currency: 'USD' }) }] });
+      const answer = final.choices[0]?.message.content;
+      if (!answer?.includes(fuelCost.toFixed(2))) throw new Error('Final response did not report the computed cost');
+      console.log(`PASS ${model}: validated arguments → executed tool → final answer includes $${fuelCost.toFixed(2)}`);
+    } catch {
+      failed = true;
+      console.error(`FAIL ${model}: could not complete the verified tool-call round trip. Check model availability and tool support.`);
+    }
+  }
+} catch { failed = true; console.error('Could not list models. Check your API key, base URL, credit balance, and network.'); }
+if (failed) process.exitCode = 1;

@@ -1,3 +1,4 @@
+import { parsePlainDate } from "./days";
 import {
   BASELINE_INTERVALS,
   DAY_MS,
@@ -9,7 +10,6 @@ import {
   MAX_ODOMETER,
 } from "./intervals";
 import { tighterLimit } from "./limits";
-import { parsePlainDate } from "./days";
 import type { CarSnapshot, ItemStatus, ScheduleItem, ScheduleItemKind } from "./types";
 
 // What the maintenance agent's write tools do to a car: log a service, correct the odometer.
@@ -43,8 +43,8 @@ const MAX_DAYS_BACK = 3 * 365;
 
 const ODOMETER_ERROR = `The odometer must be a whole number of miles up to ${MAX_ODOMETER}.`;
 
-// "2026-10-15" or a full ISO timestamp. A bare date is pinned to noon UTC, which is the
-// same calendar day in California. Returns an error string for anything else.
+// "2026-10-15" or a full ISO timestamp. A bare date is pinned to noon UTC (see
+// parsePlainDate). Returns an error string for anything else.
 function parseServiceDate(raw: string | undefined, now: Date): Date | string {
   if (raw === undefined) return now;
   const date = isPlainDate(raw) ? parsePlainDate(raw) : new Date(raw);
@@ -80,9 +80,8 @@ export function logService(
     return { ok: false, error: "That service is older than the last one on record, so there is nothing to update." };
   }
 
-  // Planned trips count as driven, as on the dashboard, so a service logged today is at
-  // the odometer the user sees there.
-  const doneOdometer = input.odometer ?? estimateCarOdometer(car, doneAt);
+  // Planned trips have not been driven and cannot become completed service mileage.
+  const doneOdometer = input.odometer ?? estimateCarOdometer({ ...car, plannedTripMiles: 0 }, doneAt);
   const dueAt =
     item.intervalDays === undefined ? undefined : new Date(doneAt.getTime() + item.intervalDays * DAY_MS).toISOString();
   const dueOdometer = item.intervalMiles === undefined ? undefined : doneOdometer + item.intervalMiles;

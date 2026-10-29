@@ -2,7 +2,7 @@ import type { DashboardItem } from "@/lib/dashboard";
 import { formatLimit, STATUS_LABEL } from "@/lib/readout";
 import { TONE } from "./tone";
 
-const SOURCE_LABEL = { baseline: "Baseline", manufacturer: "Manufacturer" } as const;
+const SOURCE_LABEL = { baseline: "Baseline", manufacturer: "Manufacturer", user: "Your record", nhtsa: "NHTSA" } as const;
 
 export function ItemTile({ item }: { item: DashboardItem }) {
   const tone = TONE[item.status];

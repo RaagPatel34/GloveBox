@@ -34,9 +34,10 @@ function pushShare(shares: number[], interval: number, left: number): void {
 
 // Status is always written out, never left to colour alone.
 export const STATUS_LABEL: Record<ItemStatus, string> = {
+  unknown: "History needed",
   overdue: "Overdue",
   due_soon: "Due soon",
-  ok: "OK",
+  ok: "On track",
 };
 
 export const numberFormat = new Intl.NumberFormat("en-US");

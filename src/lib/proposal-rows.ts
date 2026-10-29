@@ -16,9 +16,10 @@ export type ProposalRow = {
   reason: string;
   model: string;
   state: string;
+  hidden_at: string | null;
 };
 
-type DriverProposalRow = Loose<ProposalRow, "from_due_at" | "to_due_at", "from_due_odometer" | "to_due_odometer">;
+type DriverProposalRow = Loose<ProposalRow, "from_due_at" | "to_due_at" | "hidden_at", "from_due_odometer" | "to_due_odometer">;
 
 export function proposalToRow(proposal: Proposal): ProposalRow {
   return {
@@ -32,6 +33,7 @@ export function proposalToRow(proposal: Proposal): ProposalRow {
     reason: proposal.reason,
     model: proposal.model,
     state: proposal.state,
+    hidden_at: proposal.hiddenAt ?? null,
   };
 }
 
@@ -52,5 +54,6 @@ export function proposalFromRow(row: DriverProposalRow): Proposal {
     reason: row.reason,
     model: row.model as ModelTier,
     state: row.state as Proposal["state"],
+    ...(row.hidden_at === null ? {} : { hiddenAt: new Date(row.hidden_at).toISOString() }),
   };
 }

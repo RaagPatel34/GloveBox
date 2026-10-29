@@ -4,8 +4,6 @@ import { BASELINE_INTERVALS, isItemKind, isOdometerReading, isPlainDate, parseMi
 import type { ScheduleItemKind } from "../types";
 import type { Chat } from "./chat";
 
-export { pacificDate } from "../days.ts";
-
 // Nano reads one command-bar input and says what kind it is, pulling out any fields.
 // It never changes anything: the route only decides which agent runs next.
 //

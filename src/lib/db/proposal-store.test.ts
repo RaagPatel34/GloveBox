@@ -33,7 +33,7 @@ beforeEach(async () => {
   vi.stubEnv("DATABASE_URL", "postgres://local/test");
   driver.db = new PGlite();
   for (const statement of SCHEMA_STATEMENTS) await driver.db.exec(statement);
-});
+}, 30_000);
 afterEach(async () => { await driver.db?.close(); vi.unstubAllEnvs(); });
 
 it("an event finishing after a demo reset reports a recoverable failure without changing the new car", async () => {
@@ -54,7 +54,7 @@ it("an event finishing after a demo reset reports a recoverable failure without 
       await addProposals(visitor, proposals);
     },
   });
-  expect(result).toMatchObject({ proposalsAdded: 0, message: "Could not save those suggestions. Please try again." });
+  expect(result).toMatchObject({ proposals: 0, message: "Could not save those suggestions. Please try again." });
   expect(await loadProposals(visitor)).toEqual([]);
   expect(await loadCar(visitor)).toEqual(replacement);
 });
@@ -176,4 +176,22 @@ it("overlapping event requests leave one pending proposal per item", async () =>
   expect((await loadProposals(visitor)).filter(p => p.state === "pending")).toHaveLength(1);
   expect((await loadProposal(visitor, first.proposal.id))!.state).toBe("dismissed");
   expect((await loadProposal(visitor, second.proposal.id))!.state).toBe("pending");
+});
+
+it("keeps Hide behavior when reconciling the legacy proposal store", async () => {
+  const car = demoCar(NOW, visitor, randomUUID);
+  await saveCar(visitor, car);
+  const result = proposeAdjustment(car, { kind: "engine_filter", dueOdometer: 48_300, reason: "Dust" }, NOW, randomUUID);
+  if (!result.ok) throw new Error(result.error);
+  await addProposals(visitor, [result.proposal]);
+  const apply = decideProposal(car, result.proposal, "apply", NOW);
+  if (!apply.ok) throw new Error(apply.error);
+  expect(await saveDecision(visitor, apply)).toBe(true);
+  const stored = (await loadProposal(visitor, result.proposal.id))!;
+  const hide = decideProposal((await loadCar(visitor))!, stored, "hide", NOW);
+  if (!hide.ok) throw new Error(hide.error);
+  expect(await saveDecision(visitor, hide)).toBe(true);
+  expect(await loadProposals(visitor)).toEqual([]);
+  expect((await loadProposal(visitor, stored.id))!.state).toBe("applied");
+  expect((await loadCar(visitor))!.items.find(i => i.kind === "engine_filter")!.dueOdometer).toBe(48_300);
 });

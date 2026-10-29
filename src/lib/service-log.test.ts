@@ -62,7 +62,7 @@ describe("logService", () => {
     expect(logService(today.car, { kind: "wash", date: "2026-10-22" }, later).ok).toBe(true);
   });
 
-  it("logs a service done today at the odometer the dashboard shows, planned trips included", () => {
+  it("excludes undriven planned miles from a completed service", () => {
     const withTrip = { ...car(), plannedTripMiles: 300 };
     expect(buildDashboard(withTrip, NOW).odometerEstimate).toBe(48_300);
 
@@ -70,8 +70,8 @@ describe("logService", () => {
     if (!result.ok) throw new Error(result.error);
     const oil = result.car.items.find((i) => i.kind === "oil")!;
 
-    expect(oil.lastDoneOdometer).toBe(48_300);
-    expect(oil.dueOdometer).toBe(55_800);
+    expect(oil.lastDoneOdometer).toBe(48_000);
+    expect(oil.dueOdometer).toBe(55_500);
   });
 
   it("moves the odometer forward when the service mileage is past the current reading", () => {
@@ -120,6 +120,8 @@ describe("logService", () => {
   it.each([
     [{ kind: "wash", date: "2026-11-30" }, /future/],
     [{ kind: "wash", date: "last week" }, /date/],
+    // A day past the month's end would roll over to Oct 1 rather than be refused.
+    [{ kind: "wash", date: "2026-09-31" }, /YYYY-MM-DD/],
     [{ kind: "oil", odometer: -5 }, /odometer/],
     [{ kind: "oil", odometer: 48_000.5 }, /odometer/],
     [{ kind: "oil", odometer: 5_000_000 }, /odometer/],

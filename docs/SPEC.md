@@ -1,9 +1,11 @@
 # GloveBox — Spec
 
+> Roadmap document: the current delivered scope is described in README.md. Live AI is paused pending credits. Weather, automatic gas-price lookup, route optimization, server storage, and scheduled jobs below are not implemented.
+
 > Your car's co-pilot for upkeep and trip costs. Tell it what happened; it tells you what's due, when to do it, and what the drive will cost.
 
 **Hackathon:** Nebius x NVIDIA Global AI Hackathon — **Best Apps & Agents** track
-**Deadline:** Thu Oct 30, 2026 @ 10:00am PDT — **our target: submit Thu Oct 29 evening**
+**Deadline:** Fri Oct 30, 2026 @ 10:00am PDT — **our target: submit Thu Oct 29 evening**
 **Team:** 2 people · **Region:** US only (demo in Buena Park / Santa Ana, CA)
 
 ---
@@ -166,7 +168,7 @@ type Nudge = { id: string; vehicleId: string; text: string; reason: string; crea
 | Engine air filter | — | 20,000 |
 | Brake inspection | 365 | 12,000 |
 
-Status rule: `overdue` if past due; `due_soon` if within 7 days or 500 miles; else `ok`. Estimated current odometer = last reading + weeklyMiles × weeks elapsed + planned-trip miles.
+Status rule: `overdue` if past due; `due_soon` if within 7 days or 500 miles; else `ok`. Estimated current odometer = last reading + weeklyMiles × weeks elapsed. Planned trips remain separate; the recorded odometer changes only after user confirmation. Missing due dates and mileage are shown as unknown, not OK.
 
 ---
 

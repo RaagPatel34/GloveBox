@@ -32,5 +32,5 @@ export async function saveCarAction(_previous: SetupState, formData: FormData): 
   }
 
   await setVisitorCookie(input.visitorId);
-  redirect("/");
+  redirect("/garage");
 }

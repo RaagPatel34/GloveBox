@@ -111,7 +111,7 @@ export function proposeAdjustment(
   };
 }
 
-export type Decision = "apply" | "dismiss";
+export type Decision = "apply" | "dismiss" | "hide";
 
 export const CHANGED_SINCE = "Your schedule for this item changed since this was suggested. Dismiss it instead.";
 
@@ -122,16 +122,23 @@ export type DecisionResult =
 // A decision that can be saved.
 export type Decided = Extract<DecisionResult, { ok: true }>;
 
-// The user's Apply or Dismiss on a card. Apply returns the car with the item moved
+// The user's Apply, Dismiss or Hide on a card. Apply returns the car with the item moved
 // to `to` and its status recomputed, so the dashboard shows the change at once; Dismiss
-// returns no car, as nothing on it changes.
+// and Hide return no car, as nothing on it changes.
 //
 // A proposal is made against the schedule as it was then. If the item has moved since (a
 // service logged, another proposal applied), applying it would undo that, so it is refused.
 // So is one whose new due point has passed while the card waited.
 //
-// Only a pending card is applied or dismissed. Applied changes stay on record.
+// Only a pending card is applied or dismissed. Only an applied one is hidden: it stays
+// applied in the database, so the change it made is still on record.
 export function decideProposal(car: CarSnapshot, proposal: Proposal, decision: Decision, now: Date): DecisionResult {
+  if (decision === "hide") {
+    if (proposal.state !== "applied" || proposal.hiddenAt !== undefined) {
+      return { ok: false, error: "Only a suggestion you applied can be hidden." };
+    }
+    return { ok: true, decision, proposal: { ...proposal, hiddenAt: now.toISOString() }, car: null };
+  }
   if (proposal.state !== "pending") return { ok: false, error: `That suggestion was already ${proposal.state}.` };
   if (decision === "dismiss") return { ok: true, decision, proposal: { ...proposal, state: "dismissed" }, car: null };
 

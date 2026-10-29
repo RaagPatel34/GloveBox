@@ -1,8 +1,8 @@
 import { sameDueDay } from "./days";
 import { BASELINE_INTERVALS, estimateCarOdometer, itemStatus, STATUS_RANK } from "./intervals";
 import { tighterLimit, type Limit } from "./limits";
-import { intervalUsed, formatReadDate, numberFormat } from "./readout";
-import type { CarSnapshot, Proposal, ItemStatus, ScheduleItem, ScheduleItemKind, Vehicle } from "./types";
+import { formatReadDate, intervalUsed, numberFormat } from "./readout";
+import type { CarSnapshot, ItemStatus, Proposal, ScheduleItem, ScheduleItemKind, Vehicle } from "./types";
 
 export type DashboardItem = {
   id: string;
@@ -39,12 +39,13 @@ function compareAscending(a: number, b: number): number {
   return a === b ? 0 : a < b ? -1 : 1;
 }
 
+// Dismissed cards are gone, and so are hidden ones and cards for an item the car no longer has.
 function proposalCards(car: CarSnapshot, proposals: Proposal[]): ProposalCard[] {
   const day = (iso: string | undefined) => (iso === undefined ? "—" : formatReadDate(new Date(iso)));
   const miles = (n: number | undefined) => (n === undefined ? "—" : `${numberFormat.format(n)} mi`);
   return proposals.flatMap((proposal): ProposalCard[] => {
     const item = car.items.find((i) => i.id === proposal.itemId);
-    if (!item || proposal.state === "dismissed") return [];
+    if (!item || proposal.state === "dismissed" || proposal.hiddenAt !== undefined) return [];
     const { from, to } = proposal;
     const moves = [
       ...(!sameDueDay(from.dueAt, to.dueAt) ? [{ from: day(from.dueAt), to: day(to.dueAt) }] : []),
@@ -89,7 +90,7 @@ export function buildDashboard(car: CarSnapshot, now: Date, proposals: Proposal[
       compareAscending(a.limit?.inDays ?? Infinity, b.limit?.inDays ?? Infinity),
   );
 
-  const counts: Record<ItemStatus, number> = { overdue: 0, due_soon: 0, ok: 0 };
+  const counts: Record<ItemStatus, number> = { overdue: 0, due_soon: 0, ok: 0, unknown: 0 };
   for (const item of items) counts[item.status]++;
 
   return { vehicle, readingAt, odometerEstimate, items, counts, proposals: proposalCards(car, proposals) };

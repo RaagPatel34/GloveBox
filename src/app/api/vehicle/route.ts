@@ -1,42 +1,34 @@
-import { createEpaClient, EPA_UNREACHABLE } from "@/lib/epa";
-
-// Proxy for the fueleconomy.gov picker (the browser cannot call it directly).
-// One endpoint, steps picked by which params are present:
-//   (none)                       -> years
-//   ?year                        -> makes
-//   ?year&make                   -> models
-//   ?year&make&model             -> engine/transmission options
-//   ?vehicleId                   -> { vehicle } with the EPA combined MPG
-const epaClient = createEpaClient();
-
-const json = (body: unknown, status = 200) =>
-  Response.json(body, {
-    status,
-    headers: { "Cache-Control": status === 200 ? "public, max-age=3600" : "no-store" },
-  });
-
+const BASE = 'https://www.fueleconomy.gov/ws/rest/vehicle/';
 export async function GET(request: Request) {
-  const searchParams = new URL(request.url).searchParams;
-  const year = searchParams.get("year");
-  const make = searchParams.get("make");
-  const model = searchParams.get("model");
-  const vehicleId = searchParams.get("vehicleId");
-
-  if (year !== null && !/^\d{4}$/.test(year)) return json({ error: "Invalid year" }, 400);
-  for (const text of [make, model]) {
-    if (text !== null && (text === "" || text.length > 100)) return json({ error: "Invalid make or model" }, 400);
-  }
-
+  const query = new URL(request.url).searchParams;
+  const kind = query.get('kind');
+  let path: string;
+  if (kind === 'detail') {
+    const id = query.get('id') || '';
+    if (!/^\d{1,7}$/.test(id)) return Response.json({ error: 'Invalid vehicle ID.' }, { status:400 });
+    path = id;
+  } else if (kind === 'options') {
+    const year = query.get('year') || '', make = query.get('make') || '', model = query.get('model') || '';
+    if (!/^\d{4}$/.test(year) || !make.trim() || make.length > 80 || !model.trim() || model.length > 100) return Response.json({ error: 'Enter year, make and model first.' }, { status:400 });
+    path = `menu/options?${new URLSearchParams({year,make,model})}`;
+  } else return Response.json({ error: 'Unknown lookup.' }, { status:400 });
   try {
-    if (vehicleId !== null) {
-      const vehicle = await epaClient.vehicle(vehicleId);
-      return vehicle ? json({ vehicle }) : json({ error: "Unknown vehicle" }, 404);
+    const response = await fetch(BASE + path, { headers:{Accept:'application/json'}, signal:AbortSignal.timeout(8000), next:{revalidate:86400} });
+    if (!response.ok) throw new Error('Unavailable');
+    const data = await response.json();
+    if (kind === 'options') {
+      const options = !data?.menuItem ? [] : Array.isArray(data.menuItem) ? data.menuItem : [data.menuItem];
+      if (!options.length) {
+        const params = new URLSearchParams({ year:query.get('year')!,make:query.get('make')! });
+        const menuResponse = await fetch(`${BASE}menu/model?${params}`, { headers:{Accept:'application/json'},signal:AbortSignal.timeout(5000),next:{revalidate:86400} });
+        const menu = menuResponse.ok ? await menuResponse.json() : null;
+        const models = !menu?.menuItem ? [] : Array.isArray(menu.menuItem) ? menu.menuItem : [menu.menuItem];
+        return Response.json({ options:[], models:models.map((m:{text:string})=>m.text) });
+      }
+      return Response.json({ options: options.map((item: { text:string; value:string }) => ({label:item.text, id:String(item.value)})) });
     }
-    if (year === null) return json({ items: await epaClient.years() });
-    if (make === null) return json({ items: await epaClient.makes(Number(year)) });
-    if (model === null) return json({ items: await epaClient.models(Number(year), make) });
-    return json({ items: await epaClient.options(Number(year), make, model) });
-  } catch {
-    return json({ error: `${EPA_UNREACHABLE} Try again in a moment.` }, 502);
-  }
+    const mpg = Number(data.comb08);
+    if (!data || !Number.isFinite(mpg) || mpg <= 0 || mpg > 150 || data.fuelType1 === 'Electricity' || /plug-in hybrid/i.test(String(data.atvType || data.atvtype || ''))) return Response.json({ error:'This calculator supports liquid-fuel vehicles; electric and plug-in hybrid estimates are not supported.' },{status:422});
+    return Response.json({ mpg, year:Number(data.year), make:String(data.make), model:String(data.model), id:String(data.id), source:`https://www.fueleconomy.gov/feg/noframes/${data.id}.shtml` });
+  } catch { return Response.json({ error:'EPA lookup is unavailable. You can enter your fuel economy manually and continue.' }, { status:502 }); }
 }

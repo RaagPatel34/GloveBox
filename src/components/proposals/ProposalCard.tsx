@@ -6,7 +6,8 @@ import { ModelBadge } from "@/components/command/ModelBadge";
 import type { ProposalCard as Card } from "@/lib/dashboard";
 
 // One suggested schedule change: the item, what moves from and to, why, and which model
-// suggested it. Apply moves the item; Dismiss drops the card. An applied card stays marked as applied.
+// suggested it. Apply moves the item; Dismiss drops the card. An applied card stays,
+// marked as applied, until the user hides it with its close button.
 export function ProposalCard({ card }: { card: Card }) {
   const [state, formAction, pending] = useActionState<ProposalActionState, FormData>(decideProposalAction, {});
   const applied = card.state === "applied";
@@ -33,7 +34,22 @@ export function ProposalCard({ card }: { card: Card }) {
       <p className="mt-2 text-sm text-muted">{card.reason}</p>
 
       {applied ? (
-        <p className="mt-3 text-sm text-ok-text" role="status">Applied</p>
+        <form action={formAction} className="mt-3 flex items-center justify-between gap-2">
+          <input type="hidden" name="proposalId" value={card.id} />
+          <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-ok-text">Applied</p>
+          <button
+            type="submit"
+            name="decision"
+            value="hide"
+            disabled={pending}
+            aria-label={`Hide the applied ${card.label} card`}
+            className="-m-2 rounded-lg p-2 text-muted transition-colors hover:text-foreground disabled:opacity-40"
+          >
+            <svg aria-hidden="true" viewBox="0 0 16 16" className="size-4">
+              <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </button>
+        </form>
       ) : (
         <form action={formAction} className="mt-3 flex gap-2">
           <input type="hidden" name="proposalId" value={card.id} />

@@ -10,12 +10,12 @@ import { getSql } from "./sql";
 // For the reads, as in car-store.ts, the caller validates the visitor ID (getCarSnapshot
 // does); a malformed one just finds no row. The writes check it themselves.
 
-// The cards to show: pending and applied, in the order they were made. Dismissed ones are gone.
+// The cards to show: pending and applied, in the order they were made. Dismissed and hidden ones are gone.
 export async function loadProposals(visitorId: string): Promise<Proposal[]> {
   if (!isVisitorId(visitorId)) return [];
   const sql = getSql();
   const rows = (await sql`SELECT p.* FROM proposals p JOIN vehicles v ON v.id = p.vehicle_id
-    WHERE v.visitor_id = ${visitorId} AND p.state <> 'dismissed'
+    WHERE v.visitor_id = ${visitorId} AND p.state <> 'dismissed' AND p.hidden_at IS NULL
     ORDER BY p.created_at`) as ProposalRow[];
   return rows.map(proposalFromRow);
 }
@@ -60,7 +60,7 @@ export async function addProposals(visitorId: string, proposals: Proposal[]): Pr
 }
 
 // Records the user's decision on a card (see decideProposal). Only a still-pending card is
-// applied or dismissed. Returns false if nothing changed:
+// applied or dismissed, and only an applied one hidden. Returns false if nothing changed:
 // a second click, one from another tab, or, for Apply, an item that moved since.
 //
 // Apply moves the item and marks the card in one statement, so the card and the schedule
@@ -73,7 +73,12 @@ export async function saveDecision(visitorId: string, decided: Decided): Promise
   const { proposal } = decided;
   let rows: unknown[];
 
-  if (decided.decision === "dismiss") {
+  if (decided.decision === "hide") {
+    rows = await sql`UPDATE proposals SET hidden_at = ${proposal.hiddenAt ?? null}
+        WHERE id = ${proposal.id} AND state = 'applied' AND hidden_at IS NULL
+          AND vehicle_id = (SELECT id FROM vehicles WHERE id = ${proposal.vehicleId} AND visitor_id = ${visitorId})
+        RETURNING id`;
+  } else if (decided.decision === "dismiss") {
     rows = await sql`UPDATE proposals SET state = 'dismissed'
         WHERE id = ${proposal.id} AND state = 'pending'
           AND vehicle_id = (SELECT id FROM vehicles WHERE id = ${proposal.vehicleId} AND visitor_id = ${visitorId})

@@ -9,7 +9,7 @@ import { VISITOR_COOKIE } from "@/lib/visitor";
 
 export type ProposalActionState = { message?: string };
 
-// Apply or Dismiss on a proposal card. Server Functions are reachable by direct POST, so
+// Apply, Dismiss or Hide on a proposal card. Server Functions are reachable by direct POST, so
 // the browser only says which card and which button: the car and the proposal are read
 // again for the visitor's cookie, and the rules are in decideProposal.
 // On success the page re-renders in the same response, so the tile and card update at once.
@@ -19,7 +19,7 @@ export async function decideProposalAction(
 ): Promise<ProposalActionState> {
   const proposalId = formData.get("proposalId");
   const decision = formData.get("decision");
-  if (typeof proposalId !== "string" || (decision !== "apply" && decision !== "dismiss")) {
+  if (typeof proposalId !== "string" || (decision !== "apply" && decision !== "dismiss" && decision !== "hide")) {
     return { message: "Something went wrong with that button. Reload the page and try again." };
   }
 

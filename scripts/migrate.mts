@@ -4,7 +4,7 @@
 import { neon } from "@neondatabase/serverless";
 import { SCHEMA_STATEMENTS } from "../src/lib/db/schema.ts";
 
-const url = process.env.DATABASE_URL;
+const url = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL;
 if (!url) {
   console.error("DATABASE_URL is missing. Copy .env.example to .env.local and fill it in.");
   process.exit(1);
@@ -17,6 +17,6 @@ for (const statement of SCHEMA_STATEMENTS) {
 
 const tables = await sql`
   SELECT table_name FROM information_schema.tables
-  WHERE table_schema = 'public' AND table_name IN ('vehicles', 'schedule_items', 'nudges')
+  WHERE table_schema = 'public' AND table_name IN ('vehicles', 'schedule_items', 'proposals', 'nudges', 'weather_checks')
   ORDER BY table_name`;
 console.log(`Schema applied. Tables present: ${tables.map((t) => t.table_name).join(", ")}`);
