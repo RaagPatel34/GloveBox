@@ -38,7 +38,7 @@ export function missingNebiusConfig(tiers: ModelTier[]): string[] {
 
 // Optional. A local stand-in (Qwen on Ollama) thinks before every reply unless told "none",
 // which makes it too slow for the 25s timeout. Unset means the provider's default.
-function reasoningEffort(): OpenAI.ReasoningEffort | undefined {
+export function reasoningEffort(): OpenAI.ReasoningEffort | undefined {
   return (process.env.NEBIUS_REASONING_EFFORT || undefined) as OpenAI.ReasoningEffort | undefined;
 }
 

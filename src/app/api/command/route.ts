@@ -1,5 +1,5 @@
 import { isGarage, makeProposals, sampleCommand } from '@/lib/maintenance';
-import { modelFor, nebius } from '@/lib/nebius';
+import { modelFor, nebius, reasoningEffort } from '@/lib/nebius';
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 
 export async function POST(request: Request) {
@@ -30,7 +30,8 @@ export async function POST(request: Request) {
       { role: 'user', content: JSON.stringify({ command: body.command, vehicle: body.garage.vehicle, schedule: body.garage.items, today: new Date().toISOString() }) },
     ];
     const tools = [{ type: 'function' as const, function: { name: 'proposeMaintenance', description: 'Create pending reminders for the user to review; never apply them.', parameters: { type: 'object', properties: { summary: { type: 'string' }, proposals: { type: 'array', maxItems: 3, items: { type: 'object', properties: { itemId: { type: 'string' }, daysUntilDue: { type: 'integer', minimum: 0, maximum: 14 }, reason: { type: 'string', maxLength: 600 } }, required: ['itemId', 'daysUntilDue', 'reason'], additionalProperties: false } } }, required: ['summary', 'proposals'], additionalProperties: false } } }];
-    const completion = await nebius().chat.completions.create({ model, messages, tools, tool_choice: { type: 'function', function: { name: 'proposeMaintenance' } }, max_tokens: 1800 });
+    const effort = reasoningEffort();
+    const completion = await nebius().chat.completions.create({ model, messages, tools, tool_choice: { type: 'function', function: { name: 'proposeMaintenance' } }, max_tokens: 1800, ...(effort ? { reasoning_effort: effort } : {}) });
     const calls = completion.choices[0]?.message.tool_calls;
     if (calls?.length !== 1 || calls[0].type !== 'function' || calls[0].function.name !== 'proposeMaintenance') throw new Error('Invalid tool response');
     const args = JSON.parse(calls[0].function.arguments);
