@@ -1,19 +1,48 @@
-'use client';
-import { useState } from 'react';
-import { validateStops } from '@/lib/route-planner';
+"use client";
+import { useState } from "react";
+import { canDrawRoute, routeEmbedUrl } from "@/lib/route-embed";
 
-export function RouteMap({ stops }: { stops: string[] }) {
+// The route as an interactive Google Map (Maps Embed API, Directions mode). `points` are in
+// driving order, first to last (for a trip, home at both ends): coordinates ("lat,lng") or
+// addresses. `headingLevel` is one below the heading the map sits under. Draws nothing for
+// points the embed cannot take. The map loads only on request, since loading it tells Google
+// the points. Uses the domain-restricted browser key; without it, the caller's stop list and
+// Maps link stand.
+export function RouteMap({ points, headingLevel }: { points: string[]; headingLevel: 3 | 4 }) {
   const [show, setShow] = useState(false);
+  if (!canDrawRoute(points)) return null;
   const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
-  if (stops.length < 2 || stops.length > 8) return null;
-  try { validateStops(stops); } catch { return null; }
-  const params = new URLSearchParams({ key: key ?? '', origin: stops[0], destination: stops.at(-1)!, mode: 'driving' });
-  if (stops.length > 2) params.set('waypoints', stops.slice(1, -1).join('|'));
-  return <div className="spaced"><h3>Route map</h3>
-    {!key ? <p className="helper">The embedded map is waiting for a Google Maps connection. You can still open your stops using the Maps link above.</p> : <>
-      <p className="helper">Loading this map shares these stops with Google. The map may calculate a different route or time from an earlier estimate.</p>
-      <button className="secondary" onClick={() => setShow(!show)}>{show ? 'Hide map' : 'Load route map'}</button>
-      {show && <iframe title="Driving route in Google Maps" width="100%" height="400" style={{ border: 0, minWidth: 200 }} referrerPolicy="strict-origin-when-cross-origin" allowFullScreen src={`https://www.google.com/maps/embed/v1/directions?${params}`}/>}
-    </>}
-  </div>;
+  const src = routeEmbedUrl(points, key);
+  const Heading = `h${headingLevel}` as const;
+  return (
+    <div className="route-map">
+      <Heading>Route map</Heading>
+      {!src ? (
+        <p className="helper">
+          The route map is waiting for a Google Maps connection. The stop list and the Google Maps link still show the drive.
+        </p>
+      ) : (
+        <>
+          <p className="helper">
+            Loading this map shares these stops with Google. It may calculate a different route or time from the estimate above.
+          </p>
+          <button className="secondary" type="button" aria-expanded={show} onClick={() => setShow(!show)}>
+            {show ? "Hide map" : "Load route map"}
+          </button>
+          {show && (
+            <>
+              <iframe
+                className="route-map-frame"
+                title="Driving route in Google Maps"
+                src={src}
+                referrerPolicy="strict-origin-when-cross-origin"
+                allowFullScreen
+              />
+              <p className="helper">If the map does not appear, the stop list and the Google Maps link show the same drive.</p>
+            </>
+          )}
+        </>
+      )}
+    </div>
+  );
 }
