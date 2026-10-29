@@ -5,10 +5,10 @@ import { useState } from "react";
 import { useGarage } from "@/components/garage/GarageProvider";
 import { TONE } from "@/components/health/tone";
 import { isRollable, RollingNumber } from "@/components/motion/RollingNumber";
-import { ArrowIcon } from "@/components/shell/icons";
+import { ArrowIcon, ExternalIcon } from "@/components/shell/icons";
 import { primaryButton, quietButton } from "@/components/shell/ui";
 import type { DashboardItem } from "@/lib/dashboard";
-import { dueBasis } from "@/lib/garage-view";
+import { dueBasis, sourceAnchor } from "@/lib/garage-view";
 import { formatLimit, STATUS_LABEL } from "@/lib/readout";
 
 // The one thing the car needs next, and the two things you can do about it.
@@ -19,6 +19,7 @@ export function NextUp({ item }: { item: DashboardItem }) {
   const tone = TONE[item.status];
   const limit = formatLimit(item.limit);
   const scheduleItem = garage?.items.find((candidate) => candidate.id === item.id);
+  const source = sourceAnchor(item.source);
 
   return (
     <section aria-labelledby="next-up-h" className={`rounded-2xl bg-panel p-6 ring-1 sm:p-8 ${tone.ring}`}>
@@ -44,6 +45,15 @@ export function NextUp({ item }: { item: DashboardItem }) {
           </span>
         </p>
       </div>
+      {source.href && (
+        <p className="mt-4 text-sm text-muted">
+          Interval from{" "}
+          <a href={source.href} target="_blank" rel="noreferrer" className="text-foreground underline underline-offset-4">
+            {source.text} <ExternalIcon />
+            <span className="sr-only">(opens the source page)</span>
+          </a>
+        </p>
+      )}
       {why && scheduleItem && (
         <p id="next-up-basis" className="mt-4 max-w-[60ch] text-sm text-muted">
           {dueBasis(scheduleItem)}
