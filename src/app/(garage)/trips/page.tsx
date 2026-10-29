@@ -4,7 +4,7 @@ import { useGarage } from "@/components/garage/GarageProvider";
 import { EmptyGarage } from "@/components/shell/EmptyGarage";
 import { TripPlanner } from "@/components/trip-planner";
 
-// What will this drive cost? The route planner and the gas-detour calculator.
+// What will this drive cost? The trip agent, the manual route planner and the gas-detour calculator.
 export default function TripsPage() {
   const { garage } = useGarage();
   if (!garage) return <EmptyGarage />;
@@ -14,7 +14,7 @@ export default function TripsPage() {
       <h1 className="text-2xl font-medium tracking-tight">Trips</h1>
       {/* Route planner and detour calculator side by side on wide screens, stacked on phones. */}
       <div className="grid gap-6 xl:grid-cols-2 xl:items-start">
-        <TripPlanner key={`${garage.vehicle.id}-${mpg}`} mpg={mpg} />
+        <TripPlanner key={`${garage.vehicle.id}-${mpg}`} mpg={mpg} home={garage.vehicle.home} />
       </div>
     </div>
   );

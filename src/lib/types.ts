@@ -66,10 +66,17 @@ export type GasPrice = {
   source: string;
   asOf: string;
   kind: "station" | "area" | "eia";
+  // What the price averages, like "Los Angeles weekly regular gasoline average".
+  label?: string;
+  // More than two weeks old.
+  stale?: boolean;
 };
 
 export type TripStop = LatLng & {
+  // The address the route drives to.
   label: string;
+  // The place's own name, like "Trader Joe's", when it has one.
+  name?: string;
   type: "gas" | "wash" | "address";
 };
 
@@ -81,13 +88,25 @@ export type DetourVerdict = {
   worthIt: boolean;
 };
 
+// A drive from home through the stops and back. Home is not in `stops`; they are in driving order.
 export type TripPlan = {
   stops: TripStop[];
   totalMiles: number;
+  totalMinutes: number;
   fuelCost: number;
   gasPrice: GasPrice;
   detour?: DetourVerdict;
   model: Exclude<ModelTier, "nano">;
+  // The same drive in Google Maps.
+  mapsUrl: string;
+};
+
+// What POST /api/plan-trip answers with: a plan, or a message saying why there is none.
+export type TripReply = {
+  // Which model produced this reply, for its badge. Null when no model answered.
+  model: ModelTier | null;
+  message: string;
+  plan: TripPlan | null;
 };
 
 export type Nudge = {
