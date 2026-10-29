@@ -1,4 +1,4 @@
-import type { TripStop, Vehicle } from "./types";
+import type { DetourVerdict, TripStop, Vehicle } from "./types";
 
 // Different businesses can share an address. Planning and rendering use the same identity.
 export const tripPlaceKey = (place: Omit<TripStop, "type">) => JSON.stringify([place.name, place.label, place.lat, place.lng]);
@@ -20,6 +20,21 @@ export function calculateTrip(input: TripInput) {
 }
 // The MPG to cost a drive at: the real-world figure the driver set, else the EPA one.
 export const vehicleMpg = (vehicle: Pick<Vehicle, "epaMpg" | "mpgOverride">) => vehicle.mpgOverride || vehicle.epaMpg;
+
+// Is a cheaper station worth the extra miles to reach it? Plain math, so the verdict is never
+// the model's arithmetic. The extra fuel is valued at the usual station's price.
+export type DetourInput = { station: string; usualPrice: number; stationPrice: number; gallons: number; extraMiles: number; mpg: number };
+export function detourWorthIt(input: DetourInput): DetourVerdict {
+  const limits: Record<Exclude<keyof DetourInput, "station">, [number, number]> = { usualPrice: [0.01, 30], stationPrice: [0.01, 30], gallons: [0.1, 100], extraMiles: [0, 1000], mpg: [1, 150] };
+  for (const key of Object.keys(limits) as (keyof typeof limits)[]) {
+    const [min, max] = limits[key];
+    if (!Number.isFinite(input[key]) || input[key] < min || input[key] > max) throw new Error(`Check ${key}: expected ${min}–${max}.`);
+  }
+  const savings = (input.usualPrice - input.stationPrice) * input.gallons;
+  const detourCost = input.extraMiles / input.mpg * input.usualPrice;
+  const net = savings - detourCost;
+  return { station: input.station, savings, detourCost, net, worthIt: net > 0 };
+}
 
 // The most stops the trip agent plans in one drive.
 export const MAX_TRIP_STOPS = 8;
