@@ -80,6 +80,10 @@ export type TripStop = LatLng & {
   type: "gas" | "wash" | "address";
 };
 
+// A stop as the user asked for it: "gas" and "car wash" are kinds of place to find, anything
+// else is a named place.
+export type ErrandStop = { type: "gas" | "wash" } | { type: "address"; name: string };
+
 export type DetourVerdict = {
   station: string;
   savings: number;
@@ -95,6 +99,8 @@ export type TripPlan = {
   totalMinutes: number;
   fuelCost: number;
   gasPrice: GasPrice;
+  // The gas stations found for a gas stop, the one on the route first. What a detour verdict chooses between.
+  gasCandidates?: TripStop[];
   detour?: DetourVerdict;
   model: Exclude<ModelTier, "nano">;
   // The same drive in Google Maps.
@@ -130,6 +136,8 @@ export type CommandReply = {
   changes: string[];
   // How many proposal cards this reply added. Above zero, the dashboard should reload to show them.
   proposals: number;
+  // The drive an errand became, when there is one. It changes nothing about the car.
+  trip?: TripPlan;
 };
 
 // Everything the dashboard needs to know about one car. This is the seam for loading:

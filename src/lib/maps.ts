@@ -6,11 +6,15 @@ import type { LatLng } from "./types";
 
 export type Place = LatLng & { name: string; label: string };
 
-// A free-text stop -> the first matching place, or null when Google finds none.
-export function parsePlace(body: unknown): Place | null {
-  const place = (body as {
-    places?: { formattedAddress?: string; displayName?: { text?: string }; location?: { latitude?: number; longitude?: number } }[];
-  })?.places?.[0];
+// A POST like fetch, so tests can answer Google without a network.
+export type PostFetch = (url: string, init: RequestInit) => Promise<Response>;
+
+type RawPlace = { formattedAddress?: string; displayName?: { text?: string }; location?: { latitude?: number; longitude?: number } };
+
+const rawPlaces = (body: unknown) => (body as { places?: RawPlace[] })?.places;
+
+// One place Google returned, or null unless it has an address and real coordinates.
+function toPlace(place: RawPlace | undefined): Place | null {
   const lat = place?.location?.latitude;
   const lng = place?.location?.longitude;
   const label = place?.formattedAddress?.trim();
@@ -18,6 +22,12 @@ export function parsePlace(body: unknown): Place | null {
   if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
   return { name: place?.displayName?.text?.trim() || label, label, lat, lng };
 }
+
+// A free-text stop -> the first matching place, or null when Google finds none.
+export const parsePlace = (body: unknown): Place | null => toPlace(rawPlaces(body)?.[0]);
+
+// Every usable place in a search, in Google's order.
+export const parsePlaces = (body: unknown): Place[] => (rawPlaces(body) ?? []).flatMap((place) => toPlace(place) ?? []);
 
 const waypoint = ({ lat, lng }: LatLng) => ({ location: { latLng: { latitude: lat, longitude: lng } } });
 
@@ -36,24 +46,62 @@ export function loopRouteRequest(home: LatLng, stops: LatLng[]) {
 }
 
 // Biased toward points within about 30 miles of `near` (not limited to them), so "Trader Joe's" means one close to home.
-export async function findPlace(apiKey: string, query: string, near?: LatLng): Promise<Place | null> {
-  const response = await fetch("https://places.googleapis.com/v1/places:searchText", {
+export async function findPlace(apiKey: string, query: string, near?: LatLng, fetchImpl: PostFetch = fetch): Promise<Place | null> {
+  const body = {
+    textQuery: query,
+    regionCode: "US",
+    pageSize: 1,
+    ...(near ? { locationBias: biasAround(near, 50000) } : {}),
+  };
+  return parsePlace(await searchText(apiKey, body, fetchImpl));
+}
+
+// The kinds of stop the user can ask for without naming a place, as Places names them.
+export type StopKind = "gas" | "wash";
+const KINDS = {
+  gas: { textQuery: "gas station", includedType: "gas_station" },
+  wash: { textQuery: "car wash", includedType: "car_wash" },
+} satisfies Record<StopKind, { textQuery: string; includedType: string }>;
+
+// Where to look: around a point (home, or a stop), or along a route's encoded polyline.
+export type PlacesNear = { near: LatLng } | { alongRoute: string };
+
+export const MAX_CANDIDATES = 5;
+
+const biasAround = ({ lat, lng }: LatLng, radius: number) => ({ circle: { center: { latitude: lat, longitude: lng }, radius } });
+
+// Real gas stations or car washes: the place type is strict, so a "Gas" cafe doesn't count.
+// Around a point it looks within about 5 miles (a bias, not a limit).
+export function placesRequest(kind: StopKind, where: PlacesNear) {
+  return {
+    ...KINDS[kind],
+    strictTypeFiltering: true,
+    regionCode: "US",
+    pageSize: MAX_CANDIDATES,
+    ...("near" in where
+      ? { locationBias: biasAround(where.near, 8000) }
+      : { searchAlongRouteParameters: { polyline: { encodedPolyline: where.alongRoute } } }),
+  };
+}
+
+// Candidate stops of one kind, in Google's order. Empty when there are none.
+export async function findPlaces(apiKey: string, kind: StopKind, where: PlacesNear, fetchImpl: PostFetch = fetch): Promise<Place[]> {
+  return parsePlaces(await searchText(apiKey, placesRequest(kind, where), fetchImpl));
+}
+
+async function searchText(apiKey: string, body: object, fetchImpl: PostFetch): Promise<unknown> {
+  const response = await fetchImpl("https://places.googleapis.com/v1/places:searchText", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "X-Goog-Api-Key": apiKey,
       "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.location",
     },
-    body: JSON.stringify({
-      textQuery: query,
-      regionCode: "US",
-      pageSize: 1,
-      ...(near ? { locationBias: { circle: { center: { latitude: near.lat, longitude: near.lng }, radius: 50000 } } } : {}),
-    }),
+    body: JSON.stringify(body),
     signal: AbortSignal.timeout(8000),
   });
   if (!response.ok) throw new Error(`Places responded ${response.status}`);
-  return parsePlace(await response.json());
+  return response.json();
 }
 
 export async function computeLoopRoute<T extends LatLng>(apiKey: string, home: LatLng, stops: T[]): Promise<RouteResult<T>> {

@@ -1,9 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { callTools, say, scriptedChat, type ScriptedChat } from "./agent/scripted-chat";
+import type { TripServices } from "./agent/trip";
 import { describeEffects, runCommand } from "./command";
 import { buildDashboard } from "./dashboard";
 import { demoCar } from "./fixtures/demo-car";
+import { DEMO_ERRAND, DEMO_ERRAND_STOPS, demoTripServices } from "./fixtures/demo-trip";
 import { logService, updateOdometer } from "./service-log";
 import { inDays, NOW } from "./test-support";
 import type { CarSnapshot, Proposal } from "./types";
@@ -15,6 +17,7 @@ async function send(
   chat: ScriptedChat | null,
   car: CarSnapshot | null = demoCar(NOW, VISITOR, randomUUID),
   now = NOW,
+  trip: TripServices | null = null,
 ) {
   const saved: CarSnapshot[] = [];
   const proposals: Proposal[] = [];
@@ -23,6 +26,7 @@ async function send(
     car,
     chat,
     now,
+    trip,
     save: async (next) => {
       saved.push(next);
     },
@@ -470,6 +474,80 @@ describe("describeEffects", () => {
   });
 });
 
+describe("runCommand: errands", () => {
+  const demoSteps = [
+    callTools(
+      ["findNearby", { type: "gas" }],
+      ["findNearby", { type: "wash" }],
+      ["geocode", { query: "Trader Joe's, Santa Ana, CA" }],
+      ["getGasPrice", {}],
+    ),
+    callTools(["computeRoute", {}]),
+  ];
+
+  it("“gas, car wash and Trader Joe's” becomes a trip plan from the command bar, with named stops and the fuel priced", async () => {
+    const chat = scriptedChat({
+      nano: [route({ intent: "errand", stops: DEMO_ERRAND_STOPS })],
+      super: demoSteps,
+    });
+    const { services } = demoTripServices();
+
+    const { reply, saved, proposals } = await send(DEMO_ERRAND, chat, undefined, NOW, services);
+
+    // A trip plan changes nothing about the car: no log, no cards.
+    expect(saved).toEqual([]);
+    expect(proposals).toEqual([]);
+    expect(reply).toMatchObject({ model: "super", changes: [], proposals: 0 });
+    expect(reply.message).toBe("Round trip from home: 3 stops, 14.2 mi, $2.46 in fuel.");
+    expect(reply.trip?.stops.map((s) => `${s.type}: ${s.name}`)).toEqual([
+      "gas: Chevron",
+      "wash: Mister Car Wash",
+      "address: Trader Joe's",
+    ]);
+    // 14.2 mi ÷ 34 MPG (the demo car) × $5.883
+    expect(reply.trip?.fuelCost).toBeCloseTo(2.457, 3);
+  });
+
+  it("finds at least two candidate gas stations on the demo trip toward Santa Ana, so the detour verdict has something to decide", async () => {
+    const chat = scriptedChat({ nano: [route({ intent: "errand", stops: DEMO_ERRAND_STOPS })], super: demoSteps });
+    const { services } = demoTripServices();
+
+    const { reply } = await send(DEMO_ERRAND, chat, undefined, NOW, services);
+
+    expect(reply.trip?.gasCandidates?.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("hands the router's stops to the trip agent as the user's stops, not the raw sentence", async () => {
+    const chat = scriptedChat({
+      nano: [route({ intent: "errand", stops: DEMO_ERRAND_STOPS })],
+      super: demoSteps,
+    });
+    const { services } = demoTripServices();
+
+    await send(DEMO_ERRAND, chat, undefined, NOW, services);
+
+    const user = chat.requests.find((r) => r.tier === "super")!.messages.at(-1)!;
+    expect(JSON.parse(user.content as string)).toEqual({
+      stops: [{ type: "gas" }, { type: "wash" }, { type: "address", name: "Trader Joe's, Santa Ana, CA" }],
+    });
+  });
+
+  it("passes on why there is no plan, from Super, when a place can't be found", async () => {
+    const chat = scriptedChat({
+      nano: [route({ intent: "errand", stops: [{ type: "address", name: "Blorfville Mall" }] })],
+      super: [callTools(["geocode", { query: "Blorfville Mall" }], ["getGasPrice", {}])],
+    });
+    const { services } = demoTripServices();
+
+    const { reply, saved } = await send("Blorfville Mall", chat, undefined, NOW, services);
+
+    expect(saved).toEqual([]);
+    expect(reply.trip).toBeUndefined();
+    expect(reply).toMatchObject({ model: "super", changes: [], proposals: 0 });
+    expect(reply.message).toMatch(/couldn't find “Blorfville Mall”/);
+  });
+});
+
 describe("runCommand: input it cannot act on", () => {
   it("answers input the router cannot place with examples to try, from Nano, without calling Super", async () => {
     const chat = scriptedChat({ nano: [route({ intent: "unknown" })] });
@@ -482,13 +560,24 @@ describe("runCommand: input it cannot act on", () => {
     expect(reply.message).toMatch(/coming up, like “camping trip/);
   });
 
-  it("says errand planning is not here yet rather than guessing", async () => {
+  it("asks which places to go when an errand names none, without calling Super", async () => {
     const chat = scriptedChat({ nano: [route({ intent: "errand" })] });
-    const { reply, saved } = await send("gas, car wash and Trader Joe's before Friday", chat);
+    const { reply, saved } = await send("I have some errands", chat, undefined, NOW, demoTripServices().services);
     expect(saved).toEqual([]);
-    expect(reply.model).toBe("nano");
-    expect(reply.message).toMatch(/trip|errand/i);
-    expect(reply.message).toMatch(/something coming up/);
+    expect(reply).toMatchObject({ model: "nano", changes: [], proposals: 0 });
+    expect(reply.trip).toBeUndefined();
+    expect(reply.message).toMatch(/which places/i);
+    expect(reply.message).toMatch(/Trader Joe/);
+    expect(chat.requests.filter((r) => r.tier === "super")).toHaveLength(0);
+  });
+
+  it("says trip planning is not connected, rather than guessing, when Google Maps or EIA is not set up", async () => {
+    const chat = scriptedChat({ nano: [route({ intent: "errand", stops: [{ type: "gas" }] })] });
+    const { reply, saved } = await send("need gas", chat);
+    expect(saved).toEqual([]);
+    expect(reply).toMatchObject({ model: "nano", changes: [], proposals: 0 });
+    expect(reply.trip).toBeUndefined();
+    expect(reply.message).toMatch(/Google Maps and EIA prices.*aren't connected/);
   });
 
   it("explains, without a crash or a badge, when the AI is not set up", async () => {

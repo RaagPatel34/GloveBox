@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { Place } from "../maps";
+import { DEMO_CAR_WASHES, DEMO_ERRAND_STOPS, DEMO_GAS_STATIONS, demoPlacesFetch } from "../fixtures/demo-trip";
+import { demoCar } from "../fixtures/demo-car";
+import { findPlace, findPlaces, type Place, type PlacesNear, type StopKind } from "../maps";
+import { NOW } from "../test-support";
 import type { LatLng } from "../types";
 import { planTrip, type TripServices } from "./trip";
 import { callTools, say, scriptedChat } from "./scripted-chat";
@@ -24,11 +27,15 @@ const LA_PRICE = {
 // Fake Google and EIA: places by lower-cased name, a route that drives the stops in
 // reverse of the order given, and a fixed weekly price. Every call is recorded.
 function fakeServices(overrides: Partial<TripServices> = {}) {
-  const calls: { findPlace: string[]; route: LatLng[][] } = { findPlace: [], route: [] };
+  const calls: { findPlace: string[]; findPlaces: [StopKind, PlacesNear][]; route: LatLng[][] } = { findPlace: [], findPlaces: [], route: [] };
   const services: TripServices = {
     findPlace: async (query) => {
       calls.findPlace.push(query);
       return PLACES[query.toLowerCase()] ?? null;
+    },
+    findPlaces: async (kind, where) => {
+      calls.findPlaces.push([kind, where]);
+      return [];
     },
     route: async (_home, stops) => {
       calls.route.push(stops);
@@ -252,4 +259,170 @@ describe("planTrip", () => {
 
     expect(reply).toEqual({ model: "super", message: "The trip agent didn't finish the plan. Please try again.", plan: null });
   });
+
+  it("looks a named place up near home, so Trader Joe's means the one close by", async () => {
+    const chat = scriptedChat({
+      super: [callTools(["geocode", { query: "Trader Joe's" }], ["getGasPrice", {}]), callTools(["computeRoute", {}])],
+    });
+    const nears: (LatLng | undefined)[] = [];
+    const { services } = fakeServices({
+      findPlace: async (query, near) => (nears.push(near), PLACES[query.toLowerCase()]),
+    });
+
+    await planTrip({ stops: ["Trader Joe's"], home: HOME, mpg: 32, chat, services });
+
+    expect(nears).toEqual([HOME]);
+  });
 });
+
+describe("planTrip: gas and car-wash stops", () => {
+  // The spec's demo: from the demo car's home, gas + a car wash + a grocery stop toward Santa Ana,
+  // answered by canned Places responses through the real Google adapter.
+  const { vehicle } = demoCar(NOW, "11111111-2222-4333-8444-555555555555", () => "id");
+
+  function demoServices() {
+    const fetchImpl = demoPlacesFetch();
+    const fake = fakeServices({
+      findPlace: (query, near) => findPlace("key", query, near, fetchImpl),
+      findPlaces: (kind, where) => findPlaces("key", kind, where, fetchImpl),
+    });
+    return { ...fake, fetchImpl };
+  }
+
+  const demoChat = () =>
+    scriptedChat({
+      super: [
+        callTools(
+          ["findNearby", { type: "gas" }],
+          ["findNearby", { type: "wash" }],
+          ["geocode", { query: "Trader Joe's, Santa Ana, CA" }],
+          ["getGasPrice", {}],
+        ),
+        callTools(["computeRoute", {}]),
+      ],
+    });
+
+  it("turns gas and a car wash into real, named places on the route, near home", async () => {
+    const chat = demoChat();
+    const { services, fetchImpl } = demoServices();
+
+    const reply = await planTrip({ stops: DEMO_ERRAND_STOPS, home: vehicle.home, mpg: vehicle.epaMpg, chat, services });
+
+    expect(reply.plan?.stops.map(({ type, name, label }) => ({ type, name, label }))).toEqual([
+      { type: "address", name: "Trader Joe's", label: "3333 W 1st St, Santa Ana, CA 92703" },
+      { type: "wash", name: "Mister Car Wash", label: "6800 Beach Blvd, Buena Park, CA 90621" },
+      { type: "gas", name: "Chevron", label: "7501 Beach Blvd, Buena Park, CA 90620" },
+    ]);
+    expect(reply.message).toBe("Round trip from home: 3 stops, 32.0 mi, $5.54 in fuel.");
+    // Both searches are centered on home: the demo car's, 8 km (about 5 miles) around.
+    const centers = fetchImpl.requests.filter((r) => r.includedType).map((r) => r.locationBias);
+    const home = { latitude: vehicle.home.lat, longitude: vehicle.home.lng };
+    expect(centers).toEqual([{ circle: { center: home, radius: 8000 } }, { circle: { center: home, radius: 8000 } }]);
+  });
+
+  it("finds at least two candidate gas stations toward Santa Ana, for the detour verdict to decide between", async () => {
+    const chat = demoChat();
+    const { services } = demoServices();
+
+    const reply = await planTrip({ stops: DEMO_ERRAND_STOPS, home: vehicle.home, mpg: vehicle.epaMpg, chat, services });
+
+    const candidates = reply.plan?.gasCandidates ?? [];
+    expect(candidates.length).toBeGreaterThanOrEqual(2);
+    expect(candidates.map((c) => c.name)).toEqual(DEMO_GAS_STATIONS.map((s) => s.displayName.text));
+    expect(candidates.every((c) => c.type === "gas" && c.label && Number.isFinite(c.lat))).toBe(true);
+    // The one on the route is the first candidate; the model sees all of them, but only code picks.
+    const [gasResult] = chat.requests[1].messages.slice(-4).map((m) => JSON.parse(m.content as string));
+    expect(gasResult.candidates.map((c: { name: string }) => c.name)).toEqual(["Chevron", "Arco", "Shell"]);
+    expect(reply.plan?.stops.find((s) => s.type === "gas")?.name).toBe("Chevron");
+  });
+
+  it("has no gas candidates when the trip needs no gas", async () => {
+    const chat = scriptedChat({
+      super: [callTools(["findNearby", { type: "wash" }], ["getGasPrice", {}]), callTools(["computeRoute", {}])],
+    });
+    const { services } = demoServices();
+
+    const reply = await planTrip({ stops: [{ type: "wash" }], home: vehicle.home, mpg: vehicle.epaMpg, chat, services });
+
+    expect(reply.plan?.stops.map((s) => s.name)).toEqual([DEMO_CAR_WASHES[0].displayName.text]);
+    expect(reply.plan?.gasCandidates).toBeUndefined();
+  });
+
+  it("can search near one of the user's own stops once it has been found, not before", async () => {
+    const chat = scriptedChat({
+      super: [
+        callTools(["findNearby", { type: "gas", near: "Trader Joe's" }], ["geocode", { query: "Trader Joe's" }]),
+        callTools(["findNearby", { type: "gas", near: "Trader Joe's" }], ["getGasPrice", {}]),
+        callTools(["computeRoute", {}]),
+      ],
+    });
+    const { services, calls } = fakeServices({
+      findPlaces: async (kind, where) => (calls.findPlaces.push([kind, where]), [DEMO_STATION]),
+    });
+
+    const reply = await planTrip({ stops: [{ type: "gas" }, "Trader Joe's"], home: HOME, mpg: 32, chat, services });
+
+    const [early] = chat.requests[1].messages.slice(-2).map((m) => JSON.parse(m.content as string));
+    expect(early).toEqual({ error: 'Geocode "Trader Joe\'s" before searching near it.' });
+    expect(calls.findPlaces).toEqual([["gas", { near: { lat: 33.869, lng: -118.058 } }]]);
+    expect(reply.plan?.stops.map((s) => s.type).sort()).toEqual(["address", "gas"]);
+  });
+
+  it("searches only for what the user asked for, and only near home or their own stops", async () => {
+    const chat = scriptedChat({
+      // The script ends after one turn: the model's next request fails, which is all this needs.
+      super: [callTools(["findNearby", { type: "gas" }], ["findNearby", { type: "wash", near: "Disneyland" }], ["findNearby", { type: "bank" }])],
+    });
+    const { services, calls } = fakeServices();
+
+    await planTrip({ stops: [{ type: "wash" }, "Trader Joe's"], home: HOME, mpg: 32, chat, services });
+
+    const results = chat.requests[1].messages.slice(-3).map((m) => JSON.parse(m.content as string));
+    expect(results).toEqual([
+      { error: "The user didn't ask for a gas station." },
+      { error: 'Search near home (leave near out) or near one of the user\'s own address stops: ["Trader Joe\'s"].' },
+      { error: 'Find only "gas" or "wash" stops.' },
+    ]);
+    expect(calls.findPlaces).toEqual([]);
+  });
+
+  it("names the kind of place it can't find instead of routing the rest", async () => {
+    const chat = scriptedChat({ super: [callTools(["findNearby", { type: "gas" }], ["findNearby", { type: "wash" }], ["getGasPrice", {}])] });
+    const { services, calls } = fakeServices({
+      findPlaces: async (kind) => (kind === "gas" ? [DEMO_STATION] : []),
+    });
+
+    const reply = await planTrip({ stops: [{ type: "gas" }, { type: "wash" }], home: HOME, mpg: 32, chat, services });
+
+    expect(reply).toEqual({
+      model: "super",
+      message: "I couldn't find a car wash near you on the map. Name a specific one, then plan again.",
+      plan: null,
+    });
+    expect(calls.route).toHaveLength(0);
+  });
+
+  it("says so when the map is down while looking for a gas station", async () => {
+    const chat = scriptedChat({ super: [callTools(["findNearby", { type: "gas" }], ["getGasPrice", {}])] });
+    const { services } = fakeServices({
+      findPlaces: async () => {
+        throw new Error("Places responded 503");
+      },
+    });
+
+    const reply = await planTrip({ stops: [{ type: "gas" }], home: HOME, mpg: 32, chat, services });
+
+    expect(reply).toEqual({ model: "super", message: "Couldn't look up places on the map just now. Please try again.", plan: null });
+  });
+
+  it("asks for different stops: one gas, one car wash, and named places", async () => {
+    const { services } = fakeServices();
+    const ask = "Enter 1–8 different stops, each under 200 characters.";
+    for (const stops of [[{ type: "gas" }, { type: "gas" }], [{ type: "teleport" }], [{ type: "address", name: " " }], [{ type: "address" }]]) {
+      const reply = await planTrip({ stops, home: HOME, mpg: 32, chat: scriptedChat({}), services });
+      expect(reply).toEqual({ model: null, message: ask, plan: null });
+    }
+  });
+});
+
+const DEMO_STATION: Place = { name: "Chevron", label: "7501 Beach Blvd, Buena Park, CA 90620", lat: 33.8582, lng: -118.0001 };
