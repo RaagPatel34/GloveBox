@@ -84,6 +84,15 @@ export type TripStop = LatLng & {
 // else is a named place.
 export type ErrandStop = { type: "gas" | "wash" } | { type: "address"; name: string };
 
+// The one check for a stop from the router or the Trips panel: a gas or car-wash stop, or a
+// named place whose trimmed name is 1–200 characters. Null for anything else.
+export function toErrandStop(value: unknown): ErrandStop | null {
+  const { type, name } = (typeof value === "object" && value !== null ? value : {}) as Record<string, unknown>;
+  if (type === "gas" || type === "wash") return { type };
+  const trimmed = typeof name === "string" ? name.trim() : "";
+  return type === "address" && trimmed !== "" && trimmed.length <= 200 ? { type, name: trimmed } : null;
+}
+
 export type DetourVerdict = {
   station: string;
   savings: number;
@@ -99,7 +108,8 @@ export type TripPlan = {
   totalMinutes: number;
   fuelCost: number;
   gasPrice: GasPrice;
-  // The gas stations found for a gas stop, the one on the route first. What a detour verdict chooses between.
+  // The gas stations Places listed near where the gas stop was searched, in Google's order; the
+  // first is the one the plan routes through. What a detour verdict chooses between.
   gasCandidates?: TripStop[];
   detour?: DetourVerdict;
   model: Exclude<ModelTier, "nano">;

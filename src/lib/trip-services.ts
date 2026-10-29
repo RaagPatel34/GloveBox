@@ -12,7 +12,7 @@ export function tripServices(env: Record<string, string | undefined> = process.e
   if (!mapsKey || !eiaKey) return null;
   return {
     findPlace: (query, near) => findPlace(mapsKey, query, near),
-    findPlaces: (kind, where) => findPlaces(mapsKey, kind, where),
+    findPlaces: (kind, near) => findPlaces(mapsKey, kind, near),
     route: (from, stops) => computeLoopRoute(mapsKey, from, stops),
     // The Los Angeles weekly average, or California's when LA's is unavailable.
     gasPrice: () => fetchRegionalPrice(eiaKey, EIA_AREAS.la).catch(() => fetchRegionalPrice(eiaKey, EIA_AREAS.ca)),

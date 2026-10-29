@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DEMO_CAR_WASHES, DEMO_ERRAND_STOPS, DEMO_GAS_STATIONS, demoPlacesFetch } from "../fixtures/demo-trip";
 import { demoCar } from "../fixtures/demo-car";
-import { findPlace, findPlaces, type Place, type PlacesNear, type StopKind } from "../maps";
+import { findPlace, findPlaces, type Place, type StopKind } from "../maps";
 import { NOW } from "../test-support";
 import type { LatLng } from "../types";
 import { planTrip, type TripServices } from "./trip";
@@ -27,14 +27,14 @@ const LA_PRICE = {
 // Fake Google and EIA: places by lower-cased name, a route that drives the stops in
 // reverse of the order given, and a fixed weekly price. Every call is recorded.
 function fakeServices(overrides: Partial<TripServices> = {}) {
-  const calls: { findPlace: string[]; findPlaces: [StopKind, PlacesNear][]; route: LatLng[][] } = { findPlace: [], findPlaces: [], route: [] };
+  const calls: { findPlace: string[]; findPlaces: [StopKind, LatLng][]; route: LatLng[][] } = { findPlace: [], findPlaces: [], route: [] };
   const services: TripServices = {
     findPlace: async (query) => {
       calls.findPlace.push(query);
       return PLACES[query.toLowerCase()] ?? null;
     },
-    findPlaces: async (kind, where) => {
-      calls.findPlaces.push([kind, where]);
+    findPlaces: async (kind, near) => {
+      calls.findPlaces.push([kind, near]);
       return [];
     },
     route: async (_home, stops) => {
@@ -284,7 +284,7 @@ describe("planTrip: gas and car-wash stops", () => {
     const fetchImpl = demoPlacesFetch();
     const fake = fakeServices({
       findPlace: (query, near) => findPlace("key", query, near, fetchImpl),
-      findPlaces: (kind, where) => findPlaces("key", kind, where, fetchImpl),
+      findPlaces: (kind, near) => findPlaces("key", kind, near, fetchImpl),
     });
     return { ...fake, fetchImpl };
   }
@@ -330,10 +330,24 @@ describe("planTrip: gas and car-wash stops", () => {
     expect(candidates.length).toBeGreaterThanOrEqual(2);
     expect(candidates.map((c) => c.name)).toEqual(DEMO_GAS_STATIONS.map((s) => s.displayName.text));
     expect(candidates.every((c) => c.type === "gas" && c.label && Number.isFinite(c.lat))).toBe(true);
-    // The one on the route is the first candidate; the model sees all of them, but only code picks.
+    // The plan uses the first candidate; the model sees all of them, but only code picks.
     const [gasResult] = chat.requests[1].messages.slice(-4).map((m) => JSON.parse(m.content as string));
     expect(gasResult.candidates.map((c: { name: string }) => c.name)).toEqual(["Chevron", "Arco", "Shell"]);
     expect(reply.plan?.stops.find((s) => s.type === "gas")?.name).toBe("Chevron");
+  });
+
+  it("finds no gas station or car wash far from the demo stations, rather than the same ones anywhere", async () => {
+    const chat = demoChat();
+    const { services } = demoServices();
+    const sanFrancisco = { label: "Union Square, San Francisco, CA", lat: 37.788, lng: -122.4075 };
+
+    const reply = await planTrip({ stops: DEMO_ERRAND_STOPS, home: sanFrancisco, mpg: vehicle.epaMpg, chat, services });
+
+    expect(reply).toEqual({
+      model: "super",
+      message: "I couldn't find a gas station or a car wash near you on the map. Name a specific one, then plan again.",
+      plan: null,
+    });
   });
 
   it("has no gas candidates when the trip needs no gas", async () => {
@@ -357,14 +371,14 @@ describe("planTrip: gas and car-wash stops", () => {
       ],
     });
     const { services, calls } = fakeServices({
-      findPlaces: async (kind, where) => (calls.findPlaces.push([kind, where]), [DEMO_STATION]),
+      findPlaces: async (kind, near) => (calls.findPlaces.push([kind, near]), [DEMO_STATION]),
     });
 
     const reply = await planTrip({ stops: [{ type: "gas" }, "Trader Joe's"], home: HOME, mpg: 32, chat, services });
 
     const [early] = chat.requests[1].messages.slice(-2).map((m) => JSON.parse(m.content as string));
     expect(early).toEqual({ error: 'Geocode "Trader Joe\'s" before searching near it.' });
-    expect(calls.findPlaces).toEqual([["gas", { near: { lat: 33.869, lng: -118.058 } }]]);
+    expect(calls.findPlaces).toEqual([["gas", { lat: 33.869, lng: -118.058 }]]);
     expect(reply.plan?.stops.map((s) => s.type).sort()).toEqual(["address", "gas"]);
   });
 
@@ -415,14 +429,54 @@ describe("planTrip: gas and car-wash stops", () => {
     expect(reply).toEqual({ model: "super", message: "Couldn't look up places on the map just now. Please try again.", plan: null });
   });
 
-  it("asks for different stops: one gas, one car wash, and named places", async () => {
+  it("searches again when asked to look near somewhere else, and keeps the new candidates", async () => {
+    const chat = scriptedChat({
+      super: [
+        callTools(["findNearby", { type: "gas" }], ["geocode", { query: "Trader Joe's" }]),
+        callTools(["findNearby", { type: "gas", near: "Trader Joe's" }], ["getGasPrice", {}]),
+        // The same anchor again is not a new search.
+        callTools(["findNearby", { type: "gas", near: "Trader Joe's" }], ["computeRoute", {}]),
+      ],
+    });
+    const { services, calls } = fakeServices({
+      findPlaces: async (kind, near) => (calls.findPlaces.push([kind, near]), near.lat === HOME.lat ? [DEMO_STATION] : [CERRITOS_STATION]),
+    });
+
+    const reply = await planTrip({ stops: [{ type: "gas" }, "Trader Joe's"], home: HOME, mpg: 32, chat, services });
+
+    expect(calls.findPlaces).toEqual([["gas", { lat: HOME.lat, lng: HOME.lng }], ["gas", { lat: 33.869, lng: -118.058 }]]);
+    const [first] = chat.requests[1].messages.slice(-2).map((m) => JSON.parse(m.content as string));
+    const [second] = chat.requests[2].messages.slice(-2).map((m) => JSON.parse(m.content as string));
+    expect(first.name).toBe("Chevron");
+    expect(second.name).toBe("Arco");
+    expect(reply.plan?.stops.find((s) => s.type === "gas")?.name).toBe("Arco");
+    expect(reply.plan?.gasCandidates?.map((c) => c.name)).toEqual(["Arco"]);
+  });
+
+  it("plans one gas stop, and one car wash, however many times they are typed", async () => {
+    const chat = scriptedChat({
+      super: [callTools(["findNearby", { type: "gas" }], ["findNearby", { type: "wash" }], ["getGasPrice", {}]), callTools(["computeRoute", {}])],
+    });
+    const { services } = fakeServices({
+      findPlaces: async (kind) => [kind === "gas" ? DEMO_STATION : CERRITOS_STATION],
+    });
+
+    const reply = await planTrip({ stops: [{ type: "gas" }, { type: "wash" }, { type: "gas" }, { type: "wash" }], home: HOME, mpg: 32, chat, services });
+
+    expect(reply.plan?.stops.map((s) => s.type).sort()).toEqual(["gas", "wash"]);
+    expect(JSON.parse(chat.requests[0].messages.at(-1)!.content as string)).toEqual({ stops: [{ type: "gas" }, { type: "wash" }] });
+  });
+
+  it("asks for different stops: named places, each of a sensible length", async () => {
     const { services } = fakeServices();
     const ask = "Enter 1–8 different stops, each under 200 characters.";
-    for (const stops of [[{ type: "gas" }, { type: "gas" }], [{ type: "teleport" }], [{ type: "address", name: " " }], [{ type: "address" }]]) {
+    const places = [{ type: "address", name: "Trader Joe's" }, { type: "address", name: " trader joe's " }];
+    for (const stops of [[{ type: "teleport" }], [{ type: "address", name: " " }], [{ type: "address" }], places, [{ type: "gas" }, "x".repeat(201)]]) {
       const reply = await planTrip({ stops, home: HOME, mpg: 32, chat: scriptedChat({}), services });
       expect(reply).toEqual({ model: null, message: ask, plan: null });
     }
   });
 });
 
-const DEMO_STATION: Place = { name: "Chevron", label: "7501 Beach Blvd, Buena Park, CA 90620", lat: 33.8582, lng: -118.0001 };
+const CERRITOS_STATION: Place = { name: "Arco", label: "13800 Carmenita Rd, Cerritos, CA 90703", lat: 33.8701, lng: -118.0602 };
+const DEMO_STATION: Place ={ name: "Chevron", label: "7501 Beach Blvd, Buena Park, CA 90620", lat: 33.8582, lng: -118.0001 };

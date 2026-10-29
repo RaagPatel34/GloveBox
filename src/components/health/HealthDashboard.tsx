@@ -2,6 +2,7 @@ import { CommandBar } from "@/components/command/CommandBar";
 import { LoadDemoCarButton } from "@/components/demo/LoadDemoCarButton";
 import { ProposalCards } from "@/components/proposals/ProposalCards";
 import type { Dashboard } from "@/lib/dashboard";
+import { vehicleMpg } from "@/lib/trip";
 import type { Nudge } from "@/lib/types";
 import { ItemTile } from "./ItemTile";
 import { NudgeList } from "./NudgeList";
@@ -30,7 +31,7 @@ export function HealthDashboard({ dashboard, nudges = [] }: { dashboard: Dashboa
 
       <NudgeList nudges={nudges} />
 
-      <CommandBar home={vehicle.home} mpg={vehicle.mpgOverride || vehicle.epaMpg} />
+      <CommandBar home={vehicle.home} mpg={vehicleMpg(vehicle)} />
 
       <ProposalCards cards={dashboard.proposals} />
 

@@ -6,6 +6,7 @@ import { planTrip, type TripServices } from "./agent/trip";
 import { MAX_COMMAND_LENGTH } from "./command-limits";
 import { commandReply as reply } from "./command-reply";
 import { formatReadDate, numberFormat, STATUS_LABEL } from "./readout";
+import { vehicleMpg } from "./trip";
 import type { CarSnapshot, CommandReply, Proposal } from "./types";
 
 // One command-bar input, end to end: Nano routes it, Super records service logs and
@@ -65,7 +66,7 @@ export async function runCommand(args: {
         const planned = await planTrip({
           stops: routed.stops,
           home: car.vehicle.home,
-          mpg: car.vehicle.mpgOverride || car.vehicle.epaMpg,
+          mpg: vehicleMpg(car.vehicle),
           chat: tracked,
           services: trip,
         });
