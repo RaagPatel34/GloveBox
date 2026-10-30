@@ -10,7 +10,8 @@ const EXAMPLE = "Trader Joe's, Cerritos\nSanta Ana City Hall, 20 Civic Center Pl
 
 // The trip agent: type the stops, Nemotron Super looks them up, Google orders the drive
 // from home and back, and code prices the fuel from the car's MPG and the EIA weekly price.
-export function TripAgent({ home, mpg, onDistance }: { home: Vehicle["home"]; mpg: number; onDistance: (miles: number) => void }) {
+// `demo`: the demo car, whose station prices are the labelled demo prices.
+export function TripAgent({ home, mpg, demo, onDistance }: { home: Vehicle["home"]; mpg: number; demo: boolean; onDistance: (miles: number) => void }) {
   const [stops, setStops] = useState("");
   const [busy, setBusy] = useState(false);
   const [reply, setReply] = useState<TripReply | null>(null);
@@ -24,7 +25,7 @@ export function TripAgent({ home, mpg, onDistance }: { home: Vehicle["home"]; mp
       const response = await fetch("/api/plan-trip", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ stops: lines, home, mpg }),
+        body: JSON.stringify({ stops: lines, home, mpg, ...(demo ? { demo: true } : {}) }),
       });
       setReply(await response.json());
     } catch {

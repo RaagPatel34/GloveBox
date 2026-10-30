@@ -1,11 +1,12 @@
 import { planTrip } from "@/lib/agent/trip";
+import { withDemoStationPrices } from "@/lib/fixtures/demo-trip";
 import { missingNebiusConfig, nebiusChat } from "@/lib/nebius";
 import { boundedJson, sameOrigin } from "@/lib/request-json";
 import { tripServices } from "@/lib/trip-services";
 import type { TripReply } from "@/lib/types";
 
-// The trip panel: POST { stops, home, mpg } -> TripReply. The car lives in the browser,
-// so its home and MPG come with the request. The logic lives in src/lib/agent/trip.ts.
+// The trip panel: POST { stops, home, mpg, demo? } -> TripReply. The car lives in the browser,
+// so its home and MPG come with the request, and `demo: true` when it is the demo car. The logic lives in src/lib/agent/trip.ts.
 export async function POST(request: Request) {
   const answer = (message: string, status: number) => Response.json({ model: null, message, plan: null } satisfies TripReply, { status });
   if (!sameOrigin(request)) return answer("Cross-origin requests are not accepted.", 403);
@@ -37,7 +38,9 @@ export async function POST(request: Request) {
     home: { label: home.label.trim(), lat: home.lat, lng: home.lng },
     mpg: typeof body.mpg === "number" ? body.mpg : NaN,
     chat: process.env.ENABLE_LIVE_AI === "true" && missing.length === 0 ? nebiusChat() : null,
-    services,
+    // The demo car's stations get the labelled demo prices, so its errand always reaches a verdict.
+    // A client that claims the demo car only changes those labelled station prices.
+    services: body.demo === true ? withDemoStationPrices(services) : services,
     // Optional: without Ultra, a trip with several gas stations plans on Super with no detour check.
     ultra: missingNebiusConfig(["ultra"]).length === 0,
   });

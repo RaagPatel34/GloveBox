@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { callTools, say, scriptedChat } from "@/lib/agent/scripted-chat";
-import { DEMO_ERRAND, DEMO_ERRAND_STOPS, demoTripServices } from "@/lib/fixtures/demo-trip";
+import { DEMO_ERRAND, DEMO_ERRAND_STOPS, DEMO_GAS_PRICE, DEMO_PRICE_SOURCE, demoTripServices } from "@/lib/fixtures/demo-trip";
 import { demoGarage } from "@/lib/maintenance";
 import { POST } from "./route";
 
@@ -132,5 +132,54 @@ describe("browser garage command endpoint", () => {
     expect(body.proposals).toEqual([]);
     expect(body.tier).toBe("ultra");
     expect(mocks.completion).not.toHaveBeenCalled();
+  });
+
+  // The demo car's errand reaches a verdict in the running app (#15, AC5); a real car's never
+  // sees a demo price.
+  describe("station prices for the demo car", () => {
+    const CHEVRON = "7501 Beach Blvd, Buena Park, CA 90620";
+    const ARCO = "6401 Orangethorpe Ave, Buena Park, CA 90620";
+    const SHELL = "1500 S Beach Blvd, Anaheim, CA 92804";
+    const errand = () => scriptedChat({
+      nano: [say(JSON.stringify({ intent: "errand", stops: DEMO_ERRAND_STOPS }))],
+      ultra: [
+        callTools(["findNearby", { type: "gas" }], ["findNearby", { type: "wash" }], ["geocode", { query: "Trader Joe's, Santa Ana, CA" }], ["getGasPrice", {}]),
+        callTools(["computeRoute", {}]),
+        callTools(["getStationPrice", { station: CHEVRON }], ["getStationPrice", { station: ARCO }], ["getStationPrice", { station: SHELL }]),
+        callTools(["checkDetour", { station: ARCO }]),
+      ],
+    });
+    // Live-like services: the canned places, and only the weekly average for any price.
+    const liveServices = () => ({ ...demoTripServices().services, gasPrice: vi.fn(async () => DEMO_GAS_PRICE) });
+
+    async function planErrand(garage: ReturnType<typeof demoGarage>) {
+      vi.stubEnv("ENABLE_LIVE_AI", "true");
+      vi.stubEnv("NEBIUS_API_KEY", "test");
+      vi.stubEnv("NEBIUS_MODEL_SUPER", "test-super");
+      const services = liveServices();
+      mocks.chat.mockImplementation(errand());
+      mocks.services.mockReturnValue(services);
+      return { body: await (await POST(request("live", garage))).json(), gasPrice: services.gasPrice };
+    }
+
+    it("prices the demo car's stations with the labelled demo prices, so Ultra gives a verdict", async () => {
+      const { body } = await planErrand(demoGarage());
+
+      expect(body.tier).toBe("ultra");
+      expect(body.trip?.detour).toMatchObject({ station: "Arco", usual: { station: "Chevron" } });
+      expect(body.trip.detour.price).toMatchObject({ price: 4.899, kind: "station", source: DEMO_PRICE_SOURCE });
+      expect(body.trip.detour.usual.price).toMatchObject({ price: 5.199, source: DEMO_PRICE_SOURCE });
+    });
+
+    it("keeps a real car on live prices", async () => {
+      const garage = demoGarage();
+      garage.vehicle.isDemo = false;
+
+      const { body, gasPrice } = await planErrand(garage);
+
+      expect(gasPrice).toHaveBeenCalledWith(expect.objectContaining({ station: expect.objectContaining({ label: ARCO }) }));
+      expect(JSON.stringify(body)).not.toContain(DEMO_PRICE_SOURCE);
+      expect(body.trip?.detour).toBeUndefined();
+    });
   });
 });
