@@ -42,16 +42,23 @@ function priceIn(text:string){
  for(const m of text.matchAll(/\$\s?(\d{1,2}\.\d{2,3})(?!\d)/g)){const p=Number(m[1]);if(p>=MIN_PRICE&&p<=MAX_PRICE)return {price:p,at:m.index};}
  return null;
 }
+type Dated={ms:number;asOf:string};
+const instant=(ms:number):Dated|null=>Number.isFinite(ms)?{ms,asOf:new Date(ms).toISOString()}:null;
+// A calendar day stays "YYYY-MM-DD", so no time zone moves it to the day before.
+function calendarDay(y:number,month:number,d:number):Dated|null{
+ const ms=Date.UTC(y,month,d),asOf=new Date(ms).toISOString().slice(0,10);
+ return month>=0&&new Date(ms).getUTCDate()===d?{ms,asOf}:null;
+}
 // When the text says the price is from: "3 hours ago", or "as of / updated Oct 27, 2026".
-function dateIn(text:string,now:Date){
+function dateIn(text:string,now:Date):Dated|null{
  const rel=/\b(\d+|an?)\s*(minute|min|hour|hr|day)s?\s+ago\b/i.exec(text);
- if(rel)return now.getTime()-(/^an?$/i.test(rel[1])?1:Number(rel[1]))*UNIT_MS[rel[2][0].toLowerCase()];
- const tail=/\b(?:as of|updated)\s*:?\s*(.{6,20})/i.exec(text)?.[1];if(!tail)return NaN;
+ if(rel)return instant(now.getTime()-(/^an?$/i.test(rel[1])?1:Number(rel[1]))*UNIT_MS[rel[2][0].toLowerCase()]);
+ const tail=/\b(?:as of|updated)\s*:?\s*(.{6,20})/i.exec(text)?.[1];if(!tail)return null;
  let m=/^([a-z]{3})[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})/i.exec(tail);
- if(m&&MONTHS.includes(m[1].toLowerCase()))return Date.UTC(Number(m[3]),MONTHS.indexOf(m[1].toLowerCase()),Number(m[2]));
- if((m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(tail)))return Date.UTC(Number(m[3]),Number(m[1])-1,Number(m[2]));
- if((m=/^(\d{4})-(\d{2})-(\d{2})/.exec(tail)))return Date.UTC(Number(m[1]),Number(m[2])-1,Number(m[3]));
- return NaN;
+ if(m)return calendarDay(Number(m[3]),MONTHS.indexOf(m[1].toLowerCase()),Number(m[2]));
+ if((m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(tail)))return calendarDay(Number(m[3]),Number(m[1])-1,Number(m[2]));
+ if((m=/^(\d{4})-(\d{2})-(\d{2})/.exec(tail)))return calendarDay(Number(m[1]),Number(m[2])-1,Number(m[3]));
+ return null;
 }
 // The result is about the asked-for station: its name with its street number or street name
 // in the title or next to the price, or a GasBuddy station page titled with its name.
@@ -69,11 +76,10 @@ export function parseTavilyPrice(body:unknown,at:GasPriceQuery,now=new Date()):G
   if(!safeUrl(row.url)||typeof row.content!=='string')continue;
   const found=priceIn(row.content);if(!found)continue;
   const {price}=found,near=row.content.slice(Math.max(0,found.at-NEAR_CHARS),found.at+NEAR_CHARS);
-  let asOf=dateIn(row.content,now);
-  if(!Number.isFinite(asOf)&&typeof row.published_date==='string')asOf=Date.parse(row.published_date);
-  if(!Number.isFinite(asOf)||asOf>now.getTime()+DAY||now.getTime()-asOf>MAX_AGE_DAYS*DAY)continue;
+  const dated=dateIn(row.content,now)??(typeof row.published_date==='string'?instant(Date.parse(row.published_date)):null);
+  if(!dated||dated.ms>now.getTime()+DAY||now.getTime()-dated.ms>MAX_AGE_DAYS*DAY)continue;
   const title=typeof row.title==='string'?row.title:'',station=at.station;
-  const base={price,asOf:new Date(asOf).toISOString(),source:row.url,stale:false};
+  const base={price,asOf:dated.asOf,source:row.url,stale:false};
   if(station&&aboutStation(station,title,near,row.url))return {...base,kind:'station',label:`${station.name}, ${street(station)}`};
   const area=at.area??(station?cityOf(station):'');
   return {...base,kind:'area',label:area?`Regular gasoline reported around ${area}`:title.slice(0,120)||'Regular gasoline reported nearby'};

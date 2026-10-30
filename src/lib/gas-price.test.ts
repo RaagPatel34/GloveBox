@@ -60,9 +60,10 @@ describe("parseTavilyPrice", () => {
     });
   });
 
-  it("dates a price by an explicit 'as of' date", () => {
+  it("dates a price by an explicit 'as of' date, kept as a calendar day so no time zone shifts it", () => {
     const body = result({ content: "Average regular $4.719 as of Oct 27, 2026 in Orange County" });
-    expect(parseTavilyPrice(body, { area: "Orange County, CA" }, now)).toMatchObject({ price: 4.719, asOf: "2026-10-27T00:00:00.000Z", kind: "area" });
+    expect(parseTavilyPrice(body, { area: "Orange County, CA" }, now)).toMatchObject({ price: 4.719, asOf: "2026-10-27", kind: "area" });
+    expect(parseTavilyPrice(result({ content: "Regular $4.70. Last updated: 10/28/2026" }), { area: "Orange County, CA" }, now).asOf).toBe("2026-10-28");
   });
 });
 
