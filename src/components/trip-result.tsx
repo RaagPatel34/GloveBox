@@ -9,14 +9,15 @@ import type { GasPrice, TripDetour, TripPlan, Vehicle } from "@/lib/types";
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 const STOP_LABEL = { gas: "Gas", wash: "Car wash", address: "" } as const;
 
-// Where a price came from and when it was true: its kind, its date, and a link to its source.
+// Where a price came from and when it was true: its kind, its date, and a link to its source, or
+// the source named in plain text when it is not a web page (the demo's illustrative prices).
 function PriceSource({ price, name }: { price: GasPrice; name?: string }) {
   const { kindLabel, when, source } = priceProvenance(price);
   return (
     <>
       <span className="pill">{kindLabel}</span>{" "}
       {name ? `${name}, ${when.prefix}` : when.prefix} <span className="font-mono tabular-nums">{when.date}</span>.
-      {source && <>{" "}<a href={source.href} target="_blank" rel="noreferrer">{source.label} <ExternalIcon /></a></>}
+      {source ? <>{" "}<a href={source.href} target="_blank" rel="noreferrer">{source.label} <ExternalIcon /></a></> : price.source && <> {price.source}.</>}
     </>
   );
 }
