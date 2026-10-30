@@ -143,7 +143,7 @@ Verified automatic station-price discovery, the live gas-price detour verdict ([
 
 Records includes an explicit copy into an empty cloud garage and download of the original transferred archive. Existing cloud cars are never overwritten; later edits do not sync. The complete original history is preserved, with old proposals archived rather than reactivated.
 
-Trips includes optional Tavily source search (ENABLE_TAVILY + TAVILY_API_KEY; no generated answer), and saving a new car runs one Tavily search for its manufacturer service intervals (each shown with a link to its source; the owner's own intervals are never replaced) and Google directions embed (NEXT_PUBLIC_GOOGLE_MAPS_KEY restricted to the Embed API and website domains). Both wait for account setup. Search excerpts must not be represented as verified station quotes.
+Trips includes optional Tavily source search (ENABLE_TAVILY + TAVILY_API_KEY; no generated answer), and saving a new car runs one Tavily search for its manufacturer service intervals (only matching year/model results on the maker's own domain are accepted, each with a source link; dealer and guide results leave the existing intervals alone, and the owner's intervals are never replaced) and Google directions embed (NEXT_PUBLIC_GOOGLE_MAPS_KEY restricted to the Embed API and website domains). Both wait for account setup. Search excerpts must not be represented as verified station quotes.
 
 ## Daily weather
 

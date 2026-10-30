@@ -1,3 +1,4 @@
+import { ExternalIcon } from "@/components/shell/icons";
 import type { DashboardItem } from "@/lib/dashboard";
 import { sourceAnchor } from "@/lib/garage-view";
 import { formatLimit, STATUS_LABEL } from "@/lib/readout";
@@ -46,7 +47,7 @@ export function ItemTile({ item }: { item: DashboardItem }) {
         <span>{used === null ? "Interval unknown" : `${used}% used`}</span>
         {source.href ? (
           <a href={source.href} target="_blank" rel="noreferrer" className="underline underline-offset-2">
-            {SOURCE_LABEL[item.source.kind]} ↗<span className="sr-only"> (opens the source page)</span>
+            {SOURCE_LABEL[item.source.kind]} <ExternalIcon /><span className="sr-only"> (opens the source page)</span>
           </a>
         ) : (
           <span>{SOURCE_LABEL[item.source.kind]}</span>
