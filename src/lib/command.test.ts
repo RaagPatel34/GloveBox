@@ -475,6 +475,8 @@ describe("describeEffects", () => {
 });
 
 describe("runCommand: errands", () => {
+  // Ultra's: the demo errand has three gas stations near home to choose between. With only the
+  // EIA average, there are no station prices to weigh.
   const demoSteps = [
     callTools(
       ["findNearby", { type: "gas" }],
@@ -483,12 +485,13 @@ describe("runCommand: errands", () => {
       ["getGasPrice", {}],
     ),
     callTools(["computeRoute", {}]),
+    say("No station prices to compare."),
   ];
 
   it("“gas, car wash and Trader Joe's” becomes a trip plan from the command bar, with named stops and the fuel priced", async () => {
     const chat = scriptedChat({
       nano: [route({ intent: "errand", stops: DEMO_ERRAND_STOPS })],
-      super: demoSteps,
+      ultra: demoSteps,
     });
     const { services } = demoTripServices();
 
@@ -497,7 +500,7 @@ describe("runCommand: errands", () => {
     // A trip plan changes nothing about the car: no log, no cards.
     expect(saved).toEqual([]);
     expect(proposals).toEqual([]);
-    expect(reply).toMatchObject({ model: "super", changes: [], proposals: 0 });
+    expect(reply).toMatchObject({ model: "ultra", changes: [], proposals: 0 });
     expect(reply.message).toBe("Round trip from home: 3 stops, 14.2 mi, $2.46 in fuel.");
     expect(reply.trip?.stops.map((s) => `${s.type}: ${s.name}`)).toEqual([
       "gas: Chevron",
@@ -509,7 +512,7 @@ describe("runCommand: errands", () => {
   });
 
   it("finds at least two candidate gas stations on the demo trip toward Santa Ana, so the detour verdict has something to decide", async () => {
-    const chat = scriptedChat({ nano: [route({ intent: "errand", stops: DEMO_ERRAND_STOPS })], super: demoSteps });
+    const chat = scriptedChat({ nano: [route({ intent: "errand", stops: DEMO_ERRAND_STOPS })], ultra: demoSteps });
     const { services } = demoTripServices();
 
     const { reply } = await send(DEMO_ERRAND, chat, undefined, NOW, services);
@@ -520,13 +523,13 @@ describe("runCommand: errands", () => {
   it("hands the router's stops to the trip agent as the user's stops, not the raw sentence", async () => {
     const chat = scriptedChat({
       nano: [route({ intent: "errand", stops: DEMO_ERRAND_STOPS })],
-      super: demoSteps,
+      ultra: demoSteps,
     });
     const { services } = demoTripServices();
 
     await send(DEMO_ERRAND, chat, undefined, NOW, services);
 
-    const user = chat.requests.find((r) => r.tier === "super")!.messages.at(-1)!;
+    const user = chat.requests.find((r) => r.tier === "ultra")!.messages.at(-1)!;
     expect(JSON.parse(user.content as string)).toEqual({
       stops: [{ type: "gas" }, { type: "wash" }, { type: "address", name: "Trader Joe's, Santa Ana, CA" }],
     });

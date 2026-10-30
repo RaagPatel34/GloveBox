@@ -33,7 +33,8 @@ export function detourWorthIt(input: DetourInput): DetourVerdict {
   const savings = (input.usualPrice - input.stationPrice) * input.gallons;
   const detourCost = input.extraMiles / input.mpg * input.usualPrice;
   const net = savings - detourCost;
-  return { station: input.station, savings, detourCost, net, worthIt: net > 0 };
+  // Worth it only when the net shows as at least a cent, so the verdict agrees with the card.
+  return { station: input.station, savings, detourCost, net, worthIt: net > 0.005 };
 }
 
 // The most stops the trip agent plans in one drive.

@@ -30,6 +30,13 @@ describe("detourWorthIt", () => {
     expect(verdict.worthIt).toBe(false);
   });
 
+  it("is not worth it when the net saving rounds to nothing on screen", () => {
+    // 0.1¢ × 4 gal = $0.004 saved, shown as $0.00.
+    const verdict = detourWorthIt({ station: "Arco", usualPrice: 4, stationPrice: 3.999, gallons: 4, extraMiles: 0, mpg: 30 });
+    expect(verdict.net).toBeCloseTo(0.004, 6);
+    expect(verdict.worthIt).toBe(false);
+  });
+
   it("shows negative savings and says no when the other station is pricier", () => {
     const verdict = detourWorthIt({ ...base, stationPrice: 4.7, gallons: 10, extraMiles: 0 });
     expect(verdict.savings).toBeCloseTo(-2, 6);
