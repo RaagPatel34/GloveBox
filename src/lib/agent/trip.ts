@@ -19,8 +19,13 @@ export type TripServices = {
   findPlaces: (kind: StopKind, near: LatLng) => Promise<Place[]>;
   // Home -> stops -> home, with the stops in driving order.
   route: (home: LatLng, stops: Place[]) => Promise<RouteResult<Place>>;
-  gasPrice: () => Promise<GasPrice>;
+  // A gas station's price, else an area's, else the EIA weekly average (#15). Throws only when
+  // even EIA has no usable price.
+  gasPrice: (at?: GasPriceQuery) => Promise<GasPrice>;
 };
+
+// What to price: one station, or an area such as "Buena Park, CA". Neither means the EIA average.
+export type GasPriceQuery = { station?: Place; area?: string };
 
 type AddressStop = Extract<ErrandStop, { type: "address" }>;
 type KindStop = Exclude<ErrandStop, AddressStop>;

@@ -101,6 +101,19 @@ export type DetourVerdict = {
   worthIt: boolean;
 };
 
+// The trip agent's verdict on a cheaper gas station (#15), with every price it weighed.
+// `station` names the cheaper one.
+export type TripDetour = DetourVerdict & {
+  // The cheaper station's price.
+  price: GasPrice;
+  // The station on the way, which the route uses unless the detour is worth it, and its price.
+  usual: { station: string; price: GasPrice };
+  // Extra round-trip miles to buy gas at the cheaper station instead.
+  extraMiles: number;
+  // The fill-up the savings are counted on.
+  gallons: number;
+};
+
 // A drive from home through the stops and back. Home is not in `stops`; they are in driving order.
 export type TripPlan = {
   stops: TripStop[];
@@ -111,7 +124,9 @@ export type TripPlan = {
   // The gas stations Places listed near where the gas stop was searched, in Google's order; the
   // first is the one the plan routes through. What a detour verdict chooses between.
   gasCandidates?: TripStop[];
-  detour?: DetourVerdict;
+  // Set only on Ultra, when there was a cheaper station to weigh. When it is worth it, the
+  // stops, miles and fuel cost already go through the cheaper station.
+  detour?: TripDetour;
   model: Exclude<ModelTier, "nano">;
   // The same drive in Google Maps.
   mapsUrl: string;
