@@ -1,5 +1,5 @@
 import type { TripServices } from "../agent/trip";
-import { findPlace, findPlaces, type PostFetch } from "../maps";
+import { findPlace, findPlaces, type Place, type PostFetch } from "../maps";
 import type { GasPrice } from "../types";
 
 // The spec's demo errand (docs/SPEC.md, "Demo car"): gas, a car wash and a grocery stop toward
@@ -52,15 +52,44 @@ export const DEMO_GAS_PRICE: GasPrice = {
   stale: false,
 };
 
+// Each demo station's price, by address. Illustrative figures for the demo's detour verdict, not
+// quotes: their label and source say so, and the source is no link, so nothing reads as a real
+// station's page. Chevron is on the way; Arco is cheap enough to be worth the extra miles.
+const DEMO_STATION_PRICES: Record<string, number> = {
+  "7501 Beach Blvd, Buena Park, CA 90620": 5.199,
+  "6401 Orangethorpe Ave, Buena Park, CA 90620": 4.899,
+  "1500 S Beach Blvd, Anaheim, CA 92804": 5.099,
+};
+
+export const DEMO_PRICE_SOURCE = "GloveBox demo price, not a live quote";
+
+function demoStationPrice(station: Place): GasPrice | null {
+  const price = DEMO_STATION_PRICES[station.label];
+  if (price === undefined) return null;
+  return { price, asOf: "2026-10-26", source: DEMO_PRICE_SOURCE, kind: "station", label: `Demo price for ${station.name}` };
+}
+
+// Road miles run about this much longer than the straight lines between stops.
+const ROAD_FACTOR = 1.25;
+// Average speed for the demo's drive time, mostly surface streets.
+const DEMO_MPH = 30;
+
 // Trip services for the demo errand: canned Places through the real Google adapter, the stops
-// driven in the order given for a fixed distance, and a fixed weekly price.
+// driven in the order given, the miles from the straight-line loop home -> stops -> home (so a
+// farther station adds miles), canned prices for the three stations near home, and a fixed
+// weekly price otherwise, as the live services fall back to EIA.
 export function demoTripServices() {
   const fetchImpl = demoPlacesFetch();
   const services: TripServices = {
     findPlace: (query, near) => findPlace("demo", query, near, fetchImpl),
     findPlaces: (kind, near) => findPlaces("demo", kind, near, fetchImpl),
-    route: async (_home, stops) => ({ order: stops, miles: 14.2, minutes: 31 }),
-    gasPrice: async () => DEMO_GAS_PRICE,
+    route: async (home, stops) => {
+      const points = [home, ...stops, home].map(({ lat, lng }) => ({ latitude: lat, longitude: lng }));
+      const meters = points.slice(1).reduce((sum, point, i) => sum + metersBetween(points[i], point), 0);
+      const miles = Math.round((meters / 1609.344) * ROAD_FACTOR * 10) / 10;
+      return { order: stops, miles, minutes: Math.round((miles / DEMO_MPH) * 60) };
+    },
+    gasPrice: async (at) => (at?.station && demoStationPrice(at.station)) || DEMO_GAS_PRICE,
   };
   return { services, requests: fetchImpl.requests };
 }

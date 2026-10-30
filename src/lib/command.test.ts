@@ -501,14 +501,14 @@ describe("runCommand: errands", () => {
     expect(saved).toEqual([]);
     expect(proposals).toEqual([]);
     expect(reply).toMatchObject({ model: "ultra", changes: [], proposals: 0 });
-    expect(reply.message).toBe("Round trip from home: 3 stops, 14.2 mi, $2.46 in fuel.");
+    expect(reply.message).toBe("Round trip from home: 3 stops, 24.1 mi, $4.17 in fuel.");
     expect(reply.trip?.stops.map((s) => `${s.type}: ${s.name}`)).toEqual([
       "gas: Chevron",
       "wash: Mister Car Wash",
       "address: Trader Joe's",
     ]);
-    // 14.2 mi ÷ 34 MPG (the demo car) × $5.883
-    expect(reply.trip?.fuelCost).toBeCloseTo(2.457, 3);
+    // 24.1 mi ÷ 34 MPG (the demo car) × $5.883
+    expect(reply.trip?.fuelCost).toBeCloseTo(4.17, 3);
   });
 
   it("finds at least two candidate gas stations on the demo trip toward Santa Ana, so the detour verdict has something to decide", async () => {

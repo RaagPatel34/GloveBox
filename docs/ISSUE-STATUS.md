@@ -1,6 +1,6 @@
 # GitHub issue status
 
-Snapshot: October 29, 2026, taken from `origin/main` at `6b72f36` (PR #40) and the live issue and PR lists. GitHub Issues remain the delivery tracker; this page summarizes them. It replaces the October 24 acceptance audit, which described a feature branch that has since merged.
+Snapshot: October 29, 2026, taken from `origin/main` at `6e2796d` (PR #41) and the live issue and PR lists; the #15 row describes its feature branch. GitHub Issues remain the delivery tracker; this page summarizes them. It replaces the October 24 acceptance audit, which described a feature branch that has since merged.
 
 "Merged" means the code is on `main` with CI passing. It does not mean a provider-backed feature has been accepted on a hosted deployment with real keys. The right-hand column says what is still unproven.
 
@@ -27,7 +27,7 @@ Snapshot: October 29, 2026, taken from `origin/main` at `6b72f36` (PR #40) and t
 | --- | --- | --- |
 | [#4](https://github.com/RaagPatel34/GloveBox/issues/4) Keys, spend caps, Nemotron smoke test, live Vercel URL | ready-for-human | Neon, EIA and Tavily are connected on the preview. Nebius is deferred by the team; `ENABLE_LIVE_AI=false`. Google Maps is disabled and its project billing is disconnected. See [API connection status](API-CONNECTION-STATUS.md). |
 | [#14](https://github.com/RaagPatel34/GloveBox/issues/14) Route map | ready-for-agent | Code merged in #40: a Directions embed (home, each stop in plan order, home) behind a Load route map button, with the stop list and an Open in Google Maps link as the fallback. Needs a browser key restricted to the deployed domain; the in-iframe render has not been seen. Close the issue once that is checked. |
-| [#15](https://github.com/RaagPatel34/GloveBox/issues/15) Live gas prices and the detour verdict on Ultra | ready-for-agent | Not started beyond the pieces it reuses: detour math, the EIA weekly price, and the gas candidates #13 keeps. Verified station-price extraction does not exist. |
+| [#15](https://github.com/RaagPatel34/GloveBox/issues/15) Live gas prices and the detour verdict on Ultra | ready-for-agent | Code on `feat/15-gas-detour`, not merged: Tavily station and area prices (dated within a week) with the EIA fallback, Ultra only when more than one station is near home, the detour verdict on a 10-gallon fill-up, and every price shown with its kind, date and source. The demo errand reaches a verdict end to end in tests on illustrative demo prices. Live Tavily price quality and a real Ultra run are unproven. |
 | [#16](https://github.com/RaagPatel34/GloveBox/issues/16) Daily nudge job | ready-for-agent | Authenticated route, opt-in consent, bounded claims (10 cars per run) and a Vercel schedule exist. Needs a migrated database, `ENABLE_DAILY_WEATHER=true`, `CRON_SECRET` and a production release. |
 | [#17](https://github.com/RaagPatel34/GloveBox/issues/17) Odometer photo to reading | ready-for-agent | Not started. Stretch scope. |
 | [#18](https://github.com/RaagPatel34/GloveBox/issues/18) Cold walkthrough and feature freeze | ready-for-agent | Blocked on the features above. |
