@@ -82,20 +82,27 @@ describe("browser garage command endpoint", () => {
     expect(mocks.chat).toHaveBeenCalledOnce();
   });
 
-  it("says the trip agent is offline when a gas errand may need Ultra and Ultra isn't set up", async () => {
+  it("plans a gas errand on Super, with no detour, when Ultra isn't set up", async () => {
     vi.stubEnv("ENABLE_LIVE_AI", "true");
     vi.stubEnv("NEBIUS_API_KEY", "test");
     vi.stubEnv("NEBIUS_MODEL_SUPER", "test-super");
     mocks.missing.mockImplementation((tiers: string[] = []) => (tiers.includes("ultra") ? ["NEBIUS_MODEL_ULTRA"] : []));
-    const chat = scriptedChat({ nano: [say(JSON.stringify({ intent: "errand", stops: DEMO_ERRAND_STOPS }))] });
+    const chat = scriptedChat({
+      nano: [say(JSON.stringify({ intent: "errand", stops: DEMO_ERRAND_STOPS }))],
+      super: [
+        callTools(["findNearby", { type: "gas" }], ["findNearby", { type: "wash" }], ["geocode", { query: "Trader Joe's, Santa Ana, CA" }], ["getGasPrice", {}]),
+        callTools(["computeRoute", {}]),
+      ],
+    });
     mocks.chat.mockImplementation(chat);
     mocks.services.mockReturnValue(demoTripServices().services);
 
     const body = await (await POST(request())).json();
 
-    expect(body.message).toBe("The trip agent isn't connected right now. You can still plan the drive by hand below.");
-    expect(body.trip).toBeUndefined();
-    expect(chat.requests.map((r) => r.tier)).toEqual(["nano"]);
+    expect(body.tier).toBe("super");
+    expect(body.trip?.stops).toHaveLength(3);
+    expect(body.trip?.detour).toBeUndefined();
+    expect(chat.requests.map((r) => r.tier)).toEqual(["nano", "super", "super"]);
   });
 
   it("plans an errand from the supplied garage without a cloud car or database", async () => {

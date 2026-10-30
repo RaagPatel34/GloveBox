@@ -18,6 +18,7 @@ async function send(
   car: CarSnapshot | null = demoCar(NOW, VISITOR, randomUUID),
   now = NOW,
   trip: TripServices | null = null,
+  ultra = true,
 ) {
   const saved: CarSnapshot[] = [];
   const proposals: Proposal[] = [];
@@ -27,6 +28,7 @@ async function send(
     chat,
     now,
     trip,
+    ultra,
     save: async (next) => {
       saved.push(next);
     },
@@ -533,6 +535,18 @@ describe("runCommand: errands", () => {
     expect(JSON.parse(user.content as string)).toEqual({
       stops: [{ type: "gas" }, { type: "wash" }, { type: "address", name: "Trader Joe's, Santa Ana, CA" }],
     });
+  });
+
+  it("plans the demo errand on Super, with no detour, when Ultra isn't set up", async () => {
+    const chat = scriptedChat({ nano: [route({ intent: "errand", stops: DEMO_ERRAND_STOPS })], super: demoSteps.slice(0, 2) });
+    const { services } = demoTripServices();
+
+    const { reply } = await send(DEMO_ERRAND, chat, undefined, NOW, services, false);
+
+    expect(reply).toMatchObject({ model: "super" });
+    expect(reply.trip).toMatchObject({ model: "super" });
+    expect(reply.trip?.detour).toBeUndefined();
+    expect(chat.requests.some((r) => r.tier === "ultra")).toBe(false);
   });
 
   it("passes on why there is no plan, from Super, when a place can't be found", async () => {

@@ -37,6 +37,8 @@ export async function POST(request: Request) {
       pending,
       trip: tripServices(),
       chat: missing.length > 0 ? null : nebiusChat(),
+      // Optional: without Ultra, errands plan on Super with no gas-detour check.
+      ultra: missingNebiusConfig(["ultra"]).length === 0,
       now: new Date(),
       save: (next) => updateCar(visitorId!, next, car ?? undefined),
       saveProposals: (proposals) => addProposals(visitorId!, proposals),

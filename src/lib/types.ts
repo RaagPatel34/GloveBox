@@ -1,6 +1,8 @@
 // Shared contract between the frontend and the agent/data layer.
 // Change these together, in one PR, so both halves stay in sync.
 
+import type { Place } from "./maps";
+
 export type ModelTier = "nano" | "super" | "ultra";
 
 export type LatLng = { lat: number; lng: number };
@@ -71,6 +73,9 @@ export type GasPrice = {
   // More than two weeks old.
   stale?: boolean;
 };
+
+// What to price: one station, or an area such as "Buena Park, CA". Neither means the EIA average.
+export type GasPriceQuery = { station?: Place; area?: string };
 
 export type TripStop = LatLng & {
   // The address the route drives to.

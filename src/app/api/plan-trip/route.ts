@@ -1,4 +1,4 @@
-import { planTrip, tripTiers } from "@/lib/agent/trip";
+import { planTrip } from "@/lib/agent/trip";
 import { missingNebiusConfig, nebiusChat } from "@/lib/nebius";
 import { boundedJson, sameOrigin } from "@/lib/request-json";
 import { tripServices } from "@/lib/trip-services";
@@ -29,8 +29,7 @@ export async function POST(request: Request) {
     return answer("Set your home location in Car & settings, then plan again.", 400);
   }
 
-  // A trip with a gas stop may run on Ultra (choosing between stations), so it needs Ultra too.
-  const missing = missingNebiusConfig(tripTiers(body.stops));
+  const missing = missingNebiusConfig(["super"]);
   if (missing.length > 0) console.warn(`Trip agent is offline: ${missing.join(", ")} not set`);
 
   const reply = await planTrip({
@@ -39,6 +38,8 @@ export async function POST(request: Request) {
     mpg: typeof body.mpg === "number" ? body.mpg : NaN,
     chat: process.env.ENABLE_LIVE_AI === "true" && missing.length === 0 ? nebiusChat() : null,
     services,
+    // Optional: without Ultra, a trip with several gas stations plans on Super with no detour check.
+    ultra: missingNebiusConfig(["ultra"]).length === 0,
   });
   return Response.json(reply);
 }
