@@ -82,6 +82,22 @@ describe("browser garage command endpoint", () => {
     expect(mocks.chat).toHaveBeenCalledOnce();
   });
 
+  it("says the trip agent is offline when a gas errand may need Ultra and Ultra isn't set up", async () => {
+    vi.stubEnv("ENABLE_LIVE_AI", "true");
+    vi.stubEnv("NEBIUS_API_KEY", "test");
+    vi.stubEnv("NEBIUS_MODEL_SUPER", "test-super");
+    mocks.missing.mockImplementation((tiers: string[] = []) => (tiers.includes("ultra") ? ["NEBIUS_MODEL_ULTRA"] : []));
+    const chat = scriptedChat({ nano: [say(JSON.stringify({ intent: "errand", stops: DEMO_ERRAND_STOPS }))] });
+    mocks.chat.mockImplementation(chat);
+    mocks.services.mockReturnValue(demoTripServices().services);
+
+    const body = await (await POST(request())).json();
+
+    expect(body.message).toBe("The trip agent isn't connected right now. You can still plan the drive by hand below.");
+    expect(body.trip).toBeUndefined();
+    expect(chat.requests.map((r) => r.tier)).toEqual(["nano"]);
+  });
+
   it("plans an errand from the supplied garage without a cloud car or database", async () => {
     vi.stubEnv("ENABLE_LIVE_AI", "true");
     vi.stubEnv("NEBIUS_API_KEY", "test");
@@ -89,9 +105,11 @@ describe("browser garage command endpoint", () => {
     vi.stubEnv("DATABASE_URL", "");
     const chat = scriptedChat({
       nano: [say(JSON.stringify({ intent: "errand", stops: DEMO_ERRAND_STOPS }))],
-      super: [
+      // Three gas stations near home: Ultra plans it.
+      ultra: [
         callTools(["findNearby", { type: "gas" }], ["findNearby", { type: "wash" }], ["geocode", { query: "Trader Joe's, Santa Ana, CA" }], ["getGasPrice", {}]),
         callTools(["computeRoute", {}]),
+        say("No station prices to compare."),
       ],
     });
     mocks.chat.mockImplementation(chat);
@@ -105,7 +123,7 @@ describe("browser garage command endpoint", () => {
     expect(body.trip?.stops).toHaveLength(3);
     expect(body.trip?.gasCandidates.length).toBeGreaterThanOrEqual(2);
     expect(body.proposals).toEqual([]);
-    expect(body.tier).toBe("super");
+    expect(body.tier).toBe("ultra");
     expect(mocks.completion).not.toHaveBeenCalled();
   });
 });
