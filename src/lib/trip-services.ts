@@ -1,13 +1,13 @@
-import type { GasPriceQuery, TripServices } from "./agent/trip";
-import { EIA_AREAS, fetchRegionalPrice, fetchTavilyPrice, type Fetcher } from "./gas-price";
-import { computeLoopRoute, findPlace, findPlaces } from "./maps";
-import type { GasPrice } from "./types";
+import type { TripServices } from "./agent/trip";
+import { EIA_AREAS, fetchRegionalPrice, fetchTavilyPrice } from "./gas-price";
+import { computeLoopRoute, findPlace, findPlaces, type PostFetch } from "./maps";
+import type { GasPrice, GasPriceQuery } from "./types";
 
 // Google Maps, EIA and (when switched on) Tavily behind the trip agent, shared by the Trips
 // panel and the command bar. Server-only: the keys are server keys.
 
 // The live services, or null unless Google Maps is switched on and both keys are set.
-export function tripServices(env: Record<string, string | undefined> = process.env, fetchImpl: Fetcher = fetch): TripServices | null {
+export function tripServices(env: Record<string, string | undefined> = process.env, fetchImpl: PostFetch = fetch): TripServices | null {
   const mapsKey = env.ENABLE_MAPS === "true" ? env.GOOGLE_MAPS_API_KEY : undefined;
   const eiaKey = env.EIA_API_KEY;
   const tavilyKey = env.ENABLE_TAVILY === "true" ? env.TAVILY_API_KEY : undefined;

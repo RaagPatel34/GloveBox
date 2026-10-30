@@ -49,15 +49,41 @@ describe("parseTavilyPrice", () => {
     expect(() => parseTavilyPrice(body, { area: "Buena Park, CA" }, now)).toThrow();
   });
 
-  it("calls a price for a different station an area figure, not the asked-for station's", () => {
-    const body = result({
+  it("skips a different station's price rather than calling it the area's, and reads the area figure after it", () => {
+    const arco = {
       title: "ARCO in Buena Park, CA - 6000 Orangethorpe Ave | GasBuddy",
       url: "https://www.gasbuddy.com/station/999",
       content: "ARCO 6000 Orangethorpe Ave. Regular $4.299, 20 minutes ago. Nearby: Chevron.",
+    };
+    const area = { title: "Buena Park Gas Prices", url: "https://www.gasbuddy.com/gasprices/california/buena-park", content: "Average regular $4.659, updated 1 hour ago" };
+    expect(() => parseTavilyPrice({ results: [arco] }, { station: chevron }, now)).toThrow();
+    expect(parseTavilyPrice({ results: [arco, area] }, { station: chevron }, now)).toMatchObject({
+      price: 4.659, asOf: "2026-10-29T17:00:00.000Z", kind: "area", label: "Regular gasoline reported around Buena Park, CA",
     });
-    expect(parseTavilyPrice(body, { station: chevron }, now)).toMatchObject({
-      price: 4.299, asOf: "2026-10-29T17:40:00.000Z", kind: "area", label: "Regular gasoline reported around Buena Park, CA",
+  });
+
+  it("prefers the asked-for station's dated price over an earlier area figure", () => {
+    const body = { results: [
+      { title: "Buena Park Gas Prices", url: "https://www.gasbuddy.com/gasprices/california/buena-park", content: "Average regular $4.659, updated 1 hour ago" },
+      { title: "Chevron in Buena Park, CA - 8101 Beach Blvd | GasBuddy", url: "https://www.gasbuddy.com/station/12345", content: "Regular $4.899, 2 hours ago" },
+    ] };
+    expect(parseTavilyPrice(body, { station: chevron }, now)).toMatchObject({ price: 4.899, kind: "station", source: "https://www.gasbuddy.com/station/12345" });
+  });
+
+  it("needs the station's street number, not just its brand and street name", () => {
+    const body = result({
+      title: "Chevron in Buena Park, CA - 9001 Beach Blvd | GasBuddy",
+      url: "https://www.gasbuddy.com/station/777",
+      content: "Chevron 9001 Beach Blvd. Regular $4.499, 30 minutes ago.",
     });
+    expect(() => parseTavilyPrice(body, { station: chevron }, now)).toThrow();
+  });
+
+  it("dates a price by the date phrase nearest it, not the first one on the page", () => {
+    const body = result({ content: "Station list refreshed 9 days ago. Regular $4.599, updated 1 hour ago." });
+    expect(parseTavilyPrice(body, { area: "Buena Park, CA" }, now)).toMatchObject({ price: 4.599, asOf: "2026-10-29T17:00:00.000Z" });
+    const later = result({ content: "Posted 2 days ago. Regular $4.599 as of Oct 29, 2026." });
+    expect(parseTavilyPrice(later, { area: "Buena Park, CA" }, now).asOf).toBe("2026-10-29");
   });
 
   it("dates a price by an explicit 'as of' date, kept as a calendar day so no time zone shifts it", () => {

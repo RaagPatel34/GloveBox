@@ -29,12 +29,14 @@ export async function runCommand(args: {
   trip?: TripServices | null;
   // Null when the AI is not configured (see missingNebiusConfig).
   chat: Chat | null;
+  // Whether Ultra is configured, so a trip with several gas stations can weigh them.
+  ultra?: boolean;
   now: Date;
   save: (car: CarSnapshot) => Promise<void>;
   saveProposals: (proposals: Proposal[]) => Promise<void>;
   newId?: () => string;
 }): Promise<CommandReply> {
-  const { car, chat, now, pending = [], trip = null, newId = randomUUID } = args;
+  const { car, chat, now, pending = [], trip = null, ultra = false, newId = randomUUID } = args;
   const text = typeof args.text === "string" ? args.text.trim() : "";
   if (text === "" || text.length > MAX_COMMAND_LENGTH) {
     return reply(null, `Type what happened, in ${MAX_COMMAND_LENGTH} characters or fewer. ${EXAMPLES}`);
@@ -62,13 +64,15 @@ export async function runCommand(args: {
       case "errand": {
         if (!routed.stops) return reply("nano", `Which places do you want to go? ${ERRAND_EXAMPLE}`);
         if (!trip) return reply("nano", NO_TRIP);
-        // Super finds the places and plans the drive; code builds the plan from what the tools found.
+        // Super (or Ultra, choosing between gas stations) finds the places and plans the drive;
+        // code builds the plan from what the tools found.
         const planned = await planTrip({
           stops: routed.stops,
           home: car.vehicle.home,
           mpg: vehicleMpg(car.vehicle),
           chat: tracked,
           services: trip,
+          ultra,
         });
         return reply(planned.model ?? "nano", planned.message, [], 0, planned.plan);
       }

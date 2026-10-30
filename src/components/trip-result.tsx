@@ -3,7 +3,7 @@ import { RouteMap } from "@/components/route-map";
 import { ExternalIcon } from "@/components/shell/icons";
 import { priceProvenance } from "@/lib/price-provenance";
 import { tripRoutePoints } from "@/lib/route-embed";
-import { tripPlaceKey } from "@/lib/trip";
+import { atLeastACent, tripPlaceKey } from "@/lib/trip";
 import type { GasPrice, TripDetour, TripPlan, Vehicle } from "@/lib/types";
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
@@ -27,7 +27,8 @@ const perGallon = (price: GasPrice) => <><span className="font-mono tabular-nums
 // The Ultra verdict on a cheaper station: both prices with their sources, the plain-code
 // arithmetic, and whether the route goes through it. Code decided `worthIt`; this only says it.
 function DetourVerdict({ detour }: { detour: TripDetour }) {
-  const even = Math.abs(detour.net) < 0.005;
+  const even = !atLeastACent(Math.abs(detour.net));
+  const fillUp = <span className="font-mono tabular-nums">{+detour.gallons.toFixed(1)}</span>;
   return (
     <section className="trip-detour" aria-label="Gas detour verdict">
       <h4>{detour.worthIt ? "Worth the detour" : "Skip the detour"}</h4>
@@ -45,13 +46,13 @@ function DetourVerdict({ detour }: { detour: TripDetour }) {
         <li>On the way: <strong className="font-medium">{detour.usual.station}</strong> · {perGallon(detour.usual.price)} <PriceSource price={detour.usual.price} /></li>
       </ul>
       <dl className="calculation-grid">
-        <div><dt>Savings on <span className="font-mono tabular-nums">{+detour.gallons.toFixed(1)}</span> gal</dt><dd>{money.format(detour.savings)}</dd></div>
+        <div><dt>Savings on {fillUp} gal</dt><dd>{money.format(detour.savings)}</dd></div>
         <div><dt>Extra miles</dt><dd>{detour.extraMiles.toFixed(1)} mi</dd></div>
         <div><dt>Detour fuel</dt><dd>− {money.format(detour.detourCost)}</dd></div>
         <div><dt>Net</dt><dd>{detour.net < 0 && !even ? "− " : ""}{money.format(Math.abs(detour.net))}</dd></div>
       </dl>
       <p className="helper">
-        Savings = price difference × a <span className="font-mono tabular-nums">{+detour.gallons.toFixed(1)}</span>-gallon fill-up. Detour fuel = extra miles ÷ MPG × the usual station&apos;s price.
+        Savings = price difference × a {fillUp}-gallon fill-up. Detour fuel = extra miles ÷ MPG × the usual station&apos;s price.
       </p>
     </section>
   );

@@ -32,7 +32,7 @@ const ultraSteps = () => [
 
 async function planDemo() {
   const chat = scriptedChat({ ultra: ultraSteps() });
-  const reply = await planTrip({ stops: DEMO_ERRAND_STOPS, home, mpg, chat, services: demoTripServices().services });
+  const reply = await planTrip({ stops: DEMO_ERRAND_STOPS, home, mpg, chat, services: demoTripServices().services, ultra: true });
   return { reply, chat };
 }
 
@@ -96,7 +96,7 @@ describe("the demo errand, end to end", () => {
       super: [callTools(["findNearby", { type: "gas" }], ["getGasPrice", {}]), callTools(["computeRoute", {}])],
     });
 
-    const reply = await planTrip({ stops: [{ type: "gas" }], home: santaAna, mpg, chat, services: demoTripServices().services });
+    const reply = await planTrip({ stops: [{ type: "gas" }], home: santaAna, mpg, chat, services: demoTripServices().services, ultra: true });
 
     expect(chat.requests.map((r) => r.tier)).toEqual(["super", "super"]);
     expect(reply.model).toBe("super");
@@ -108,7 +108,7 @@ describe("the demo errand, end to end", () => {
   it("says so, rather than inventing a verdict, when Ultra finds no cheaper station to check", async () => {
     const chat = scriptedChat({ ultra: [...ultraSteps().slice(0, 2), say("No station prices to compare.")] });
 
-    const reply = await planTrip({ stops: DEMO_ERRAND_STOPS, home, mpg, chat, services: demoTripServices().services });
+    const reply = await planTrip({ stops: DEMO_ERRAND_STOPS, home, mpg, chat, services: demoTripServices().services, ultra: true });
 
     expect(reply.plan?.model).toBe("ultra");
     expect(reply.plan?.detour).toBeUndefined();

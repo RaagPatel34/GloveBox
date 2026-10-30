@@ -1,4 +1,5 @@
 import { NO_HOME_LABEL } from "../garage";
+import { areaOf } from "../gas-price";
 import type { Place, StopKind } from "../maps";
 import { mapsDirections, type RouteResult } from "../route-planner";
 import { detourWorthIt, MAX_TRIP_STOPS, tripCost, tripPlaceKey } from "../trip";
@@ -6,8 +7,8 @@ import {
   toErrandStop,
   type ErrandStop,
   type GasPrice,
+  type GasPriceQuery,
   type LatLng,
-  type ModelTier,
   type TripDetour,
   type TripPlan,
   type TripReply,
@@ -36,9 +37,6 @@ export type TripServices = {
   // even EIA has no usable price.
   gasPrice: (at?: GasPriceQuery) => Promise<GasPrice>;
 };
-
-// What to price: one station, or an area such as "Buena Park, CA". Neither means the EIA average.
-export type GasPriceQuery = { station?: Place; area?: string };
 
 type AddressStop = Extract<ErrandStop, { type: "address" }>;
 type KindStop = Exclude<ErrandStop, AddressStop>;
@@ -89,6 +87,9 @@ const STOP_NOUN = { gas: "a gas station", wash: "a car wash" } satisfies Record<
 const reply = (model: TripReply["model"], message: string, plan: TripPlan | null = null): TripReply => ({ model, message, plan });
 
 const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+// What the model is told: miles to a tenth, money to the cent.
+const toTenths = (value: number) => Math.round(value * 10) / 10;
+const toCents = (value: number) => Math.round(value * 100) / 100;
 
 const normalize = (text: string) => text.trim().replace(/\s+/g, " ").toLowerCase();
 
@@ -112,12 +113,6 @@ export function tripStops(value: unknown): ErrandStop[] | null {
   return new Set(names).size === names.length ? merged : null;
 }
 
-// The models planning these stops may need, for the Nebius config check: Ultra too when they
-// include gas, since more than one station near home means Ultra plans the trip.
-export function tripTiers(stops: unknown): ModelTier[] {
-  return tripStops(stops)?.some((stop) => stop.type === "gas") ? ["super", "ultra"] : ["super"];
-}
-
 // One sentence for the named places among `stops` and one for the kinds of place, for whichever there are.
 function describeStops(stops: ErrandStop[], named: (names: string[]) => string, kinds: (nouns: string[]) => string): string {
   const names = stops.filter(isAddress).map((stop) => stop.name);
@@ -132,8 +127,10 @@ export async function planTrip(args: {
   // Null when the AI is not configured (see missingNebiusConfig).
   chat: Chat | null;
   services: TripServices;
+  // Whether Ultra is configured. Without it, every trip plans on Super with no detour check.
+  ultra?: boolean;
 }): Promise<TripReply> {
-  const { mpg, chat, services } = args;
+  const { mpg, chat, services, ultra = false } = args;
   const stops = tripStops(args.stops);
   if (!stops) return reply(null, `Enter 1–${MAX_TRIP_STOPS} different stops, each under 200 characters.`);
   if (!Number.isFinite(mpg) || mpg < 1 || mpg > 150) {
@@ -158,6 +155,8 @@ export async function planTrip(args: {
     );
   }
   const state: TripState = { places: stops.map(() => undefined), candidates: {}, stationPrices: new Map() };
+  // The city the base price is asked for ("Buena Park, CA"); none means the EIA average.
+  const homeArea = areaOf(home.label);
   // The user's address stop that `text` names, with where it sits among the stops.
   const findAddress = (text: unknown) => {
     const index = typeof text === "string" ? stops.findIndex((stop) => isAddress(stop) && normalize(stop.name) === normalize(text)) : -1;
@@ -189,9 +188,10 @@ export async function planTrip(args: {
     state.detour = undefined;
   };
 
-  // Ultra is only for choosing between gas stations. Code runs findNearby's usual search (near
-  // home) before the model starts, and picks Ultra when it finds more than one station.
-  if (stops.some((stop) => stop.type === "gas")) {
+  // Ultra is only for choosing between gas stations. When Ultra is configured, code runs
+  // findNearby's usual search (near home) before the model starts, and picks Ultra when it finds
+  // more than one station.
+  if (ultra && stops.some((stop) => stop.type === "gas")) {
     try {
       await searchNear("gas", home);
     } catch (error) {
@@ -261,9 +261,9 @@ export async function planTrip(args: {
     },
     {
       name: "getGasPrice",
-      description: "This week's average regular gas price near the user, with its source and date.",
+      description: "The regular gas price around the user's home, with its source, date and kind (area or eia).",
       parameters: { type: "object", properties: {} },
-      run: async () => (state.price ??= await callRecordingFailure(NO_PRICE, services.gasPrice)),
+      run: async () => (state.price ??= await callRecordingFailure(NO_PRICE, () => services.gasPrice(homeArea ? { area: homeArea } : undefined))),
     },
     {
       name: "computeRoute",
@@ -283,7 +283,7 @@ export async function planTrip(args: {
         state.route ??= await callRecordingFailure(NO_ROUTE, () => services.route(home, onePerPlace(state.places as Place[])));
         return {
           order: state.route.order.map((place) => place.name),
-          miles: Math.round(state.route.miles * 10) / 10,
+          miles: toTenths(state.route.miles),
           minutes: Math.round(state.route.minutes),
         };
       },
@@ -390,8 +390,7 @@ export async function planTrip(args: {
           places,
           route: via,
         };
-        const cents = (value: number) => Math.round(value * 100) / 100;
-        return { station: cheaper.name, worthIt: verdict.worthIt, net: cents(verdict.net), extraMiles: Math.round(extraMiles * 10) / 10 };
+        return { station: cheaper.name, worthIt: verdict.worthIt, net: toCents(verdict.net), extraMiles: toTenths(extraMiles) };
       },
     },
   ];

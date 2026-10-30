@@ -2,7 +2,7 @@ import { isGarage, makeProposals, sampleCommand } from '@/lib/maintenance';
 import { missingNebiusConfig, modelFor, nebius, nebiusChat, reasoningEffort } from '@/lib/nebius';
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 import { routeCommand } from '@/lib/agent/router';
-import { planTrip, tripTiers } from '@/lib/agent/trip';
+import { planTrip } from '@/lib/agent/trip';
 import { tripServices } from '@/lib/trip-services';
 import { vehicleMpg } from '@/lib/trip';
 import type { CommandResult } from '@/lib/maintenance';
@@ -41,10 +41,9 @@ export async function POST(request: Request) {
       if (home.label.length > 200 || typeof home.lat !== 'number' || typeof home.lng !== 'number' || !Number.isFinite(home.lat) || !Number.isFinite(home.lng) || Math.abs(home.lat) > 90 || Math.abs(home.lng) > 180) {
         return Response.json({ error: 'Set your home location in Car & settings, then plan again.' }, { status: 400 });
       }
-      // A gas errand may run on Ultra; without it, planTrip says the trip agent is offline.
-      const missing = missingNebiusConfig(tripTiers(routed.stops));
-      if (missing.length > 0) console.warn(`Trip agent is offline: ${missing.join(', ')} not set`);
-      const planned = await planTrip({ stops: routed.stops, home, mpg: vehicleMpg(body.garage.vehicle), chat: missing.length === 0 ? chat : null, services });
+      // Super plans the drive; Ultra, when it is configured, weighs several gas stations.
+      const ultra = missingNebiusConfig(['ultra']).length === 0;
+      const planned = await planTrip({ stops: routed.stops, home, mpg: vehicleMpg(body.garage.vehicle), chat, services, ultra });
       return Response.json({ proposals: [], message: planned.message, source: 'nebius', tier: planned.model ?? 'nano', ...(planned.plan ? { trip: planned.plan } : {}) } satisfies CommandResult);
     }
     const model = modelFor('super');

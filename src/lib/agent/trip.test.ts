@@ -269,6 +269,18 @@ describe("planTrip", () => {
     });
   });
 
+  it("asks for the price around home's city, or the regional average when home names none", async () => {
+    const asked: unknown[] = [];
+    const { services } = fakeServices({ gasPrice: async (at) => (asked.push(at), LA_PRICE) });
+    const steps = () => [callTools(["geocode", { query: "Trader Joe's" }], ["getGasPrice", {}]), callTools(["computeRoute", {}])];
+
+    await planTrip({ stops: ["Trader Joe's"], home: HOME, mpg: 32, chat: scriptedChat({ super: steps() }), services });
+    await planTrip({ stops: ["Trader Joe's"], home: { ...HOME, label: "8039 Beach Blvd, Buena Park, CA 90620, USA" }, mpg: 32, chat: scriptedChat({ super: steps() }), services });
+    await planTrip({ stops: ["Trader Joe's"], home: { ...HOME, label: "My place" }, mpg: 32, chat: scriptedChat({ super: steps() }), services });
+
+    expect(asked).toEqual([{ area: "Buena Park, CA" }, { area: "Buena Park, CA" }, undefined]);
+  });
+
   it("gives no plan without a gas price, saying where the price comes from", async () => {
     const chat = scriptedChat({ super: [callTools(["geocode", { query: "Trader Joe's" }], ["getGasPrice", {}])] });
     const { services } = fakeServices({
@@ -371,7 +383,7 @@ describe("planTrip: gas and car-wash stops", () => {
     const chat = demoChat();
     const { services, fetchImpl } = demoServices();
 
-    const reply = await planTrip({ stops: DEMO_ERRAND_STOPS, home: vehicle.home, mpg: vehicle.epaMpg, chat, services });
+    const reply = await planTrip({ stops: DEMO_ERRAND_STOPS, home: vehicle.home, mpg: vehicle.epaMpg, chat, services, ultra: true });
 
     expect(reply.plan?.stops.map(({ type, name, label }) => ({ type, name, label }))).toEqual([
       { type: "address", name: "Trader Joe's", label: "3333 W 1st St, Santa Ana, CA 92703" },
@@ -389,7 +401,7 @@ describe("planTrip: gas and car-wash stops", () => {
     const chat = demoChat();
     const { services } = demoServices();
 
-    const reply = await planTrip({ stops: DEMO_ERRAND_STOPS, home: vehicle.home, mpg: vehicle.epaMpg, chat, services });
+    const reply = await planTrip({ stops: DEMO_ERRAND_STOPS, home: vehicle.home, mpg: vehicle.epaMpg, chat, services, ultra: true });
 
     const candidates = reply.plan?.gasCandidates ?? [];
     expect(candidates.length).toBeGreaterThanOrEqual(2);
@@ -440,7 +452,7 @@ describe("planTrip: gas and car-wash stops", () => {
       findPlaces: async (kind, near) => (calls.findPlaces.push([kind, near]), [DEMO_STATION]),
     });
 
-    const reply = await planTrip({ stops: [{ type: "gas" }, "Trader Joe's"], home: HOME, mpg: 32, chat, services });
+    const reply = await planTrip({ stops: [{ type: "gas" }, "Trader Joe's"], home: HOME, mpg: 32, chat, services, ultra: true });
 
     const [early] = chat.requests[1].messages.slice(-2).map((m) => JSON.parse(m.content as string));
     expect(early).toEqual({ error: 'Geocode "Trader Joe\'s" before searching near it.' });
@@ -491,7 +503,7 @@ describe("planTrip: gas and car-wash stops", () => {
       },
     });
 
-    const reply = await planTrip({ stops: [{ type: "gas" }], home: HOME, mpg: 32, chat, services });
+    const reply = await planTrip({ stops: [{ type: "gas" }], home: HOME, mpg: 32, chat, services, ultra: true });
 
     expect(reply).toEqual({ model: null, message: "Couldn't look up places on the map just now. Please try again.", plan: null });
     expect(chat.requests).toHaveLength(0);
@@ -595,7 +607,7 @@ describe("planTrip: Ultra weighs a cheaper gas station", () => {
     const chat = scriptedChat({ ultra: [lookups(), callTools(["computeRoute", {}]), say("Chevron is on the way.")] });
     const { services, calls } = ultraServices();
 
-    const reply = await planTrip({ stops: [{ type: "gas" }, "Trader Joe's"], home: HOME, mpg: 25, chat, services });
+    const reply = await planTrip({ stops: [{ type: "gas" }, "Trader Joe's"], home: HOME, mpg: 25, chat, services, ultra: true });
 
     expect(reply.model).toBe("ultra");
     expect(reply.plan?.model).toBe("ultra");
@@ -617,7 +629,7 @@ describe("planTrip: Ultra weighs a cheaper gas station", () => {
     const chat = scriptedChat({ ultra: [lookups(), priceAll(), callTools(["checkDetour", { station: ARCO.label }])] });
     const { services, calls } = ultraServices();
 
-    const reply = await planTrip({ stops: [{ type: "gas" }, "Trader Joe's"], home: HOME, mpg: 25, chat, services });
+    const reply = await planTrip({ stops: [{ type: "gas" }, "Trader Joe's"], home: HOME, mpg: 25, chat, services, ultra: true });
 
     expect(calls.route).toEqual([[CHEVRON, PLACES["trader joe's"]], [ARCO, PLACES["trader joe's"]]]);
     expect(reply.plan).toMatchObject({
@@ -649,7 +661,7 @@ describe("planTrip: Ultra weighs a cheaper gas station", () => {
     const chat = scriptedChat({ ultra: [lookups(), priceAll(), callTools(["checkDetour", { station: "Arco" }])] });
     const { services } = ultraServices({ viaMiles: 40 });
 
-    const reply = await planTrip({ stops: [{ type: "gas" }, "Trader Joe's"], home: HOME, mpg: 25, chat, services });
+    const reply = await planTrip({ stops: [{ type: "gas" }, "Trader Joe's"], home: HOME, mpg: 25, chat, services, ultra: true });
 
     expect(reply.plan).toMatchObject({
       stops: [{ type: "gas", ...CHEVRON }, { type: "address", ...PLACES["trader joe's"] }],
@@ -669,7 +681,7 @@ describe("planTrip: Ultra weighs a cheaper gas station", () => {
     });
     const { services, calls } = ultraServices({ prices: new Map([...PRICES, [ARCO, areaPrice]]) });
 
-    const reply = await planTrip({ stops: [{ type: "gas" }, "Trader Joe's"], home: HOME, mpg: 25, chat, services });
+    const reply = await planTrip({ stops: [{ type: "gas" }, "Trader Joe's"], home: HOME, mpg: 25, chat, services, ultra: true });
 
     const [checked] = chat.requests[3].messages.slice(-1).map((m) => JSON.parse(m.content as string));
     expect(checked).toEqual({ verdict: null, reason: expect.any(String) });
@@ -683,13 +695,25 @@ describe("planTrip: Ultra weighs a cheaper gas station", () => {
     const chat = scriptedChat({ ultra: [lookups(), priceAll(), callTools(["checkDetour", { station: ARCO.label }])] });
     const { services, priced } = ultraServices({ prices: new Map([...PRICES, [SHELL, new Error("Tavily responded 500")]]) });
 
-    const reply = await planTrip({ stops: [{ type: "gas" }, "Trader Joe's"], home: HOME, mpg: 25, chat, services });
+    const reply = await planTrip({ stops: [{ type: "gas" }, "Trader Joe's"], home: HOME, mpg: 25, chat, services, ultra: true });
 
     const shell = JSON.parse(chat.requests[2].messages.at(-1)!.content as string);
     expect(shell).toEqual({ error: "Couldn't price Shell just now." });
     expect(reply.plan?.detour?.worthIt).toBe(true);
     // The weekly price, then each station once: checkDetour reuses the prices already found.
     expect(priced).toEqual([undefined, "Chevron", "Arco", "Shell"]);
+  });
+
+  it("plans on Super, with no detour, when Ultra isn't set up, however many stations there are", async () => {
+    const chat = scriptedChat({ super: [lookups(), callTools(["computeRoute", {}])] });
+    const { services } = ultraServices();
+
+    const reply = await planTrip({ stops: [{ type: "gas" }, "Trader Joe's"], home: HOME, mpg: 25, chat, services, ultra: false });
+
+    expect(reply.model).toBe("super");
+    expect(reply.plan).toMatchObject({ model: "super", totalMiles: 20 });
+    expect(reply.plan?.detour).toBeUndefined();
+    expect(chat.requests.every((r) => r.tier === "super")).toBe(true);
   });
 
   it("stays on Super, without the station tools, when there is only one gas station", async () => {
